@@ -10,7 +10,7 @@ using LiteMath::DEG_TO_RAD;
 
 struct Camera
 {
-  Camera() : pos(0.0f, 0.0f, +5.0f), lookAt(0, 0, 0), up(0, 1, 0), fov(45.0f), tdist(100.0f) {}
+  Camera() : pos(130.0f, 135.0f, 158.0f), lookAt(0, 0, 0), up(0, 1, 0), fov(45.0f), tdist(100.0f) {}
 
   float3 pos;
   float3 lookAt;

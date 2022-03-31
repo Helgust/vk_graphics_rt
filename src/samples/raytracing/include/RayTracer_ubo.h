@@ -8,6 +8,7 @@ typedef LiteMath::float4x4 mat4;
 typedef LiteMath::float2   vec2;
 typedef LiteMath::float3   vec3;
 typedef LiteMath::float4   vec4;
+typedef unsigned uint;
 #else
 #define MAXFLOAT 1e37f
 #define M_PI          3.14159265358979323846f
@@ -23,7 +24,8 @@ struct RayTracer_UBO_Data
   uint m_height; 
   uint m_width; 
   uint m_pAccelStruct_capacity; 
-  uint m_pAccelStruct_size; 
+  uint m_pAccelStruct_size;
+  float time; 
   uint dummy_last;
 };
 

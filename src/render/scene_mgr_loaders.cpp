@@ -152,7 +152,7 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
     LoadCommonGeoDataOnGPU();
   }
 
-  if(m_config.instance_matrix_as_vertex_attribute)
+  if(m_config.instance_matrix_as_vertex_attribute | m_config.instance_matrix_as_storage_buffer)
   {
     LoadInstanceDataOnGPU();
   }
@@ -283,7 +283,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
     LoadCommonGeoDataOnGPU();
   }
 
-  if(m_config.instance_matrix_as_vertex_attribute)
+  if(m_config.instance_matrix_as_vertex_attribute | m_config.instance_matrix_as_storage_buffer)
   {
     LoadInstanceDataOnGPU();
   }

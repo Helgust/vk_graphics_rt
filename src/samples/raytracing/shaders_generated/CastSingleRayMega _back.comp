@@ -1,7 +1,6 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_ray_query : require
-#extension GL_EXT_debug_printf : enable
 
 #include "common_generated.h"
 
@@ -208,7 +207,9 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
   vec4 rayPos = rayPosAndNear;
   vec4 rayDir = rayDirAndFar;
   vec4 color = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-  
+
+   CRT_Hit hit = m_pAccelStruct_RayQuery_NearestHit(rayPos, rayDir);
+  vec3 hit_point;
 
   for (int j = 0; j < 1; ++j)
   {
@@ -216,48 +217,32 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
     if (hit.primId == -1) {
       break;
     }
-    
     vec3 hit_point = vec3(rayPos) + vec3(rayDir)*hit.t;
     vec3 n = GetNormal(hit);
-    if(soft_shadow)
+
+    
+    int total = 0;
+    for (int u = 0; u < 8; u++)
     {
-      float total = 0.0f;
-      for (int u = 0; u < samples_cnt; u++)
-      {   
-        uint rngState = uint(hit.t) * uint(rayPos.y) * uint(rayPos.z) * gl_GlobalInvocationID[1] * tidY + tidX;
-        float distanceToCenter = length(m_lights[j].pos.xyz - hit_point);
-        float q = sqrt(1.0f - (light_rad / distanceToCenter) * (light_rad / distanceToCenter));
-
-        vec3 lightPos = PointOnLight(m_lights[j],rngState);
-        //debugPrintfEXT("My lightPos is %1.2v4f \n", lightPos);
+      for (int v = 0; v < 8; v++)
+      {
+        vec3 lightPos = PointOnLight(m_lights[j],u,v);
         vec3 lightDir = normalize(lightPos - hit_point);
-
-        CRT_Hit hitLight = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 1.0f), vec4(lightDir, MAXFLOAT));
-        if (hitLight.primId == -1)
+        CRT_Hit hitLight = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.001f), vec4(lightDir, MAXFLOAT));
+        if (hitLight.instId == -1)
         {
-          total += 1.0f;
+          total +=1;
           float shade = max(dot(n, normalize(lightDir)), 0.1f);
-          //float pdf_xp = 1.0f / (2*M_PI * (1.0f - q));
-          //color += shade * (1.0f / pdf_xp) * m_lights[j].intensity;
-          color += shade;
+          color += total/64 * shade;
         }
       }
-      color*=(total / samples_cnt);
     }
-    else
-    {
-      vec3 lightPos = m_lights[j].pos.xyz;
-      vec3 lightDir = normalize(lightPos - hit_point);
-
-      CRT_Hit hitLight = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 1.0f), vec4(lightDir, MAXFLOAT));
-      if (hitLight.primId == -1)
-      {
-        float shade = max(dot(n, normalize(lightDir)), 0.1f);
-        color += shade;
-      }
-    } 
   }
   out_color[tidY * ubo.m_width + tidX + out_colorOffset] = ColorToInt(color);
+  
+  
+
+  
 }
 
 void kernel_InitEyeRay(uint tidX, uint tidY, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar) 
