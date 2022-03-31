@@ -91,6 +91,7 @@ struct SceneManager
   VkBuffer GetInstanceMatBuffer()  const { return m_instMatricesBuf; }
   VkBuffer GetMaterialsBuffer()    const { return m_materialBuf; }
   VkBuffer GetMaterialIDsBuffer()  const { return m_matIdsBuf; }
+  std::shared_ptr<vk_utils::ICopyEngine> GetCopyHelper() { return  m_pCopyHelper; }
 
   std::vector<VkSampler> GetTextureSamplers() const { return m_samplers; }
   std::vector<VkImageView>  GetTextureViews() const { return m_textureViews; }

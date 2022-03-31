@@ -8,12 +8,14 @@
 layout(binding = 0, set = 0) buffer data0 { uint out_color[]; };
 layout(binding = 1, set = 0) uniform accelerationStructureEXT m_pAccelStruct;
 layout(binding = 2, set = 0) buffer dataUBO { RayTracer_UBO_Data ubo; };
-layout(binding = 3, set = 0) buffer Vertices { Vertex vertices[]; };
-layout(binding = 4, set = 0) buffer Indices { uint indices[]; };
-layout(binding = 5, set = 0) buffer MatIds { uint mat_ids[]; };
-layout(binding = 6, set = 0) buffer Materials { MaterialData_pbrMR materials[]; };
-layout(binding = 7, set = 0) buffer InstanceMats { mat4 instance_mats[]; };
-layout(binding = 8, set = 0) buffer MeshInfos { MeshInfo mesh_infos[]; };
+layout(binding = 3, set = 0) buffer dataNoise { uint noise[]; };
+layout(binding = 4, set = 0) buffer Vertices { Vertex vertices[]; };
+layout(binding = 5, set = 0) buffer Indices { uint indices[]; };
+layout(binding = 6, set = 0) buffer MatIds { uint mat_ids[]; };
+layout(binding = 7, set = 0) buffer Materials { MaterialData_pbrMR materials[]; };
+layout(binding = 8, set = 0) buffer InstanceMats { mat4 instance_mats[]; };
+layout(binding = 9, set = 0) buffer MeshInfos { MeshInfo mesh_infos[]; };
+
 
 uint ColorToInt(vec4 color) 
 {

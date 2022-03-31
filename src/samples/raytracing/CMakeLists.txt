@@ -32,6 +32,7 @@ set(RENDER_SOURCE
         simple_render.cpp
         simple_render_rt.cpp
         raytracing.cpp
+        blue_noise_gen.cpp
         )
 
 set(GENERATED_SOURCE

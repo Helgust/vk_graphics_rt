@@ -18,6 +18,7 @@
 #include <render/CrossRT.h>
 #include "raytracing.h"
 #include "raytracing_generated.h"
+#include "blue_noise_gen.h"
 
 enum class RenderMode
 {
@@ -29,8 +30,8 @@ class RayTracer_GPU : public RayTracer_Generated
 {
 public:
   RayTracer_GPU(int32_t a_width, uint32_t a_height) : RayTracer_Generated(a_width, a_height) {} 
-  std::string AlterShaderPath(const char* a_shaderPath) override { return std::string("../src/samples/raytracing/") + std::string(a_shaderPath); }
-  void InitDescriptors(std::shared_ptr<SceneManager> sceneManager);
+  std::string AlterShaderPath(const char* a_shaderPath) override { return std::string("../../src/samples/raytracing/") + std::string(a_shaderPath); }
+  void InitDescriptors(std::shared_ptr<SceneManager> sceneManager, vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler);
 };
 
 class SimpleRender : public IRender
@@ -56,7 +57,6 @@ public:
   void UpdateCamera(const Camera* cams, uint32_t a_camsCount) override;
   Camera GetCurrentCamera() override {return m_cam;}
   void UpdateView();
-
   void LoadScene(const char *path) override;
   void DrawFrame(float a_time, DrawMode a_mode) override;
 
@@ -165,6 +165,13 @@ protected:
   std::vector<VkFramebuffer> m_frameBuffers;
   vk_utils::VulkanImageMem m_depthBuffer{};
   // ***
+
+  BlueNoiseGenerator* noiseGen;
+  size_t NoiseMapWidth  = 64;
+  size_t NoiseMapHeight = 64;
+  void SetupNoiseImage();
+  vk_utils::VulkanImageMem m_NoiseMapTex{};
+  VkSampler m_NoiseTexSampler = VK_NULL_HANDLE;
 
   // *** GUI
   std::shared_ptr<IRenderGUI> m_pGUIRender;

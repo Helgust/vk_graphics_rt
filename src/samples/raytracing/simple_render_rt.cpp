@@ -21,7 +21,30 @@ void SimpleRender::SetupQuadDescriptors()
 {
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
   m_pBindings->BindImage(0, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+  //m_pBindings->BindImage(3, m_NoiseMapTex.view, m_NoiseTexSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
   m_pBindings->BindEnd(&m_quadDS, &m_quadDSLayout);
+}
+
+void SimpleRender::SetupNoiseImage() 
+{
+  noiseGen    = new BlueNoiseGenerator(64, 64);
+  std::vector<uint32_t>noisePixels;
+  noiseGen->getNoise(noisePixels, NoiseMapWidth, NoiseMapHeight);
+  unsigned char *pixels = reinterpret_cast<unsigned char *>(noisePixels.data());
+
+  vk_utils::deleteImg(m_device, &m_NoiseMapTex);
+  if (m_NoiseTexSampler != VK_NULL_HANDLE)
+  {
+    vkDestroySampler(m_device, m_NoiseTexSampler, VK_NULL_HANDLE);
+  }
+
+  int mipLevels     = 1;
+  m_NoiseMapTex     = allocateColorTextureFromDataLDR(m_device, m_physicalDevice, pixels,
+      NoiseMapWidth, NoiseMapHeight, mipLevels, VK_FORMAT_R8G8B8A8_UNORM, m_pScnMgr->GetCopyHelper());
+  if (m_NoiseTexSampler == VK_NULL_HANDLE)
+  {
+    m_NoiseTexSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+  }
 }
 
 void SimpleRender::SetupRTImage()
@@ -117,7 +140,8 @@ void SimpleRender::RayTraceGPU()
 
     m_pRayTracerGPU->SetScene(tmp);
     m_pRayTracerGPU->SetVulkanInOutFor_CastSingleRay(m_genColorBuffer, 0);
-    m_pRayTracerGPU->InitDescriptors(m_pScnMgr);
+    m_pRayTracerGPU->InitDescriptors(m_pScnMgr, m_NoiseMapTex, m_NoiseTexSampler);
+    
     m_pRayTracerGPU->UpdateAll(m_pCopyHelper);
   }
 

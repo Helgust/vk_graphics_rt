@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "vulkan_basics.h"
-
+#include <vk_images.h>
 #include "vk_pipeline.h"
 #include "vk_buffers.h"
 #include "vk_utils.h"
