@@ -2,6 +2,7 @@
 #include <numeric>
 #include <cmath>
 #include <cstdlib>
+#include <iostream>
 
 class BlueNoiseGenerator 
 {

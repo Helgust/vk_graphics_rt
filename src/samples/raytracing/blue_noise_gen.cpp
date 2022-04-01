@@ -37,7 +37,7 @@ void BlueNoiseGenerator::getNoise(std::vector<uint32_t> &noiseMap, size_t width,
     for (int x = 0; x < width; ++x) {
 		for (int y = 0; y < height; ++y) {
 			std::vector<float> v = blue_noise[y * width + x];
-			noiseMap[y * width + x] = v[0];
+			noiseMap[y * width + x] = 255 * v[0];
 		}
 	}
 }

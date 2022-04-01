@@ -1,5 +1,6 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
+#extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_ray_query : require
 #extension GL_EXT_debug_printf : enable
 
@@ -8,7 +9,7 @@
 layout(binding = 0, set = 0) buffer data0 { uint out_color[]; };
 layout(binding = 1, set = 0) uniform accelerationStructureEXT m_pAccelStruct;
 layout(binding = 2, set = 0) buffer dataUBO { RayTracer_UBO_Data ubo; };
-layout(binding = 3, set = 0) buffer dataNoise { uint noise[]; };
+layout(binding = 3, set = 0) uniform sampler2D NoiseTexture;
 layout(binding = 4, set = 0) buffer Vertices { Vertex vertices[]; };
 layout(binding = 5, set = 0) buffer Indices { uint indices[]; };
 layout(binding = 6, set = 0) buffer MatIds { uint mat_ids[]; };
@@ -209,6 +210,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
 {
   vec4 rayPos = rayPosAndNear;
   vec4 rayDir = rayDirAndFar;
+  vec2 coordInit = vec2(gl_GlobalInvocationID[0]/64.0f, gl_GlobalInvocationID[1]/64.0f);
   vec4 color = vec4(0.0f, 0.0f, 0.0f, 0.0f);
   
 
@@ -224,14 +226,27 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
     if(soft_shadow)
     {
       float total = 0.0f;
+      vec2 coord = coordInit ;
       for (int u = 0; u < samples_cnt; u++)
       {   
-        uint rngState = uint(hit.t) * uint(rayPos.y) * uint(rayPos.z) * gl_GlobalInvocationID[1] * tidY + tidX;
+        
+        vec4 rngState = texture(NoiseTexture,coord);
+        if(coord.x >= 63)
+        {
+          coord.x = 0;
+          coord = coord + vec2(0.0f,1.0f);
+        }
+        if(coord.y >=63)
+        {
+          coord = coordInit;
+        }
+        coord = coord + vec2(float(u),0.0f);
+        //uint rngState = uint(hit.t) * uint(rayPos.y) * uint(rayPos.z) * gl_GlobalInvocationID[1] * tidY + tidX;
         float distanceToCenter = length(m_lights[j].pos.xyz - hit_point);
         float q = sqrt(1.0f - (light_rad / distanceToCenter) * (light_rad / distanceToCenter));
 
-        vec3 lightPos = PointOnLight(m_lights[j],rngState);
-        //debugPrintfEXT("My lightPos is %1.2v4f \n", lightPos);
+        vec3 lightPos = PointOnLight(m_lights[j],rngState.x);
+        
         vec3 lightDir = normalize(lightPos - hit_point);
 
         CRT_Hit hitLight = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 1.0f), vec4(lightDir, MAXFLOAT));
@@ -284,7 +299,6 @@ void main()
   const uint m_width = ubo.m_width;
   ///////////////////////////////////////////////////////////////// prolog
 
-  
   vec4 rayPosAndNear,  rayDirAndFar;
   kernel_InitEyeRay(tidX, tidY, rayPosAndNear, rayDirAndFar);
 

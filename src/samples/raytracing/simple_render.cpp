@@ -557,6 +557,7 @@ void SimpleRender::LoadScene(const char* path)
   
   SetupRTImage();
   SetupNoiseImage();
+  
   CreateUniformBuffer();
 
   SetupSimplePipeline();

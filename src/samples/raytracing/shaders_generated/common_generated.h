@@ -115,7 +115,15 @@ float stepAndOutputRNGFloat(uint rngState)
   return float(word) / 4294967295.0f;
 }
 
-vec3 PointOnLight(Light m_light,uint st)
+vec3 PointOnLight(Light m_light,float st)
+{
+  float theta = st*2*M_PI;
+  float phi = acos(2*st - 1);
+  //float r =  sqrt(stepAndOutputRNGFloat(st))*light_rad;
+  return vec3(m_light.pos.x + light_rad*sin(phi)*cos(theta),m_light.pos.y + light_rad*sin(phi)*sin(theta),m_light.pos.z + light_rad*cos(phi));
+}
+
+vec3 PointOnLightOld(Light m_light,uint st)
 {
   float theta = stepAndOutputRNGFloat(st)*2*M_PI;
   float phi = acos(2*stepAndOutputRNGFloat(st) - 1);

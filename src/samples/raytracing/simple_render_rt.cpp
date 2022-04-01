@@ -26,7 +26,7 @@ void SimpleRender::SetupQuadDescriptors()
 
 void SimpleRender::SetupNoiseImage() 
 {
-  noiseGen    = new BlueNoiseGenerator(64, 64);
+  noiseGen    = new BlueNoiseGenerator(NoiseMapWidth, NoiseMapHeight);
   std::vector<uint32_t>noisePixels;
   noiseGen->getNoise(noisePixels, NoiseMapWidth, NoiseMapHeight);
   unsigned char *pixels = reinterpret_cast<unsigned char *>(noisePixels.data());

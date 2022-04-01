@@ -168,8 +168,8 @@ protected:
   // ***
 
   BlueNoiseGenerator* noiseGen;
-  size_t NoiseMapWidth  = 64;
-  size_t NoiseMapHeight = 64;
+  size_t NoiseMapWidth  = 1024;
+  size_t NoiseMapHeight = 1024;
   void SetupNoiseImage();
   vk_utils::VulkanImageMem m_NoiseMapTex{};
   VkSampler m_NoiseTexSampler = VK_NULL_HANDLE;
