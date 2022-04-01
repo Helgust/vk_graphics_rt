@@ -21,7 +21,6 @@ void SimpleRender::SetupQuadDescriptors()
 {
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
   m_pBindings->BindImage(0, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-  //m_pBindings->BindImage(3, m_NoiseMapTex.view, m_NoiseTexSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
   m_pBindings->BindEnd(&m_quadDS, &m_quadDSLayout);
 }
 
@@ -141,6 +140,7 @@ void SimpleRender::RayTraceGPU()
     m_pRayTracerGPU->SetScene(tmp);
     m_pRayTracerGPU->SetVulkanInOutFor_CastSingleRay(m_genColorBuffer, 0);
     m_pRayTracerGPU->InitDescriptors(m_pScnMgr, m_NoiseMapTex, m_NoiseTexSampler);
+    //m_pRayTracerGPU->InitDescriptors(m_pScnMgr);
     
     m_pRayTracerGPU->UpdateAll(m_pCopyHelper);
   }

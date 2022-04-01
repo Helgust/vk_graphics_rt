@@ -53,7 +53,7 @@ void RayTracer_Generated::InitHelpers()
 
 VkDescriptorSetLayout RayTracer_Generated::CreateCastSingleRayMegaDSLayout()
 {
-  std::array<VkDescriptorSetLayoutBinding, 3+1+6> dsBindings;
+  std::array<VkDescriptorSetLayoutBinding, 2+1+7> dsBindings;
 
   // binding for out_color
   dsBindings[0].binding            = 0;
@@ -78,7 +78,7 @@ VkDescriptorSetLayout RayTracer_Generated::CreateCastSingleRayMegaDSLayout()
 
   // binding for noise_color
   dsBindings[3].binding            = 3;
-  dsBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  dsBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
   dsBindings[3].descriptorCount    = 1;
   dsBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[3].pImmutableSamplers = nullptr;

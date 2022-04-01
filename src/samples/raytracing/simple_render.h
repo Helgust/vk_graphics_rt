@@ -32,6 +32,7 @@ public:
   RayTracer_GPU(int32_t a_width, uint32_t a_height) : RayTracer_Generated(a_width, a_height) {} 
   std::string AlterShaderPath(const char* a_shaderPath) override { return std::string("../../src/samples/raytracing/") + std::string(a_shaderPath); }
   void InitDescriptors(std::shared_ptr<SceneManager> sceneManager, vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler);
+  //void InitDescriptors(std::shared_ptr<SceneManager> sceneManager);
 };
 
 class SimpleRender : public IRender

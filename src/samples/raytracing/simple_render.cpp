@@ -6,6 +6,25 @@
 #include <vk_buffers.h>
 
 
+void fillWriteDescriptorSetEntry2(VkDescriptorSet set, VkWriteDescriptorSet& writeDS,
+  VkDescriptorImageInfo* imageInfo, VkImageView imageView, VkSampler sampler,int binding) {
+
+  //imageInfo->imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  imageInfo->imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  imageInfo->imageView  = imageView;
+  imageInfo->sampler  = sampler;
+
+  writeDS = VkWriteDescriptorSet{};
+  writeDS.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  writeDS.dstSet = set;
+  writeDS.dstBinding = binding;
+  writeDS.descriptorCount = 1;
+  writeDS.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ;
+  writeDS.pBufferInfo = nullptr;
+  writeDS.pImageInfo = imageInfo;
+  writeDS.pTexelBufferView = nullptr;
+}
+
 void fillWriteDescriptorSetEntry(VkDescriptorSet set, VkWriteDescriptorSet& writeDS,
   VkDescriptorBufferInfo* bufferInfo, VkBuffer buffer, int binding) {
 
@@ -24,31 +43,13 @@ void fillWriteDescriptorSetEntry(VkDescriptorSet set, VkWriteDescriptorSet& writ
   writeDS.pTexelBufferView = nullptr;
 }
 
-void fillWriteDescriptorSetEntry(VkDescriptorSet set, VkWriteDescriptorSet& writeDS,
-  VkDescriptorImageInfo* imageInfo, VkImageView imageView, VkSampler sampler,int binding) {
-
-  imageInfo->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfo->imageView  = imageView;
-  imageInfo->sampler  = sampler;
-
-  writeDS = VkWriteDescriptorSet{};
-  writeDS.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  writeDS.dstSet = set;
-  writeDS.dstBinding = binding;
-  writeDS.descriptorCount = 1;
-  writeDS.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  writeDS.pBufferInfo = nullptr;
-  writeDS.pImageInfo = imageInfo;
-  writeDS.pTexelBufferView = nullptr;
-}
-
 void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler) 
 {
   std::array<VkDescriptorBufferInfo, 6> descriptorBufferInfo;
   std::array<VkDescriptorImageInfo, 1> descriptorImageInfo;
   std::array<VkWriteDescriptorSet, 7> writeDescriptorSet;
 
-  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorImageInfo[0], noiseMapTex.view, noiseTexSampler, 3);
+  fillWriteDescriptorSetEntry2(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorImageInfo[0], noiseMapTex.view, noiseTexSampler, 3);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[1], &descriptorBufferInfo[0], sceneManager->GetVertexBuffer(), 4);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[2], &descriptorBufferInfo[1], sceneManager->GetIndexBuffer(), 5);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[3], &descriptorBufferInfo[2], sceneManager->GetMaterialIDsBuffer(), 6);
@@ -420,16 +421,16 @@ void SimpleRender::CleanupPipelineAndSwapchain()
     m_screenRenderPass = VK_NULL_HANDLE;
   }
 
-  // vk_utils::deleteImg(m_device, &m_NoiseMapTex);
-  // if (m_NoiseTexSampler != VK_NULL_HANDLE)
-  // {
-  //   vkDestroySampler(m_device, m_NoiseTexSampler, VK_NULL_HANDLE);
-  // }
-  // if (m_NoiseMapTex.mem != VK_NULL_HANDLE)
-  // {
-  //   vkFreeMemory(m_device, m_NoiseMapTex.mem, nullptr);
-  //   m_NoiseMapTex.mem = VK_NULL_HANDLE;
-  // }
+  vk_utils::deleteImg(m_device, &m_NoiseMapTex);
+  if (m_NoiseTexSampler != VK_NULL_HANDLE)
+  {
+    vkDestroySampler(m_device, m_NoiseTexSampler, VK_NULL_HANDLE);
+  }
+  if (m_NoiseMapTex.mem != VK_NULL_HANDLE)
+  {
+    vkFreeMemory(m_device, m_NoiseMapTex.mem, nullptr);
+    m_NoiseMapTex.mem = VK_NULL_HANDLE;
+  }
 
   m_swapchain.Cleanup();
 }
@@ -548,7 +549,7 @@ void SimpleRender::LoadScene(const char* path)
 
   std::vector<std::pair<VkDescriptorType, uint32_t> > dtypes = {
     {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,             1},
-    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     2}
+    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     1}
   };
 
   // set large a_maxSets, because every window resize will cause the descriptor set for quad being to be recreated
@@ -744,16 +745,16 @@ void SimpleRender::Cleanup()
     m_instance = VK_NULL_HANDLE;
   }
 
-  // vk_utils::deleteImg(m_device, &m_NoiseMapTex);
-  // if (m_NoiseTexSampler != VK_NULL_HANDLE)
-  // {
-  //   vkDestroySampler(m_device, m_NoiseTexSampler, VK_NULL_HANDLE);
-  // }
-  // if (m_NoiseMapTex.mem != VK_NULL_HANDLE)
-  // {
-  //   vkFreeMemory(m_device, m_NoiseMapTex.mem, nullptr);
-  //   m_NoiseMapTex.mem = VK_NULL_HANDLE;
-  // }
+  vk_utils::deleteImg(m_device, &m_NoiseMapTex);
+  if (m_NoiseTexSampler != VK_NULL_HANDLE)
+  {
+    vkDestroySampler(m_device, m_NoiseTexSampler, VK_NULL_HANDLE);
+  }
+  if (m_NoiseMapTex.mem != VK_NULL_HANDLE)
+  {
+    vkFreeMemory(m_device, m_NoiseMapTex.mem, nullptr);
+    m_NoiseMapTex.mem = VK_NULL_HANDLE;
+  }
 }
 
 /////////////////////////////////

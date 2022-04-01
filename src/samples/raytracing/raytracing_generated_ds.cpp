@@ -54,7 +54,7 @@ void RayTracer_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     //std::array<VkDescriptorImageInfo,  1 + additionalSize> descriptorImageInfo;
     std::array<VkAccelerationStructureKHR,  2 + additionalSize> accelStructs;
     std::array<VkWriteDescriptorSetAccelerationStructureKHR,  2 + additionalSize> descriptorAccelInfo;
-    std::array<VkWriteDescriptorSet,   3 + additionalSize> writeDescriptorSet;
+    std::array<VkWriteDescriptorSet,   2 + additionalSize> writeDescriptorSet;
 
     descriptorBufferInfo[0]        = VkDescriptorBufferInfo{};
     descriptorBufferInfo[0].buffer = CastSingleRay_local.out_colorBuffer;
