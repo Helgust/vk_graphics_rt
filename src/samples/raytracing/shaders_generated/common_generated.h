@@ -43,14 +43,14 @@ struct Light
 };
 
 //For buggy
-const Light l1 = { {100.0f,110.0f,75.0f,1.0f}, 0xff000000, 100.0f};
+const Light l1 = { {0.0f,20.0f,-30.0f,1.0f}, 0xff000000, 10.0f};
 const Light l2 = { {-60.0f,110.0f,70.0f,1.0f}, 0xff000000, 100.0f};
 
 //buster_drone
 //const Light l1 = { {40.0f,10.0f,150.0f,1.0f}, 0xff000000, 100000.0f };
 //const Light l2 = { {40.0f,-40.0f,120.0f,1.0f}, 0x0000ff00, 100000.0f };
 const Light m_lights[2] = { l1, l2 };
-const int samples_cnt = 1;
+const int samples_cnt = 10;
 const float light_rad = 10;
 bool soft_shadow = true;
 

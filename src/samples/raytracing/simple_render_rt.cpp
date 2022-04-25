@@ -121,7 +121,7 @@ void SimpleRender::RayTraceCPU()
   m_pCopyHelper->UpdateImage(m_rtImage.image, m_raytracedImageData.data(), m_width, m_height, 4, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-void SimpleRender::RayTraceGPU()
+void SimpleRender::RayTraceGPU(float a_time)
 {
   if(!m_pRayTracerGPU)
   {
@@ -142,11 +142,11 @@ void SimpleRender::RayTraceGPU()
     m_pRayTracerGPU->InitDescriptors(m_pScnMgr, m_NoiseMapTex, m_NoiseTexSampler);
     //m_pRayTracerGPU->InitDescriptors(m_pScnMgr);
     
-    m_pRayTracerGPU->UpdateAll(m_pCopyHelper);
+    m_pRayTracerGPU->UpdateAll(m_pCopyHelper, a_time);
   }
 
   m_pRayTracerGPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix);
-  m_pRayTracerGPU->UpdatePlainMembers(m_pCopyHelper);
+  m_pRayTracerGPU->UpdatePlainMembers(m_pCopyHelper, a_time);
   
   // do ray tracing
   //

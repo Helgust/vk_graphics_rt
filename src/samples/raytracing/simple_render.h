@@ -154,7 +154,7 @@ protected:
   std::unique_ptr<RayTracer> m_pRayTracerCPU;
   std::unique_ptr<RayTracer_GPU> m_pRayTracerGPU;
   void RayTraceCPU();
-  void RayTraceGPU();
+  void RayTraceGPU(float a_time);
 
   VkBuffer m_genColorBuffer = VK_NULL_HANDLE;
   VkDeviceMemory m_colorMem = VK_NULL_HANDLE;
@@ -177,7 +177,7 @@ protected:
   // *** GUI
   std::shared_ptr<IRenderGUI> m_pGUIRender;
   void SetupGUIElements();
-  void DrawFrameWithGUI();
+  void DrawFrameWithGUI(float a_time);
   //
 
   Camera   m_cam;
@@ -195,7 +195,7 @@ protected:
 
   std::shared_ptr<SceneManager> m_pScnMgr = nullptr;
 
-  void DrawFrameSimple();
+  void DrawFrameSimple(float a_time);
 
   void CreateInstance();
   void CreateDevice(uint32_t a_deviceId);

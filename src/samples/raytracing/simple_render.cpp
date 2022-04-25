@@ -10,7 +10,7 @@ void fillWriteDescriptorSetEntry2(VkDescriptorSet set, VkWriteDescriptorSet& wri
   VkDescriptorImageInfo* imageInfo, VkImageView imageView, VkSampler sampler,int binding) {
 
   //imageInfo->imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-  imageInfo->imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  imageInfo->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   imageInfo->imageView  = imageView;
   imageInfo->sampler  = sampler;
 
@@ -489,7 +489,7 @@ void SimpleRender::ProcessInput(const AppInput &input)
   if(input.keyPressed[GLFW_KEY_B])
   {
 #ifdef WIN32
-    std::system("cd ../resources/shaders && python compile_simple_render_shaders.py");
+    std::system("cd ../resources/shaders && py compile_simple_render_shaders.py");
 #else
     std::system("cd ../resources/shaders && python3 compile_simple_render_shaders.py");
 #endif
@@ -555,8 +555,9 @@ void SimpleRender::LoadScene(const char* path)
   // set large a_maxSets, because every window resize will cause the descriptor set for quad being to be recreated
   m_pBindings = std::make_shared<vk_utils::DescriptorMaker>(m_device, dtypes, 1000);
   
-  SetupRTImage();
   SetupNoiseImage();
+  SetupRTImage();
+  
   
   CreateUniformBuffer();
 
@@ -573,7 +574,7 @@ void SimpleRender::LoadScene(const char* path)
   UpdateView();
 }
 
-void SimpleRender::DrawFrameSimple()
+void SimpleRender::DrawFrameSimple(float a_time)
 {
   vkWaitForFences(m_device, 1, &m_frameFences[m_presentationResources.currentFrame], VK_TRUE, UINT64_MAX);
   vkResetFences(m_device, 1, &m_frameFences[m_presentationResources.currentFrame]);
@@ -593,7 +594,7 @@ void SimpleRender::DrawFrameSimple()
   else if(m_currentRenderMode == RenderMode::RAYTRACING)
   {
     if (ENABLE_HARDWARE_RT)
-      RayTraceGPU();
+      RayTraceGPU(a_time);
     else
       RayTraceCPU();
 
@@ -639,13 +640,13 @@ void SimpleRender::DrawFrame(float a_time, DrawMode a_mode)
   {
   case DrawMode::WITH_GUI:
     SetupGUIElements();
-    DrawFrameWithGUI();
+    DrawFrameWithGUI(a_time);
     break;
   case DrawMode::NO_GUI:
-    DrawFrameSimple();
+    DrawFrameSimple(a_time);
     break;
   default:
-    DrawFrameSimple();
+    DrawFrameSimple(a_time);
   }
 }
 
@@ -774,7 +775,7 @@ void SimpleRender::SetupGUIElements()
     ImGui::NewLine();
 
     ImGui::ColorEdit3("Meshes base color 1", m_uniforms.baseColor.M, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoInputs);
-    ImGui::SliderFloat3("Light source 1 position", m_uniforms.lightPos.M, -10.f, 10.f);
+    ImGui::SliderFloat3("Light source 1 position", m_uniforms.lightPos.M, -100.f, 100.f);
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
@@ -794,7 +795,7 @@ void SimpleRender::SetupGUIElements()
   ImGui::Render();
 }
 
-void SimpleRender::DrawFrameWithGUI()
+void SimpleRender::DrawFrameWithGUI(float a_time)
 {
   vkWaitForFences(m_device, 1, &m_frameFences[m_presentationResources.currentFrame], VK_TRUE, UINT64_MAX);
   vkResetFences(m_device, 1, &m_frameFences[m_presentationResources.currentFrame]);
@@ -823,7 +824,7 @@ void SimpleRender::DrawFrameWithGUI()
   else if(m_currentRenderMode == RenderMode::RAYTRACING)
   {
     if (ENABLE_HARDWARE_RT)
-      RayTraceGPU();
+      RayTraceGPU(a_time);
     else
       RayTraceCPU();
 

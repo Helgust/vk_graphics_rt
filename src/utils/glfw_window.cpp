@@ -27,7 +27,7 @@ struct input_sample
   bool wireframeMode        = false;
 
   float lastX, lastY, scrollY;
-  float camMoveSpeed     = 1.0f;
+  float camMoveSpeed     = 100.0f;
   float mouseSensitivity = 0.1f;
 
 } g_inputDesktop;

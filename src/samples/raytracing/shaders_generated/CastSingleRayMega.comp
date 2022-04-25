@@ -210,9 +210,11 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
 {
   vec4 rayPos = rayPosAndNear;
   vec4 rayDir = rayDirAndFar;
-  vec2 coordInit = vec2(gl_GlobalInvocationID[0]/64.0f, gl_GlobalInvocationID[1]/64.0f);
+  vec2 coordInit = vec2(gl_GlobalInvocationID[0], gl_GlobalInvocationID[1]);
+  //debugPrintfEXT("coordInit = %v2f\n", coordInit);
   vec4 color = vec4(0.0f, 0.0f, 0.0f, 0.0f);
   
+  uint hash = ((uint(coordInit.x) << 12) | uint(coordInit.y)) ^ floatBitsToUint(ubo.time);
 
   for (int j = 0; j < 1; ++j)
   {
@@ -229,19 +231,11 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
       vec2 coord = coordInit ;
       for (int u = 0; u < samples_cnt; u++)
       {   
-        
-        vec4 rngState = texture(NoiseTexture,coord);
-        if(coord.x >= 63)
-        {
-          coord.x = 0;
-          coord = coord + vec2(0.0f,1.0f);
-        }
-        if(coord.y >=63)
-        {
-          coord = coordInit;
-        }
-        coord = coord + vec2(float(u),0.0f);
-        //uint rngState = uint(hit.t) * uint(rayPos.y) * uint(rayPos.z) * gl_GlobalInvocationID[1] * tidY + tidX;
+        hash += uint(u);
+        vec2 new_coord = ivec2(hash / 1024u, hash % 1024u) ;
+        new_coord = new_coord / 1024;
+        new_coord = vec2(new_coord.x, new_coord.y * 2);
+        vec4 rngState = texture(NoiseTexture,new_coord);
         float distanceToCenter = length(m_lights[j].pos.xyz - hit_point);
         float q = sqrt(1.0f - (light_rad / distanceToCenter) * (light_rad / distanceToCenter));
 
@@ -254,7 +248,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
         {
           total += 1.0f;
           float shade = max(dot(n, normalize(lightDir)), 0.1f);
-          //float pdf_xp = 1.0f / (2*M_PI * (1.0f - q));
+          float pdf_xp = 1.0f / (2*M_PI * (1.0f - q));
           //color += shade * (1.0f / pdf_xp) * m_lights[j].intensity;
           color += shade;
         }

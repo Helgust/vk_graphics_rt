@@ -42,7 +42,10 @@ int main()
   initVulkanGLFW(app, window, VULKAN_DEVICE_ID);
 
   //app->LoadScene("../resources/scenes/043_cornell_normals/statex_00001.xml");
-  app->LoadScene("../resources/scenes/buggy/Buggy.gltf");
+  //app->LoadScene("../resources/scenes/powerplant/statex_00001.xml");
+  //app->LoadScene("../resources/scenes/03_san_miguel/statex_00001.xml");
+  app->LoadScene("../resources/scenes/sun_temple/scenelib/statex_00001.xml");
+  //app->LoadScene("../resources/scenes/buggy/Buggy.gltf");
   //app->LoadScene("../resources/scenes/box/Box.gltf");
 
   bool showGUI = true;
