@@ -205,6 +205,12 @@ vec4 CookTorrance (CRT_Hit hit, vec3 lightDir)
   return vec4 ( pow ( diff * base, vec3 ( 1.0 / gamma ) ), 1.0 );
 }
 
+vec2 random2(vec2 p) {
+    float r1 = texture(NoiseTexture, p/1024.).x;
+    float r2 = texture(NoiseTexture, (p + vec2(512))/1024.).x;
+    return vec2(r1, r2);
+}
+
 ///////////////////////////////////////////////////////////////// subkernels here
 void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in vec4 rayDirAndFar, uint out_colorOffset) 
 {
@@ -215,6 +221,13 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
   vec4 color = vec4(0.0f, 0.0f, 0.0f, 0.0f);
   
   uint hash = ((uint(coordInit.x) << 12) | uint(coordInit.y)) ^ floatBitsToUint(ubo.time);
+
+  vec2 rand1 = fract(Q25 * ubo.time + random2(coordInit+vec2(128,0)));
+
+  vec2 rand2 = fract(Q2 * ubo.time + random2(coordInit+vec2(256,0)));
+  vec2 rand3 = fract(Q22 * ubo.time + random2(coordInit+vec2(0,256)));
+  vec2 rand4 = fract(Q23 * ubo.time + random2(coordInit+vec2(256)));
+  vec2 rand5 = fract(Q24 * ubo.time + random2(coordInit+vec2(128)));
 
   for (int j = 0; j < 1; ++j)
   {
@@ -232,10 +245,10 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
       for (int u = 0; u < samples_cnt; u++)
       {   
         hash += uint(u);
-        vec2 new_coord = ivec2(hash / 1024u, hash % 1024u) ;
+        vec2 new_coord = ivec2(hash / 1024u, hash) % 1024u ;
         new_coord = new_coord / 1024;
-        new_coord = vec2(new_coord.x, new_coord.y * 2);
-        vec4 rngState = texture(NoiseTexture,new_coord);
+        // new_coord = vec2(new_coord.x, new_coord.y * 4);
+        vec4 rngState = texture(NoiseTexture,rand4);
         float distanceToCenter = length(m_lights[j].pos.xyz - hit_point);
         float q = sqrt(1.0f - (light_rad / distanceToCenter) * (light_rad / distanceToCenter));
 
@@ -248,7 +261,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
         {
           total += 1.0f;
           float shade = max(dot(n, normalize(lightDir)), 0.1f);
-          float pdf_xp = 1.0f / (2*M_PI * (1.0f - q));
+          //float pdf_xp = 1.0f / (2*M_PI * (1.0f - q));
           //color += shade * (1.0f / pdf_xp) * m_lights[j].intensity;
           color += shade;
         }
@@ -274,9 +287,11 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
 void kernel_InitEyeRay(uint tidX, uint tidY, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar) 
 {
   
+  uint hash = ((uint(gl_GlobalInvocationID[0]) << 12) | uint(gl_GlobalInvocationID[1])) ^ floatBitsToUint(ubo.time);
+  hash += uint(gl_LocalInvocationIndex);
   rayPosAndNear = ubo.m_camPos; // to_float4(m_camPos, 1.0f);
   
-  const vec3 rayDir = EyeRayDir(float(tidX), float(tidY), float(ubo.m_width), float(ubo.m_height), ubo.m_invProjView);
+  const vec3 rayDir = EyeRayDir(float(tidX), float(tidY), float(ubo.m_width), float(ubo.m_height), ubo.m_invProjView, uint(hash));
   rayDirAndFar  = vec4(rayDir, MAXFLOAT);
 
 }

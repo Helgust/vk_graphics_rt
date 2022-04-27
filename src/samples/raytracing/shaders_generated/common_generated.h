@@ -43,7 +43,7 @@ struct Light
 };
 
 //For buggy
-const Light l1 = { {0.0f,20.0f,-30.0f,1.0f}, 0xff000000, 10.0f};
+const Light l1 = { {0.0f,20.0f,-50.0f,1.0f}, 0xff000000, 10.0f};
 const Light l2 = { {-60.0f,110.0f,70.0f,1.0f}, 0xff000000, 100.0f};
 
 //buster_drone
@@ -88,12 +88,37 @@ struct Vertex {
 /////////////////// local functions /////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
-vec3 EyeRayDir(float x, float y, float w, float h, mat4 a_mViewProjInv) {
-  vec4 pos = vec4(2.0f * (x + 0.5f) / w - 1.0f, 2.0f * (y + 0.5f) / h - 1.0f, 0.0f, 1.0f);
+const float Q1 = 0.6180339887498948482;
+const float P2 = 1.324717957244746;
+const vec2 Q2 = vec2(1./P2, 1./P2/P2);
+const vec2 Q22 = vec2(2./pow(P2,4.), 1./pow(P2,6.));
+const vec2 Q23 = vec2(2./pow(P2,7.), 1./pow(P2,8.));
+const vec2 Q24 = vec2(3./pow(P2,9.), 5./pow(P2,10.));
+const vec2 Q25 = vec2(3./pow(P2,11.), 5./pow(P2,12.));
+
+const int HALTON_COUNT = 8;
+
+const float JITTER_SCALE = 1.0;
+
+const vec2 HALTON_SEQUENCE[HALTON_COUNT] = vec2[HALTON_COUNT](
+    vec2(1.0 / 2.0, 1.0 / 3.0),
+    vec2(1.0 / 4.0, 2.0 / 3.0),
+    vec2(3.0 / 4.0, 1.0 / 9.0),
+    vec2(1.0 / 8.0, 4.0 / 9.0),
+    vec2(5.0 / 8.0, 7.0 / 9.0),
+    vec2(3.0 / 8.0, 2.0 / 9.0),
+    vec2(7.0 / 8.0, 5.0 / 9.0),
+    vec2(1.0 / 16.0, 8.0 / 9.0)
+);
+
+
+
+vec3 EyeRayDir(float x, float y, float w, float h, mat4 a_mViewProjInv, uint index) {
+  vec2 jitter = (HALTON_SEQUENCE[index % HALTON_COUNT]- 0.5) * JITTER_SCALE;
+  vec4 pos = vec4(2.0f * (x + jitter.x + 0.5f) / w - 1.0f, 2.0f * (y + jitter.y + 0.5f) / h - 1.0f, 0.0f, 1.0f);
 
   pos = a_mViewProjInv * pos;
   pos /= pos.w;
-
   //  pos.y *= (-1.0f);
 
   return normalize(pos.xyz);
