@@ -51,7 +51,7 @@ const Light l2 = { {-60.0f,110.0f,70.0f,1.0f}, 0xff000000, 100.0f};
 //const Light l2 = { {40.0f,-40.0f,120.0f,1.0f}, 0x0000ff00, 100000.0f };
 const Light m_lights[2] = { l1, l2 };
 const int samples_cnt = 10;
-const float light_rad = 5;
+const float light_rad = 10;
 bool soft_shadow = true;
 
 struct MaterialData_pbrMR
