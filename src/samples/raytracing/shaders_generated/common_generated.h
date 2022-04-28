@@ -118,8 +118,8 @@ vec3 EyeRayDir(float x, float y, float w, float h, mat4 a_mViewProjInv, uint ind
   vec4 pos = vec4(2.0f * (x + jitter.x + 0.5f) / w - 1.0f, 2.0f * (y + jitter.y + 0.5f) / h - 1.0f, 0.0f, 1.0f);
 
   pos = a_mViewProjInv * pos;
-  pos /= pos.w;
-  //  pos.y *= (-1.0f);
+  //pos /= pos.w; // figured out for what purpose it will be done
+  //pos.y *= (-1.0f);
 
   return normalize(pos.xyz);
 }
