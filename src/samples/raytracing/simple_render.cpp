@@ -197,6 +197,7 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.imageAvailable));
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.renderingFinished));
   m_screenRenderPass = vk_utils::createDefaultRenderPass(m_device, m_swapchain.GetFormat());
+  m_taaRenderPass = vk_utils::createDefaultRenderPass(m_device, m_swapchain.GetFormat(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   std::vector<VkFormat> depthFormats = {
       VK_FORMAT_D32_SFLOAT,
@@ -211,7 +212,31 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
 
   m_pGUIRender = std::make_shared<ImGuiRender>(m_instance, m_device, m_physicalDevice, m_queueFamilyIDXs.graphics, m_graphicsQueue, m_swapchain);
 
-  SetupQuadRenderer();
+
+  m_resImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  vk_utils::createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, m_swapchain.GetFormat(), 
+   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &m_resImage, nullptr, nullptr
+  );
+  // vk_utils::createImageViewAndBindMem(m_device, &image, &imageView);
+  m_resImageSampler = vk_utils::createSampler(m_device);
+  {
+    std::vector<VkImageView> attachments;
+    attachments.push_back(m_resImage.view);
+    attachments.push_back(m_depthBuffer.view);
+
+    VkFramebufferCreateInfo framebufferInfo = {};
+    framebufferInfo.sType                   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass              = m_taaRenderPass;
+    framebufferInfo.attachmentCount         = (uint32_t)attachments.size();
+    framebufferInfo.pAttachments            = attachments.data();
+    framebufferInfo.width                   = m_width;
+    framebufferInfo.height                  = m_height;
+    framebufferInfo.layers                  = 1;
+
+    VK_CHECK_RESULT(vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_taaFrameBuffer));
+  }
+
+  //SetupQuadRenderer();
 }
 
 void SimpleRender::CreateInstance()
@@ -250,6 +275,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindEnd(&m_dSet, &m_dSetLayout);
+  
 
   // if we are recreating pipeline (for example, to reload shaders)
   // we need to cleanup old pipeline
@@ -384,9 +410,35 @@ void SimpleRender::BuildCommandBufferQuad(VkCommandBuffer a_cmdBuff, VkImageView
 
   VK_CHECK_RESULT(vkBeginCommandBuffer(a_cmdBuff, &beginInfo));
   {
-    float scaleAndOffset[4] = { 0.5f, 0.5f, -0.5f, +0.5f };
-    m_pFSQuad->SetRenderTarget(a_targetImageView);
-    m_pFSQuad->DrawCmd(a_cmdBuff, m_quadDS, scaleAndOffset);
+    vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
+    vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
+
+    {
+    VkRenderPassBeginInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = m_taaRenderPass;
+    renderPassInfo.framebuffer = m_taaFrameBuffer;
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = m_swapchain.GetExtent();
+    VkClearValue clearValues[2] = {};
+    clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+    clearValues[1].depthStencil = {1.0f, 0};
+    renderPassInfo.clearValueCount = 2;
+    renderPassInfo.pClearValues = &clearValues[0];
+
+    vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    {
+      vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_taaPipeline.pipeline);
+      vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_taaPipeline.layout, 0, 1, &m_taaDS, 0, nullptr);
+      vkCmdPushConstants(a_cmdBuff, m_taaPipeline.layout,VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushConst2M), &pushConst2M);
+      vkCmdDrawIndexed(a_cmdBuff, 4, 1, 0, 0, 0);
+    }
+    vkCmdEndRenderPass(a_cmdBuff);
+  }
+
+    // float scaleAndOffset[4] = { 0.5f, 0.5f, -0.5f, +0.5f };
+    // m_pFSQuad->SetRenderTarget(a_targetImageView);
+    // m_pFSQuad->DrawCmd(a_cmdBuff, m_quadDS, scaleAndOffset);
   }
 
   VK_CHECK_RESULT(vkEndCommandBuffer(a_cmdBuff));
@@ -473,8 +525,10 @@ void SimpleRender::RecreateSwapChain()
   m_pRayTracerCPU = nullptr;
   m_pRayTracerGPU = nullptr;
   SetupRTImage();
-  SetupQuadRenderer();
-  SetupQuadDescriptors();
+  SetupNewRTImage();
+  SetupTAAPipeline();
+  //SetupQuadRenderer();
+  //SetupQuadDescriptors();
   //
 
   m_pGUIRender->OnSwapchainChanged(m_swapchain);
@@ -548,8 +602,8 @@ void SimpleRender::LoadScene(const char* path)
   }
 
   std::vector<std::pair<VkDescriptorType, uint32_t> > dtypes = {
-    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,             1},
-    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     1}
+    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,             5},
+    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     5}
   };
 
   // set large a_maxSets, because every window resize will cause the descriptor set for quad being to be recreated
@@ -557,12 +611,15 @@ void SimpleRender::LoadScene(const char* path)
   
   SetupNoiseImage();
   SetupRTImage();
+  SetupNewRTImage();
   
   
   CreateUniformBuffer();
 
   SetupSimplePipeline();
-  SetupQuadDescriptors();
+  SetupTAAPipeline();
+  //SetupQuadDescriptors();
+  
 
 //  auto loadedCam = m_pScnMgr->GetCamera(0);
 //  m_cam.fov = loadedCam.fov;

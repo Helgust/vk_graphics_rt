@@ -40,6 +40,8 @@ class SimpleRender : public IRender
 public:
   const std::string VERTEX_SHADER_PATH   = "../resources/shaders/simple.vert";
   const std::string FRAGMENT_SHADER_PATH = "../resources/shaders/simple.frag";
+  const std::string TAA_VERTEX_SHADER_PATH   = "../resources/shaders/taa.vert";
+  const std::string TAA_FRAGMENT_SHADER_PATH = "../resources/shaders/taa.frag";
   const bool        ENABLE_HARDWARE_RT   = true;
 
   static constexpr uint64_t STAGING_MEM_SIZE = 16 * 16 * 1024u;
@@ -150,6 +152,19 @@ protected:
   vk_utils::VulkanImageMem m_rtImage;
   VkSampler                m_rtImageSampler = VK_NULL_HANDLE;
 
+  VkFramebuffer m_taaFrameBuffer;
+  pipeline_data_t m_taaPipeline {};
+  VkRenderPass m_taaRenderPass = VK_NULL_HANDLE; // rasterization renderpass
+  
+  VkDescriptorSet m_taaDS = VK_NULL_HANDLE;
+  VkDescriptorSetLayout m_taaDSLayout = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_newRtImage;
+  VkSampler m_newRtImageSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_resImage;
+  VkSampler                m_resImageSampler = VK_NULL_HANDLE;
+
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
   std::unique_ptr<RayTracer> m_pRayTracerCPU;
   std::unique_ptr<RayTracer_GPU> m_pRayTracerGPU;
@@ -207,7 +222,9 @@ protected:
   void BuildCommandBufferQuad(VkCommandBuffer a_cmdBuff, VkImageView a_targetImageView);
   void SetupQuadRenderer();
   void SetupQuadDescriptors();
+  void SetupTAAPipeline();
   void SetupRTImage();
+  void SetupNewRTImage();
   void SetupRTScene();
   // ***************************
 

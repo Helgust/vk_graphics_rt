@@ -8,7 +8,7 @@ void SimpleRender::SetupQuadRenderer()
 {
   vk_utils::RenderTargetInfo2D rtargetInfo = {};
   rtargetInfo.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-  rtargetInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  rtargetInfo.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   rtargetInfo.format = m_swapchain.GetFormat();
   rtargetInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   rtargetInfo.size   = m_swapchain.GetExtent();
@@ -20,8 +20,45 @@ void SimpleRender::SetupQuadRenderer()
 void SimpleRender::SetupQuadDescriptors()
 {
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
-  m_pBindings->BindImage(0, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+  m_pBindings->BindImage(0, m_resImage.view, m_resImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
   m_pBindings->BindEnd(&m_quadDS, &m_quadDSLayout);
+}
+  
+void SimpleRender::SetupTAAPipeline()
+{
+  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
+  m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+  m_pBindings->BindImage(1, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+  m_pBindings->BindImage(2, m_newRtImage.view, m_newRtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+  m_pBindings->BindEnd(&m_taaDS, &m_taaDSLayout);
+
+  // if we are recreating pipeline (for example, to reload shaders)
+  // we need to cleanup old pipeline
+  if(m_taaPipeline.layout != VK_NULL_HANDLE)
+  {
+    vkDestroyPipelineLayout(m_device, m_taaPipeline.layout, nullptr);
+    m_taaPipeline.layout = VK_NULL_HANDLE;
+  }
+  if(m_taaPipeline.pipeline != VK_NULL_HANDLE)
+  {
+    vkDestroyPipeline(m_device, m_taaPipeline.pipeline, nullptr);
+    m_taaPipeline.pipeline = VK_NULL_HANDLE;
+  }
+
+  vk_utils::GraphicsPipelineMaker maker;
+
+  std::unordered_map<VkShaderStageFlagBits, std::string> shader_paths;
+
+  shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = TAA_FRAGMENT_SHADER_PATH + ".spv";
+  shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = TAA_VERTEX_SHADER_PATH + ".spv";
+
+  maker.LoadShaders(m_device, shader_paths);
+
+  m_taaPipeline.layout = maker.MakeLayout(m_device, {m_dSetLayout}, sizeof(pushConst2M));
+  maker.SetDefaultState(m_width, m_height);
+
+  m_taaPipeline.pipeline = maker.MakePipeline(m_device, m_pScnMgr->GetPipelineVertexInputStateCreateInfo(),
+                                                       m_taaRenderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
 }
 
 void SimpleRender::SetupNoiseImage() 
@@ -53,11 +90,26 @@ void SimpleRender::SetupRTImage()
   // change format and usage according to your implementation of RT
   m_rtImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_rtImage);
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT, &m_rtImage);
 
   if(m_rtImageSampler == VK_NULL_HANDLE)
   {
     m_rtImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+  }
+}
+
+void SimpleRender::SetupNewRTImage()
+{
+  vk_utils::deleteImg(m_device, &m_newRtImage);
+
+  // change format and usage according to your implementation of RT
+  m_newRtImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT, &m_newRtImage);
+
+  if(m_newRtImageSampler == VK_NULL_HANDLE)
+  {
+    m_newRtImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 }
 // ***************************************************************************************************************************
@@ -179,7 +231,7 @@ void SimpleRender::RayTraceGPU(float a_time)
       transferImage.pNext               = nullptr;
       transferImage.srcAccessMask       = 0;
       transferImage.dstAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
-      transferImage.oldLayout           = VK_IMAGE_LAYOUT_UNDEFINED;
+      transferImage.oldLayout           = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
       transferImage.newLayout           = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL; 
       transferImage.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
       transferImage.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
