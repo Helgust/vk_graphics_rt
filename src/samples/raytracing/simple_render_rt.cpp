@@ -20,8 +20,8 @@ void SimpleRender::SetupQuadRenderer()
 void SimpleRender::SetupQuadDescriptors()
 {
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
-  m_pBindings->BindImage(0, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-  m_pBindings->BindEnd(&m_quadDS, &m_quadDSLayout);
+  m_pBindings->BindImage(0, m_resImage.view, m_taaImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+  m_pBindings->BindEnd(&m_finalQuadDS, &m_finalQuadDSLayout);
 }
 
 void SimpleRender::SetupNoiseImage() 
@@ -58,6 +58,21 @@ void SimpleRender::SetupRTImage()
   if(m_rtImageSampler == VK_NULL_HANDLE)
   {
     m_rtImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+  }
+}
+
+void SimpleRender::SetupTaaImage()
+{
+  vk_utils::deleteImg(m_device, &m_taaImage);
+
+  // change format and usage according to your implementation of RT
+  m_taaImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_taaImage);
+
+  if(m_taaImageSampler == VK_NULL_HANDLE)
+  {
+    m_taaImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 }
 // ***************************************************************************************************************************
@@ -213,7 +228,6 @@ void SimpleRender::RayTraceGPU(float a_time)
   
       vkCmdCopyBufferToImage(commandBuffer, m_genColorBuffer, m_rtImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
     }
-    
     // get back normal image layout
     {
       VkImageMemoryBarrier transferImage;

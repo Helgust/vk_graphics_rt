@@ -197,6 +197,7 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.imageAvailable));
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.renderingFinished));
   m_screenRenderPass = vk_utils::createDefaultRenderPass(m_device, m_swapchain.GetFormat());
+  m_quadRenderPass = vk_utils::createDefaultRenderPass(m_device, m_swapchain.GetFormat(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   std::vector<VkFormat> depthFormats = {
       VK_FORMAT_D32_SFLOAT,
@@ -208,6 +209,31 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
   vk_utils::getSupportedDepthFormat(m_physicalDevice, depthFormats, &m_depthBuffer.format);
   m_depthBuffer  = vk_utils::createDepthTexture(m_device, m_physicalDevice, m_width, m_height, m_depthBuffer.format);
   m_frameBuffers = vk_utils::createFrameBuffers(m_device, m_swapchain, m_screenRenderPass, m_depthBuffer.view);
+
+  m_taaImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, m_swapchain.GetFormat(),
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, &m_taaImage, nullptr, nullptr);
+  m_taaImageSampler = vk_utils::createSampler(m_device);
+
+  m_resImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, m_swapchain.GetFormat(),
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, &m_resImage, nullptr, nullptr);
+  m_resImageSampler = vk_utils::createSampler(m_device);
+
+  std::vector<VkImageView> attachments;
+  attachments.push_back(m_resImage.view);
+  attachments.push_back(m_depthBuffer.view);
+
+  VkFramebufferCreateInfo framebufferInfo = {};
+  framebufferInfo.sType                   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  framebufferInfo.renderPass              = m_quadRenderPass;
+  framebufferInfo.attachmentCount         = (uint32_t)attachments.size();;
+  framebufferInfo.pAttachments            = attachments.data();
+  framebufferInfo.width                   = m_width;
+  framebufferInfo.height                  = m_height;
+  framebufferInfo.layers                  = 1;
+
+  VK_CHECK_RESULT(vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_quadFrameBuffer));
 
   m_pGUIRender = std::make_shared<ImGuiRender>(m_instance, m_device, m_physicalDevice, m_queueFamilyIDXs.graphics, m_graphicsQueue, m_swapchain);
 
@@ -277,6 +303,41 @@ void SimpleRender::SetupSimplePipeline()
 
   m_basicForwardPipeline.pipeline = maker.MakePipeline(m_device, m_pScnMgr->GetPipelineVertexInputStateCreateInfo(),
                                                        m_screenRenderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
+}
+
+void SimpleRender::SetupTAAPipeline()
+{
+  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
+  m_pBindings->BindImage(0, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+  m_pBindings->BindImage(1, m_taaImage.view, m_taaImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+  m_pBindings->BindEnd(&m_quadDS, &m_quadDSLayout);
+
+  // if we are recreating pipeline (for example, to reload shaders)
+  // we need to cleanup old pipeline
+  // if(m_quadPipeline.layout != VK_NULL_HANDLE)
+  // {
+  //   vkDestroyPipelineLayout(m_device, m_quadPipeline.layout, nullptr);
+  //   m_quadPipeline.layout = VK_NULL_HANDLE;
+  // }
+  // if(m_quadPipeline.pipeline != VK_NULL_HANDLE)
+  // {
+  //   vkDestroyPipeline(m_device, m_quadPipeline.pipeline, nullptr);
+  //   m_quadPipeline.pipeline = VK_NULL_HANDLE;
+  // }
+
+  vk_utils::GraphicsPipelineMaker maker;
+
+  std::unordered_map<VkShaderStageFlagBits, std::string> shader_paths;
+  shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = TAA_FRAGMENT_SHADER_PATH + ".spv";
+  shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = TAA_VERTEX_SHADER_PATH + ".spv";
+
+  maker.LoadShaders(m_device, shader_paths);
+
+  m_quadPipeline.layout = maker.MakeLayout(m_device, {m_quadDSLayout}, sizeof(uint32_t));
+  maker.SetDefaultState(m_width, m_height);
+
+  m_quadPipeline.pipeline = maker.MakePipeline(m_device, m_pScnMgr->GetPipelineVertexInputStateCreateInfo(),
+                                                       m_quadRenderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
 }
 
 void SimpleRender::CreateUniformBuffer()
@@ -383,11 +444,54 @@ void SimpleRender::BuildCommandBufferQuad(VkCommandBuffer a_cmdBuff, VkImageView
   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
   VK_CHECK_RESULT(vkBeginCommandBuffer(a_cmdBuff, &beginInfo));
-  {
+
+  vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
+  vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
+
+    VkRenderPassBeginInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = m_quadRenderPass;
+    renderPassInfo.framebuffer = m_quadFrameBuffer;
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = m_swapchain.GetExtent();
+    VkClearValue clearValues[2] = {};
+    clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+    clearValues[1].depthStencil = {1.0f, 0};
+    renderPassInfo.clearValueCount = 2;
+    renderPassInfo.pClearValues = &clearValues[0];
+
+    vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    {
+      vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_quadPipeline.pipeline);
+      vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_quadPipeline.layout, 0, 1, &m_quadDS, 0, nullptr);
+      uint32_t radius = static_cast<uint32_t>(filterRadius);
+      vkCmdPushConstants(a_cmdBuff, m_quadPipeline.layout,VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uint32_t), &radius);
+      vkCmdDrawIndexed(a_cmdBuff, 4, 1, 0, 0, 0);
+    }
+    vkCmdEndRenderPass(a_cmdBuff);
+
+    // execute copy
+    //
+    {
+      VkImageSubresourceLayers subresourceLayers = {};
+      subresourceLayers.aspectMask               = VK_IMAGE_ASPECT_COLOR_BIT;
+      subresourceLayers.mipLevel                 = 0;
+      subresourceLayers.baseArrayLayer           = 0;
+      subresourceLayers.layerCount               = 1;
+
+      VkImageCopy copyRegion = {};
+      copyRegion.srcSubresource = subresourceLayers;
+      copyRegion.srcOffset = VkOffset3D{ 0, 0, 0 };
+      copyRegion.dstSubresource = subresourceLayers;
+      copyRegion.dstOffset = VkOffset3D{ 0, 0, 0 };
+      copyRegion.extent = VkExtent3D{ uint32_t(m_width), uint32_t(m_height), 1 };
+  
+      vkCmdCopyImage(a_cmdBuff, m_resImage.image,VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_taaImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+    }
+
     float scaleAndOffset[4] = { 0.5f, 0.5f, -0.5f, +0.5f };
     m_pFSQuad->SetRenderTarget(a_targetImageView);
-    m_pFSQuad->DrawCmd(a_cmdBuff, m_quadDS, scaleAndOffset);
-  }
+    m_pFSQuad->DrawCmd(a_cmdBuff, m_finalQuadDS, scaleAndOffset);
 
   VK_CHECK_RESULT(vkEndCommandBuffer(a_cmdBuff));
 }
@@ -415,10 +519,18 @@ void SimpleRender::CleanupPipelineAndSwapchain()
   }
   m_frameBuffers.clear();
 
+  vkDestroyFramebuffer(m_device,m_quadFrameBuffer,nullptr);
+
   if(m_screenRenderPass != VK_NULL_HANDLE)
   {
     vkDestroyRenderPass(m_device, m_screenRenderPass, nullptr);
     m_screenRenderPass = VK_NULL_HANDLE;
+  }
+
+  if(m_quadRenderPass != VK_NULL_HANDLE)
+  {
+    vkDestroyRenderPass(m_device, m_quadRenderPass, nullptr);
+    m_quadRenderPass = VK_NULL_HANDLE;
   }
 
   vk_utils::deleteImg(m_device, &m_NoiseMapTex);
@@ -473,6 +585,7 @@ void SimpleRender::RecreateSwapChain()
   m_pRayTracerCPU = nullptr;
   m_pRayTracerGPU = nullptr;
   SetupRTImage();
+  //SetupTaaImage();
   SetupQuadRenderer();
   SetupQuadDescriptors();
   //
@@ -490,11 +603,16 @@ void SimpleRender::ProcessInput(const AppInput &input)
   {
 #ifdef WIN32
     std::system("cd ../resources/shaders && py compile_simple_render_shaders.py");
+    std::system("cd ../resources/shaders && py compile_quad_render_shaders.py");
 #else
     std::system("cd ../resources/shaders && python3 compile_simple_render_shaders.py");
+    std::system("cd ../resources/shaders && python3 compile_quad_render_shaders.py");
 #endif
 
     SetupSimplePipeline();
+    SetupTAAPipeline();
+    SetupQuadRenderer();
+
 
     for (uint32_t i = 0; i < m_framesInFlight; ++i)
     {
@@ -557,11 +675,13 @@ void SimpleRender::LoadScene(const char* path)
   
   SetupNoiseImage();
   SetupRTImage();
+  //SetupTaaImage();
   
   
   CreateUniformBuffer();
 
   SetupSimplePipeline();
+  SetupTAAPipeline();
   SetupQuadDescriptors();
 
 //  auto loadedCam = m_pScnMgr->GetCamera(0);
@@ -667,6 +787,20 @@ void SimpleRender::Cleanup()
     m_rtImageSampler = VK_NULL_HANDLE;
   }
   vk_utils::deleteImg(m_device, &m_rtImage);
+
+  if(m_taaImageSampler != VK_NULL_HANDLE)
+  {
+    vkDestroySampler(m_device, m_taaImageSampler, nullptr);
+    m_taaImageSampler = VK_NULL_HANDLE;
+  }
+  vk_utils::deleteImg(m_device, &m_taaImage);
+
+  if(m_resImageSampler != VK_NULL_HANDLE)
+  {
+    vkDestroySampler(m_device, m_resImageSampler, nullptr);
+    m_resImageSampler = VK_NULL_HANDLE;
+  }
+  vk_utils::deleteImg(m_device, &m_resImage);
 
   m_pFSQuad = nullptr;
 

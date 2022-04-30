@@ -40,6 +40,9 @@ class SimpleRender : public IRender
 public:
   const std::string VERTEX_SHADER_PATH   = "../resources/shaders/simple.vert";
   const std::string FRAGMENT_SHADER_PATH = "../resources/shaders/simple.frag";
+  const std::string TAA_VERTEX_SHADER_PATH = "../resources/shaders/taa.vert";
+  const std::string TAA_FRAGMENT_SHADER_PATH = "../resources/shaders/taa.frag";
+  
   const bool        ENABLE_HARDWARE_RT   = true;
 
   static constexpr uint64_t STAGING_MEM_SIZE = 16 * 16 * 1024u;
@@ -150,6 +153,25 @@ protected:
   vk_utils::VulkanImageMem m_rtImage;
   VkSampler                m_rtImageSampler = VK_NULL_HANDLE;
 
+  vk_utils::VulkanImageMem m_taaImage;
+  VkSampler                m_taaImageSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_resImage;
+  VkSampler                m_resImageSampler = VK_NULL_HANDLE;
+  pipeline_data_t m_quadPipeline;
+  VkRenderPass m_quadRenderPass = VK_NULL_HANDLE; 
+
+  VkFramebuffer    m_quadFrameBuffer = VK_NULL_HANDLE;
+  VkImageView      m_quadTargetView;
+
+  VkDescriptorSet m_finalQuadDS = VK_NULL_HANDLE;
+  VkDescriptorSetLayout m_finalQuadDSLayout = VK_NULL_HANDLE;
+
+  int filterRadius = 0;
+
+  void SetupTAAPipeline();
+  
+
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
   std::unique_ptr<RayTracer> m_pRayTracerCPU;
   std::unique_ptr<RayTracer_GPU> m_pRayTracerGPU;
@@ -208,6 +230,7 @@ protected:
   void SetupQuadRenderer();
   void SetupQuadDescriptors();
   void SetupRTImage();
+  void SetupTaaImage();
   void SetupRTScene();
   // ***************************
 
