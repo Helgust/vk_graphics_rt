@@ -25,6 +25,8 @@ struct UniformParams
   vec4  lightPos;
   vec4  baseColor;
   float time;
+  mat4 m_invProjView; 
+  vec4 m_camPos; 
   bool animateLightColor;
 };
 

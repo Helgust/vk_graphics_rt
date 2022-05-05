@@ -40,19 +40,21 @@ struct Light
   vec4 pos;
   uint color;
   float intensity;
+  float rad;
 };
 
 //For buggy
-const Light l1 = { {0.0f,20.0f,-50.0f,1.0f}, 0xff000000, 100000.0f};
-const Light l2 = { {-60.0f,110.0f,70.0f,1.0f}, 0xff000000, 100.0f};
+const Light l1 = { {-2.0f,20.0f,0.0f,0.0f}, 0xff000000, 10.0f,3.0f,};
+const Light l2 = { {0.0f,110.0f,0.0f,1.0f},0xff000000, 5.0f,5.0f,};
 
 //buster_drone
 //const Light l1 = { {40.0f,10.0f,150.0f,1.0f}, 0xff000000, 100000.0f };
 //const Light l2 = { {40.0f,-40.0f,120.0f,1.0f}, 0x0000ff00, 100000.0f };
 const Light m_lights[2] = { l1, l2 };
-const int samples_cnt = 10;
-const float light_rad = 10;
+const int samples_cnt = 8;
+//const float light_dist = 20.0f;
 bool soft_shadow = true;
+bool debug_light_pos = true;
 
 struct MaterialData_pbrMR
 {
@@ -118,7 +120,7 @@ vec3 EyeRayDir(float x, float y, float w, float h, mat4 a_mViewProjInv, uint ind
   vec4 pos = vec4(2.0f * (x + jitter.x + 0.5f) / w - 1.0f, 2.0f * (y + jitter.y + 0.5f) / h - 1.0f, 0.0f, 1.0f);
 
   pos = a_mViewProjInv * pos;
-  //pos /= pos.w; // figured out for what purpose it will be done
+  //pos /= abs(pos.w);
   //pos.y *= (-1.0f);
 
   return normalize(pos.xyz);
@@ -145,7 +147,7 @@ vec3 PointOnLight(Light m_light,float st)
   float theta = st*2*M_PI;
   float phi = acos(2*st - 1);
   //float r =  sqrt(stepAndOutputRNGFloat(st))*light_rad;
-  return vec3(m_light.pos.x + light_rad*sin(phi)*cos(theta),m_light.pos.y + light_rad*sin(phi)*sin(theta),m_light.pos.z + light_rad*cos(phi));
+  return vec3(m_light.pos.x + m_light.rad*sin(phi)*cos(theta),m_light.pos.y + m_light.rad*sin(phi)*sin(theta),m_light.pos.z + m_light.rad*cos(phi));
 }
 
 vec3 PointOnLightOld(Light m_light,uint st)
@@ -153,7 +155,7 @@ vec3 PointOnLightOld(Light m_light,uint st)
   float theta = stepAndOutputRNGFloat(st)*2*M_PI;
   float phi = acos(2*stepAndOutputRNGFloat(st) - 1);
   //float r =  sqrt(stepAndOutputRNGFloat(st))*light_rad;
-  return vec3(m_light.pos.x + light_rad*sin(phi)*cos(theta),m_light.pos.y + light_rad*sin(phi)*sin(theta),m_light.pos.z + light_rad*cos(phi));
+  return vec3(m_light.pos.x + m_light.rad*sin(phi)*cos(theta),m_light.pos.y + m_light.rad*sin(phi)*sin(theta),m_light.pos.z + m_light.rad*cos(phi));
 }
 
 

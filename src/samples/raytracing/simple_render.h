@@ -118,6 +118,7 @@ protected:
   struct
   {
     LiteMath::float4x4 projView;
+    LiteMath::float4x4 prevProjView;
     LiteMath::float4x4 model;
   } pushConst2M;
 

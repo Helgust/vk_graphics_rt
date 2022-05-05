@@ -8,7 +8,7 @@ void SimpleRender::SetupQuadRenderer()
 {
   vk_utils::RenderTargetInfo2D rtargetInfo = {};
   rtargetInfo.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-  rtargetInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  rtargetInfo.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   rtargetInfo.format = m_swapchain.GetFormat();
   rtargetInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   rtargetInfo.size   = m_swapchain.GetExtent();
@@ -194,7 +194,7 @@ void SimpleRender::RayTraceGPU(float a_time)
       transferImage.pNext               = nullptr;
       transferImage.srcAccessMask       = 0;
       transferImage.dstAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
-      transferImage.oldLayout           = VK_IMAGE_LAYOUT_UNDEFINED;
+      transferImage.oldLayout           = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
       transferImage.newLayout           = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL; 
       transferImage.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
       transferImage.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -234,7 +234,7 @@ void SimpleRender::RayTraceGPU(float a_time)
       transferImage.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
       transferImage.pNext               = nullptr;
       transferImage.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
-      transferImage.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT;
+      transferImage.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
       transferImage.oldLayout           = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
       transferImage.newLayout           = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; 
       transferImage.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;

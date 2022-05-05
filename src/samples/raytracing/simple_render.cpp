@@ -307,9 +307,10 @@ void SimpleRender::SetupSimplePipeline()
 
 void SimpleRender::SetupTAAPipeline()
 {
-  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
-  m_pBindings->BindImage(0, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-  m_pBindings->BindImage(1, m_taaImage.view, m_taaImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
+  m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+  m_pBindings->BindImage(1, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+  m_pBindings->BindImage(2, m_taaImage.view, m_taaImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
   m_pBindings->BindEnd(&m_quadDS, &m_quadDSLayout);
 
   // if we are recreating pipeline (for example, to reload shaders)
@@ -333,7 +334,7 @@ void SimpleRender::SetupTAAPipeline()
 
   maker.LoadShaders(m_device, shader_paths);
 
-  m_quadPipeline.layout = maker.MakeLayout(m_device, {m_quadDSLayout}, sizeof(uint32_t));
+  m_quadPipeline.layout = maker.MakeLayout(m_device, {m_quadDSLayout}, sizeof(pushConst2M));
   maker.SetDefaultState(m_width, m_height);
 
   m_quadPipeline.pipeline = maker.MakePipeline(m_device, m_pScnMgr->GetPipelineVertexInputStateCreateInfo(),
@@ -362,6 +363,8 @@ void SimpleRender::CreateUniformBuffer()
   m_uniforms.lightPos  = LiteMath::float4(0.0f, 1.0f,  1.0f, 1.0f);
   m_uniforms.baseColor = LiteMath::float4(0.9f, 0.92f, 1.0f, 0.0f);
   m_uniforms.animateLightColor = true;
+  m_uniforms.m_camPos = to_float4(m_cam.pos, 1.0f);
+  m_uniforms.m_invProjView = m_inverseProjViewMatrix;
 
   UpdateUniformBuffer(0.0f);
 }
@@ -370,6 +373,9 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
 {
 // most uniforms are updated in GUI -> SetupGUIElements()
   m_uniforms.time = a_time;
+  // m_uniforms.m_camPos = to_float4(m_cam.pos, 1.0f);
+  // m_uniforms.m_invProjView = m_inverseProjViewMatrix;
+
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
 
@@ -464,8 +470,11 @@ void SimpleRender::BuildCommandBufferQuad(VkCommandBuffer a_cmdBuff, VkImageView
     {
       vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_quadPipeline.pipeline);
       vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_quadPipeline.layout, 0, 1, &m_quadDS, 0, nullptr);
-      uint32_t radius = static_cast<uint32_t>(filterRadius);
-      vkCmdPushConstants(a_cmdBuff, m_quadPipeline.layout,VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uint32_t), &radius);
+
+      //vkCmdDrawIndexed(a_cmdBuff, 4, 1, 0, 0, 0);
+
+      // uint32_t radius = static_cast<uint32_t>(filterRadius);
+      // vkCmdPushConstants(a_cmdBuff, m_quadPipeline.layout,VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uint32_t), &radius);
       vkCmdDrawIndexed(a_cmdBuff, 4, 1, 0, 0, 0);
     }
     vkCmdEndRenderPass(a_cmdBuff);

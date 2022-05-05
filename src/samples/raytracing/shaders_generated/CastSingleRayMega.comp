@@ -23,6 +23,7 @@ uint ColorToInt(vec4 color)
   uvec4 bytes = uvec4(color * 255.0f);
   uint result = (bytes.a << 24) | (bytes.b << 16) | (bytes.g << 8) | (bytes.r);
   return result;
+  //return int(color.x * 255 * 0x01000000) + int(color.y * 0x00FF0000) + int(color.z * 0x0000FF00) + int(color.w * 0x000000FF);
 }
 
 vec4 ColorToVec4(uint color)
@@ -218,16 +219,16 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
   vec4 rayDir = rayDirAndFar;
   vec2 coordInit = vec2(gl_GlobalInvocationID[0], gl_GlobalInvocationID[1]);
   //debugPrintfEXT("coordInit = %v2f\n", coordInit);
-  vec4 color = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+  vec3 color = vec3(0.0f, 0.0f, 0.0f);
   
   uint hash = ((uint(coordInit.x) << 12) | uint(coordInit.y)) ^ floatBitsToUint(ubo.time);
 
-  vec2 rand1 = fract(Q25 * ubo.time + random2(coordInit+vec2(128,0)));
+  //vec2 rand1 = fract(Q25 * ubo.time + random2(coordInit+vec2(128,0)));
 
-  vec2 rand2 = fract(Q2 * ubo.time + random2(coordInit+vec2(256,0)));
-  vec2 rand3 = fract(Q22 * ubo.time + random2(coordInit+vec2(0,256)));
+  //vec2 rand2 = fract(Q2 * ubo.time + random2(coordInit+vec2(256,0)));
+  //vec2 rand3 = fract(Q22 * ubo.time + random2(coordInit+vec2(0,256)));
   vec2 rand4 = fract(Q23 * ubo.time + random2(coordInit+vec2(256)));
-  vec2 rand5 = fract(Q24 * ubo.time + random2(coordInit+vec2(128)));
+  //vec2 rand5 = fract(Q24 * ubo.time + random2(coordInit+vec2(128)));
 
   for (int j = 0; j < 1; ++j)
   {
@@ -238,6 +239,8 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
     
     vec3 hit_point = vec3(rayPos) + vec3(rayDir)*hit.t;
     vec3 n = GetNormal(hit);
+    // if(dot(n, normalize(rayDir)>0)
+    //   break
     if(soft_shadow)
     {
       float total = 0.0f;
@@ -247,41 +250,85 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
         hash += uint(u);
         vec2 new_coord = ivec2(hash / 1024u, hash) % 1024u ;
         new_coord = new_coord / 1024;
-        // new_coord = vec2(new_coord.x, new_coord.y * 4);
+         //new_coord = vec2(new_coord.x, new_coord.y * 4);
         vec4 rngState = texture(NoiseTexture,rand4);
         float distanceToCenter = length(m_lights[j].pos.xyz - hit_point);
-        float q = sqrt(1.0f - (light_rad / distanceToCenter) * (light_rad / distanceToCenter));
+        float q = sqrt(1.0f - (m_lights[j].rad / distanceToCenter) * (m_lights[j].rad / distanceToCenter));
 
         vec3 lightPos = PointOnLight(m_lights[j],rngState.x);
         
         vec3 lightDir = normalize(lightPos - hit_point);
+        vec3 shadowDir = normalize(lightPos - lightPos);
 
-        CRT_Hit hitLight = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 1.0f), vec4(lightDir, MAXFLOAT));
-        if (hitLight.primId == -1)
-        {
-          total += 1.0f;
-          float shade = max(dot(n, normalize(lightDir)), 0.1f);
-          //float pdf_xp = 1.0f / (2*M_PI * (1.0f - q));
-          //color += shade * (1.0f / pdf_xp) * m_lights[j].intensity;
-          color += shade;
-        }
+        CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.1f), vec4(lightDir, MAXFLOAT));
+        if ((hitShadow.primId != -1) && (hitShadow.t < 20))
+        continue;
+        total += 1.0f;
+        float shade = max(dot(n, normalize(lightDir)), 0.1f);
+        float pdf_xp = 1.0f / (2*M_PI * (1.0f - q));
+        color += shade * (1.0f / pdf_xp) * m_lights[j].intensity;
+        //color += shade*m_lights[j].intensity/(4 * M_PI * m_lights[j].rad*m_lights[j].rad);
+        //color += shade;
       }
       color*=(total / samples_cnt);
     }
     else
     {
       vec3 lightPos = m_lights[j].pos.xyz;
-      vec3 lightDir = normalize(lightPos - hit_point);
+      vec3 shadow_orig  = (dot(vec3(rayDir), n) < 0) ? hit_point + n * 1e-4 : hit_point - n * 1e-4;
+      vec3 shadowDir = normalize(lightPos - shadow_orig);
+      
+      CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.1f), vec4(shadowDir, MAXFLOAT));
 
-      CRT_Hit hitLight = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 1.0f), vec4(lightDir, MAXFLOAT));
-      if (hitLight.primId == -1)
-      {
-        float shade = max(dot(n, normalize(lightDir)), 0.1f);
-        color += shade;
-      }
-    } 
+      if ((hitShadow.primId != -1) && (hitShadow.t < m_lights[j].rad)) // condition for to be in light
+        continue;
+      float shade = max(dot(normalize(shadowDir), n), 0.0f);
+      color += shade*m_lights[j].intensity/(4 * M_PI * m_lights[j].rad*m_lights[j].rad);
+        
+    }
   }
-  out_color[tidY * ubo.m_width + tidX + out_colorOffset] = ColorToInt(color);
+
+  //color*=vec3(0.0f,1.0f,0.0f);
+
+  if(debug_light_pos)
+  {
+    vec3 k = vec3(rayPos) - vec3(m_lights[0].pos);
+    float b = dot(k,vec3(rayDir));
+    float c =dot(k,k) - m_lights[0].rad * m_lights[0].rad;
+    float d = b*b -c;
+    if(d >=0)
+    {
+      float sqrtd = sqrt(d);
+      // t, a == 1
+      float t1 = -b + sqrtd;
+      float t2 = -b - sqrtd; 
+      float min_t  = min(t1,t2);
+      float max_t = max(t1,t2);
+      float t = (min_t >= 0) ? min_t : max_t;
+      if (t > 0)
+        color=vec3(1.0f,0.0f,0.0f) ;
+    }
+
+    // k = vec3(rayPos) - vec3(m_lights[0].pos);
+    // b = dot(k,vec3(rayDir));
+    // c =dot(k,k) -  light_dist * light_dist;
+    // d = b*b -c;
+    // if(d >=0)
+    // {
+    //   float sqrtd = sqrt(d);
+    //   // t, a == 1
+    //   float t1 = -b + sqrtd;
+    //   float t2 = -b - sqrtd; 
+    //   float min_t  = min(t1,t2);
+    //   float max_t = max(t1,t2);
+    //   float t = (min_t >= 0) ? min_t : max_t;
+    //   if (t > 0)
+    //     color=vec3(1.0f,1.0f,0.0f) ;
+    // }
+
+  }
+  out_color[tidY * ubo.m_width + tidX + out_colorOffset] = ColorToInt(vec4(clamp(color, 0.0, 1.0), 1.0));
+  //out_color[tidY * ubo.m_width + tidX] = ColorToInt(color);
 }
 
 void kernel_InitEyeRay(uint tidX, uint tidY, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar) 
