@@ -41,17 +41,19 @@ struct Light
   uint color;
   float intensity;
   float rad;
+  float light_dist;
 };
 
 //For buggy
-const Light l1 = { {-2.0f,20.0f,0.0f,0.0f}, 0xff000000, 10.0f,3.0f,};
-const Light l2 = { {0.0f,110.0f,0.0f,1.0f},0xff000000, 5.0f,5.0f,};
+const Light l1 = { {0.0f,30.0f,0.0f,1.0f}, 0xffffffff, 50.0f,5.0f,10.0f};
+const Light l2 = { {0.0f,110.0f,-20.0f,1.0f},0xff000000, 5.0f,5.0f,10.0f};
 
 //buster_drone
 //const Light l1 = { {40.0f,10.0f,150.0f,1.0f}, 0xff000000, 100000.0f };
 //const Light l2 = { {40.0f,-40.0f,120.0f,1.0f}, 0x0000ff00, 100000.0f };
 const Light m_lights[2] = { l1, l2 };
-const int samples_cnt = 8;
+const int samples_cnt = 4;
+const int light_cnt = 1;
 //const float light_dist = 20.0f;
 bool soft_shadow = true;
 bool debug_light_pos = true;
@@ -90,13 +92,13 @@ struct Vertex {
 /////////////////// local functions /////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
-const float Q1 = 0.6180339887498948482;
-const float P2 = 1.324717957244746;
-const vec2 Q2 = vec2(1./P2, 1./P2/P2);
-const vec2 Q22 = vec2(2./pow(P2,4.), 1./pow(P2,6.));
-const vec2 Q23 = vec2(2./pow(P2,7.), 1./pow(P2,8.));
-const vec2 Q24 = vec2(3./pow(P2,9.), 5./pow(P2,10.));
-const vec2 Q25 = vec2(3./pow(P2,11.), 5./pow(P2,12.));
+// const float Q1 = 0.6180339887498948482;
+// const float P2 = 1.324717957244746;
+// const vec2 Q2 = vec2(1./P2, 1./P2/P2);
+// const vec2 Q22 = vec2(2./pow(P2,4.), 1./pow(P2,6.));
+// const vec2 Q23 = vec2(2./pow(P2,7.), 1./pow(P2,8.));
+// const vec2 Q24 = vec2(3./pow(P2,9.), 5./pow(P2,10.));
+// const vec2 Q25 = vec2(3./pow(P2,11.), 5./pow(P2,12.));
 
 const int HALTON_COUNT = 8;
 
@@ -120,26 +122,10 @@ vec3 EyeRayDir(float x, float y, float w, float h, mat4 a_mViewProjInv, uint ind
   vec4 pos = vec4(2.0f * (x + jitter.x + 0.5f) / w - 1.0f, 2.0f * (y + jitter.y + 0.5f) / h - 1.0f, 0.0f, 1.0f);
 
   pos = a_mViewProjInv * pos;
-  //pos /= abs(pos.w);
+  pos /= abs(pos.w);
   //pos.y *= (-1.0f);
 
   return normalize(pos.xyz);
-}
-
-// Random number generation using pcg32i_random_t, using inc = 1. Our random state is a uint.
-uint stepRNG(uint rngState)
-{
-  return rngState * 747796405 + 1;
-}
-
-// Steps the RNG and returns a floating-point value between 0 and 1 inclusive.
-float stepAndOutputRNGFloat(uint rngState)
-{
-  // Condensed version of pcg_output_rxs_m_xs_32_32, with simple conversion to floating-point [0,1].
-  rngState  = stepRNG(rngState);
-  uint word = ((rngState >> ((rngState >> 28) + 4)) ^ rngState) * 277803737;
-  word      = (word >> 22) ^ word;
-  return float(word) / 4294967295.0f;
 }
 
 vec3 PointOnLight(Light m_light,float st)
@@ -149,15 +135,6 @@ vec3 PointOnLight(Light m_light,float st)
   //float r =  sqrt(stepAndOutputRNGFloat(st))*light_rad;
   return vec3(m_light.pos.x + m_light.rad*sin(phi)*cos(theta),m_light.pos.y + m_light.rad*sin(phi)*sin(theta),m_light.pos.z + m_light.rad*cos(phi));
 }
-
-vec3 PointOnLightOld(Light m_light,uint st)
-{
-  float theta = stepAndOutputRNGFloat(st)*2*M_PI;
-  float phi = acos(2*stepAndOutputRNGFloat(st) - 1);
-  //float r =  sqrt(stepAndOutputRNGFloat(st))*light_rad;
-  return vec3(m_light.pos.x + m_light.rad*sin(phi)*cos(theta),m_light.pos.y + m_light.rad*sin(phi)*sin(theta),m_light.pos.z + m_light.rad*cos(phi));
-}
-
 
 uint fakeOffset(uint x, uint y, uint pitch) { return y*pitch + x; }  // RTV pattern, for 2D threading
 
