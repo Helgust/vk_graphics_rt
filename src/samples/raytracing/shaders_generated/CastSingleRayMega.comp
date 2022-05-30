@@ -147,17 +147,6 @@ vec4 GetPos(CRT_Hit hit)
   return instance_mats[hit.instId] * vec4(p, 1.0f);
 }
 
-
-// Hash Functions for GPU Rendering, Jarzynski et al.
-// http://www.jcgt.org/published/0009/03/02/
-vec3 random_pcg3d(uvec3 v) {
-  v = v * 1664525u + 1013904223u;
-  v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
-  v ^= v >> 16u;
-  v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
-  return vec3(v) * (1.0/float(0xffffffffu));
-}
-
 vec2 random2(vec2 p) {
     float r1 = texture(NoiseTexture, p/64.).x;
     float r2 = texture(NoiseTexture, (p + vec2(32))/64.).x;
@@ -175,13 +164,6 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
   
   uint hash = ((uint(coordInit.x) << 12) | uint(coordInit.y)) ^ floatBitsToUint(ubo.time);
 
-  //vec2 rand1 = fract(Q25 * ubo.time + random2(coordInit+vec2(128,0)));
-
-  //vec2 rand2 = fract(Q2 * ubo.time + random2(coordInit+vec2(256,0)));
-  //vec2 rand3 = fract(Q22 * ubo.time + random2(coordInit+vec2(0,256)));
-  
-  //vec2 rand5 = fract(Q24 * ubo.time + random2(coordInit+vec2(128)));
-
   for (int j = 0; j < light_cnt; ++j)
   {
     CRT_Hit hit = m_pAccelStruct_RayQuery_NearestHit(rayPos, rayDir);
@@ -196,12 +178,12 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
     if(soft_shadow)
     {
       float total = 0.0f;
-      vec2 coord = coordInit ;
       float distanceToLight = length(m_lights[j].pos.xyz - hit_point);
       for (int u = 0; u < samples_cnt; u++)
       {   
         hash += uint(u);
         vec3 random = random_pcg3d(uvec3(coordInit, hash));
+        //vec2 random = random_pcg2d(coordInit);
         vec4 rngState = texture(NoiseTexture,random.xy);
         
         vec3 lightPos = PointOnLight(m_lights[j],rngState.x);

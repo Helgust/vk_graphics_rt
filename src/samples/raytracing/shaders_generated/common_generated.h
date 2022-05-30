@@ -45,7 +45,7 @@ struct Light
 };
 
 //For buggy
-const Light l1 = { {0.0f,30.0f,0.0f,1.0f}, 0xffffffff, 50.0f,5.0f,10.0f};
+const Light l1 = { {0.0f,10.0f,-60.0f,1.0f}, 0xffffffff, 50.0f,5.0f,10.0f};
 const Light l2 = { {0.0f,110.0f,-20.0f,1.0f},0xff000000, 5.0f,5.0f,10.0f};
 
 //buster_drone
@@ -134,6 +134,33 @@ vec3 PointOnLight(Light m_light,float st)
   float phi = acos(2*st - 1);
   //float r =  sqrt(stepAndOutputRNGFloat(st))*light_rad;
   return vec3(m_light.pos.x + m_light.rad*sin(phi)*cos(theta),m_light.pos.y + m_light.rad*sin(phi)*sin(theta),m_light.pos.z + m_light.rad*cos(phi));
+}
+
+// Hash Functions for GPU Rendering, Jarzynski et al.
+// http://www.jcgt.org/published/0009/03/02/
+vec3 random_pcg3d(uvec3 v) {
+  v = v * 1664525u + 1013904223u;
+  v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
+  v ^= v >> 16u;
+  v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
+  return vec3(v) * (1.0/float(0xffffffffu));
+}
+
+uvec2 random_pcg2d(uvec2 v)
+{
+    v = v * 1664525u + 1013904223u;
+
+    v.x += v.y * 1664525u;
+    v.y += v.x * 1664525u;
+
+    v = v ^ (v>>16u);
+
+    v.x += v.y * 1664525u;
+    v.y += v.x * 1664525u;
+
+    v = v ^ (v>>16u);
+
+    return v;
 }
 
 uint fakeOffset(uint x, uint y, uint pitch) { return y*pitch + x; }  // RTV pattern, for 2D threading

@@ -1,6 +1,7 @@
 #include <render/VulkanRTX.h>
 #include "simple_render.h"
 #include "raytracing_generated.h"
+#include "stb_image.h"
 
 // ***************************************************************************************************************************
 // setup full screen quad to display ray traced image
@@ -24,13 +25,74 @@ void SimpleRender::SetupQuadDescriptors()
   m_pBindings->BindEnd(&m_finalQuadDS, &m_finalQuadDSLayout);
 }
 
+struct Pixel
+{
+  unsigned char r, g, b;
+};
+
+void WriteBMP(const char *fname, Pixel *a_pixelData, int width, int height)
+{
+  int paddedsize = (width * height) * sizeof(Pixel);
+
+  unsigned char bmpfileheader[14] = {'B', 'M', 0, 0, 0, 0, 0, 0, 0, 0, 54, 0, 0, 0};
+  unsigned char bmpinfoheader[40] = {40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 24, 0};
+
+  bmpfileheader[2] = (unsigned char)(paddedsize);
+  bmpfileheader[3] = (unsigned char)(paddedsize >> 8);
+  bmpfileheader[4] = (unsigned char)(paddedsize >> 16);
+  bmpfileheader[5] = (unsigned char)(paddedsize >> 24);
+
+  bmpinfoheader[4] = (unsigned char)(width);
+  bmpinfoheader[5] = (unsigned char)(width >> 8);
+  bmpinfoheader[6] = (unsigned char)(width >> 16);
+  bmpinfoheader[7] = (unsigned char)(width >> 24);
+  bmpinfoheader[8] = (unsigned char)(height);
+  bmpinfoheader[9] = (unsigned char)(height >> 8);
+  bmpinfoheader[10] = (unsigned char)(height >> 16);
+  bmpinfoheader[11] = (unsigned char)(height >> 24);
+
+  std::ofstream out(fname, std::ios::out | std::ios::binary);
+  out.write((const char *)bmpfileheader, 14);
+  out.write((const char *)bmpinfoheader, 40);
+  out.write((const char *)a_pixelData, paddedsize);
+  out.flush();
+  out.close();
+}
+
+void SaveBMP(const char *fname, const unsigned int *pixels, int w, int h)
+{
+  std::vector<Pixel> pixels2(w * h);
+
+  for (size_t i = 0; i < pixels2.size(); i++)
+  {
+    Pixel px;
+    px.r = (pixels[i] & 0x00FF0000) >> 16;
+    px.g = (pixels[i] & 0x0000FF00) >> 8;
+    px.b = (pixels[i] & 0x000000FF);
+    pixels2[i] = px;
+  }
+
+  WriteBMP(fname, &pixels2[0], w, h);
+}
+
+unsigned char* loadImageLDR(const char* a_filename, int &w, int &h, int &channels)
+{
+  unsigned char* pixels = stbi_load(a_filename, &w, &h, &channels, STBI_rgb_alpha);
+
+  if(w <= 0 || h <= 0 || !pixels)
+  {
+    return nullptr;
+  }
+
+  return pixels;
+}
+
+
 void SimpleRender::SetupNoiseImage() 
 {
-  noiseGen    = new BlueNoiseGenerator(NoiseMapWidth, NoiseMapHeight);
-  std::vector<uint32_t>noisePixels;
-  noiseGen->getNoise(noisePixels, NoiseMapWidth, NoiseMapHeight);
-  unsigned char *pixels = reinterpret_cast<unsigned char *>(noisePixels.data());
-
+  int w, h, channels;
+  auto pixels = loadImageLDR(NOISE_TEX.c_str(), w, h, channels);
+  //SaveBMP("jopa.bmp",noisePixels.data(),NoiseMapWidth,NoiseMapHeight);
   vk_utils::deleteImg(m_device, &m_NoiseMapTex);
   if (m_NoiseTexSampler != VK_NULL_HANDLE)
   {
@@ -38,18 +100,17 @@ void SimpleRender::SetupNoiseImage()
   }
 
   int mipLevels     = 1;
-  m_NoiseMapTex     = allocateColorTextureFromDataLDR(m_device, m_physicalDevice, pixels,
-      NoiseMapWidth, NoiseMapHeight, mipLevels, VK_FORMAT_R8G8B8A8_UNORM, m_pScnMgr->GetCopyHelper());
+  m_NoiseMapTex     = allocateColorTextureFromDataLDR(m_device, m_physicalDevice, pixels, w, h, mipLevels,
+           VK_FORMAT_R8G8B8A8_UNORM, m_pScnMgr->GetCopyHelper());
   if (m_NoiseTexSampler == VK_NULL_HANDLE)
   {
     m_NoiseTexSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
-  }
+  }  
 }
 
 void SimpleRender::SetupRTImage()
 {
-  vk_utils::deleteImg(m_device, &m_rtImage);
-
+  vk_utils::deleteImg(m_device, &m_rtImage);  
   // change format and usage according to your implementation of RT
   m_rtImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,

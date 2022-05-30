@@ -3,6 +3,9 @@
 
 #define VK_NO_PROTOTYPES
 
+// #define STB_IMAGE_IMPLEMENTATION
+// #include "stb_image.h"
+
 #include "../../render/scene_mgr.h"
 #include "../../render/render_common.h"
 #include "../../render/render_gui.h"
@@ -18,7 +21,11 @@
 #include <render/CrossRT.h>
 #include "raytracing.h"
 #include "raytracing_generated.h"
-#include "blue_noise_gen.h"
+
+//delete after 
+#include <vector>
+#include <fstream>
+#include <cstring>
 
 enum class RenderMode
 {
@@ -42,6 +49,8 @@ public:
   const std::string FRAGMENT_SHADER_PATH = "../resources/shaders/simple.frag";
   const std::string TAA_VERTEX_SHADER_PATH = "../resources/shaders/taa.vert";
   const std::string TAA_FRAGMENT_SHADER_PATH = "../resources/shaders/taa.frag";
+
+  const std::string NOISE_TEX = "../resources/textures/STBN.png";
   
   const bool        ENABLE_HARDWARE_RT   = true;
 
@@ -190,9 +199,6 @@ protected:
   vk_utils::VulkanImageMem m_depthBuffer{};
   // ***
 
-  BlueNoiseGenerator* noiseGen;
-  size_t NoiseMapWidth  = 64;
-  size_t NoiseMapHeight = 64;
   void SetupNoiseImage();
   vk_utils::VulkanImageMem m_NoiseMapTex{};
   VkSampler m_NoiseTexSampler = VK_NULL_HANDLE;
