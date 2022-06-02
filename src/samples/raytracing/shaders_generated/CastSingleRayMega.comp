@@ -183,10 +183,21 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
       {   
         hash += uint(u);
         vec3 random = random_pcg3d(uvec3(coordInit, hash));
+        //int second = (int(ubo.time*60)*samples_cnt) + u;
+        //vec2 random = Nth_weyl(vec2(0.0f), second)/64;
+        //debugPrintfEXT("random = %1.2v3f\n", random);
         //vec2 random = random_pcg2d(coordInit);
         vec4 rngState = texture(NoiseTexture,random.xy);
-        
-        vec3 lightPos = PointOnLight(m_lights[j],rngState.x);
+        float criteria = (random.z*2) - 1;
+        float rngOffset;
+        if(criteria > 0)
+          rngOffset = rngState.x;
+        else
+          if(criteria < 0)
+            rngOffset = rngState.g;
+          else
+            rngOffset = rngState.b;
+        vec3 lightPos = PointOnLight(m_lights[j],rngOffset);
         //vec3 lightDir = normalize(lightPos - hit_point);
         vec3 shadow_orig  = (dot(vec3(rayDir), n) < 0) ? hit_point + n * 1e-4 : hit_point - n * 1e-4;
         vec3 shadowDir = normalize(lightPos - shadow_orig);
@@ -204,9 +215,8 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
           color += shade*m_lights[j].intensity/(4 * M_PI * m_lights[j].rad*m_lights[j].rad);
           //color += shade;
         }
-        
       }
-      color*=(total / samples_cnt);
+      color*=(total / (samples_cnt));
     }
     else
     {

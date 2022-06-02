@@ -45,7 +45,7 @@ struct Light
 };
 
 //For buggy
-const Light l1 = { {0.0f,10.0f,-60.0f,1.0f}, 0xffffffff, 50.0f,5.0f,10.0f};
+const Light l1 = { {0.0f,10.0f,0.0f,1.0f}, 0xffffffff, 50.0f,5.0f,10.0f};
 const Light l2 = { {0.0f,110.0f,-20.0f,1.0f},0xff000000, 5.0f,5.0f,10.0f};
 
 //buster_drone
@@ -56,7 +56,7 @@ const int samples_cnt = 4;
 const int light_cnt = 1;
 //const float light_dist = 20.0f;
 bool soft_shadow = true;
-bool debug_light_pos = true;
+bool debug_light_pos = false;
 
 struct MaterialData_pbrMR
 {
@@ -114,6 +114,12 @@ const vec2 HALTON_SEQUENCE[HALTON_COUNT] = vec2[HALTON_COUNT](
     vec2(7.0 / 8.0, 5.0 / 9.0),
     vec2(1.0 / 16.0, 8.0 / 9.0)
 );
+
+vec2 Nth_weyl(vec2 p0, int n) {
+    
+    //return fract(p0 + float(n)*vec2(0.754877669, 0.569840296));
+    return floor(p0 + vec2(n*12664745, n*9560333)/exp2(24.));	// integer mul to avoid round-off
+}
 
 
 
