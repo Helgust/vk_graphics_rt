@@ -29,8 +29,7 @@
             "problemMatcher": [
                 "$gcc"
             ]
-        }
-
+        },
         {
             "label": "CleanUpAndBuildDebug",
             "type": "shell",
@@ -40,5 +39,39 @@
                 "$gcc"
             ]
         },
+        {
+            "label": "Shaders Compile RT",
+            "type": "shell",
+            "command": "cd src/samples/raytracing/shaders_generated/ && py compile_rt_shaders.py",
+            "group": "build"
+        },
+        {
+            "label": "Shaders Compile SimpleForward",
+            "type": "shell",
+            "command": "cd resources/shaders/ && py compile_simple_render_shaders.py",
+            "group": "build"
+        },
+        {
+            "label": "Shaders Copy to Bin",
+            "type": "shell",
+            "command": "py copy_shaders_to_bin.py",
+            "group": "build"
+        },
+        {
+            "label": "Shaders Remove leftovers",
+            "type": "shell",
+            "command": "py remove_leftovers.py",
+            "group": "build"
+        },
+        {
+            "label": "Shaders Compile Copy Remove Leftovers",
+            "type": "shell",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Shaders Compile SimpleForward",
+                "Shaders Copy to Bin",
+                "Shaders Remove leftovers"
+            ]
+        }
     ]
 }
