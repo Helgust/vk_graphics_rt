@@ -49,6 +49,9 @@ public:
   const std::string FRAGMENT_SHADER_PATH = "../resources/shaders/simple.frag";
   const std::string TAA_VERTEX_SHADER_PATH = "../resources/shaders/taa.vert";
   const std::string TAA_FRAGMENT_SHADER_PATH = "../resources/shaders/taa.frag";
+  const std::string RESOLVE_FRAGMENT_SHADER_PATH = "../resources/shaders/resolve.frag";
+  const std::string RESOLVE_VERTEX_SHADER_PATH = "../resources/shaders/resolve.vert";
+  const std::string MRT_FRAGMENT_SHADER_PATH = "../resources/shaders/mrt.frag";
 
   const std::string NOISE_TEX = "../resources/textures/STBN.png";
   
@@ -119,17 +122,38 @@ protected:
     VkQueue     queue             = VK_NULL_HANDLE;
     VkSemaphore imageAvailable    = VK_NULL_HANDLE;
     VkSemaphore renderingFinished = VK_NULL_HANDLE;
+    VkSemaphore gbufferFinished = VK_NULL_HANDLE;
   } m_presentationResources;
 
   std::vector<VkFence> m_frameFences;
   std::vector<VkCommandBuffer> m_cmdBuffersDrawMain;
+  std::vector<VkCommandBuffer> m_cmdBuffersGbuffer;
 
   struct
   {
     LiteMath::float4x4 projView;
-    LiteMath::float4x4 prevProjView;
     LiteMath::float4x4 model;
+    LiteMath::float4 color;
+    LiteMath::float4 lightPos;
+    LiteMath::float2 screenSize;
+    uint32_t isOutsideLight;
   } pushConst2M;
+
+  struct FrameBufferAttachment {
+  VkImage image;
+  VkDeviceMemory mem;
+  VkImageView view;
+  VkFormat format;
+	};
+	struct FrameBuffer {
+		int32_t width, height;
+		VkFramebuffer frameBuffer;
+		FrameBufferAttachment position, normal, albedo;
+		FrameBufferAttachment depth;
+		VkRenderPass renderPass;
+	} m_gBuffer;
+
+  VkSampler m_colorSampler;
 
   UniformParams m_uniforms {};
   VkBuffer m_ubo = VK_NULL_HANDLE;
@@ -139,9 +163,13 @@ protected:
   std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
 
   pipeline_data_t m_basicForwardPipeline {};
+  pipeline_data_t m_resolvePipeline {};
+  pipeline_data_t m_gBufferPipeline {};
 
   VkDescriptorSet m_dSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dSetLayout = VK_NULL_HANDLE;
+  VkDescriptorSet m_dResolveSet = VK_NULL_HANDLE;
+  VkDescriptorSetLayout m_dResolveSetLayout = VK_NULL_HANDLE;
   VkRenderPass m_screenRenderPass = VK_NULL_HANDLE; // rasterization renderpass
 
   LiteMath::float4x4 m_projectionMatrix;
@@ -226,10 +254,24 @@ protected:
 
   void DrawFrameSimple(float a_time);
 
+  void SetupGbuffer();
+
+  void CreateAttachment(
+  VkFormat format,
+  VkImageUsageFlagBits imageUsageType,
+  VkImageUsageFlags usage,
+  FrameBufferAttachment *attachment);
+
   void CreateInstance();
   void CreateDevice(uint32_t a_deviceId);
 
   void BuildCommandBufferSimple(VkCommandBuffer cmdBuff, VkFramebuffer frameBuff,
+                                VkImageView a_targetImageView, VkPipeline a_pipeline);
+
+  void BuildGbufferCommandBuffer(VkCommandBuffer cmdBuff, VkFramebuffer frameBuff,
+                              VkImageView a_targetImageView, VkPipeline a_pipeline);
+
+  void BuildResolveCommandBuffer(VkCommandBuffer cmdBuff, VkFramebuffer frameBuff,
                                 VkImageView a_targetImageView, VkPipeline a_pipeline);
 
   // *** Ray tracing related stuff
