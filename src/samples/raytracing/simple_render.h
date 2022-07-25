@@ -151,9 +151,7 @@ protected:
     LiteMath::float4x4 projView;
     LiteMath::float4x4 model;
     LiteMath::float4 color;
-    LiteMath::float4 lightPos;
     LiteMath::float2 screenSize;
-    uint32_t isOutsideLight;
   } pushConst2M;
 
   struct FrameBufferAttachment {
@@ -262,6 +260,7 @@ protected:
 
   VkPhysicalDeviceFeatures m_enabledDeviceFeatures = {};
   std::vector<const char*> m_deviceExtensions      = {};
+  std::vector<const char*> m_optionalDeviceExtensions      = {};
   std::vector<const char*> m_instanceExtensions    = {};
 
   bool m_enableValidation;
