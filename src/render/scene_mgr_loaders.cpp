@@ -147,8 +147,6 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
     }
   }
 
-  AddLightSphere(20, 20);
-
   if(m_config.load_geometry)
   {
     LoadCommonGeoDataOnGPU();
