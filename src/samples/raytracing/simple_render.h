@@ -80,23 +80,6 @@ public:
 
   // debugging utils
   //
-
-  template<class T>
-  void setObjectName(T handle, VkObjectType type, const char* name)
-  {
-    if (SetDebugUtilsObjectNameEXT != nullptr)
-    {
-		  VkDebugUtilsObjectNameInfoEXT nameInfo{
-		    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-        .pNext = NULL,
-		    .objectType = type,
-		    .objectHandle = reinterpret_cast<uint64_t>(handle),
-		    .pObjectName = name,
-		  };
-		  SetDebugUtilsObjectNameEXT(m_device, &nameInfo);
-    }
-  }
-
   static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallbackFn(
     VkDebugReportFlagsEXT                       flags,
     VkDebugReportObjectTypeEXT                  objectType,
@@ -133,7 +116,6 @@ protected:
 
   RenderMode m_currentRenderMode = RenderMode::RASTERIZATION;
 
-  PFN_vkSetDebugUtilsObjectNameEXT SetDebugUtilsObjectNameEXT = nullptr;
   struct
   {
     uint32_t    currentFrame      = 0u;
@@ -152,7 +134,9 @@ protected:
     LiteMath::float4x4 projView;
     LiteMath::float4x4 model;
     LiteMath::float4 color;
+    LiteMath::float4 lightPos;
     LiteMath::float2 screenSize;
+    uint32_t isOutsideLight;
   } pushConst2M;
 
   struct FrameBufferAttachment {
@@ -261,7 +245,6 @@ protected:
 
   VkPhysicalDeviceFeatures m_enabledDeviceFeatures = {};
   std::vector<const char*> m_deviceExtensions      = {};
-  std::vector<const char*> m_optionalDeviceExtensions      = {};
   std::vector<const char*> m_instanceExtensions    = {};
 
   bool m_enableValidation;

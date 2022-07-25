@@ -9,6 +9,7 @@ layout(push_constant) uniform params_t
     mat4 mProjView;
     mat4 mModel;
     vec4 color;
+    vec4 lightPos;
     vec2 screenSize; 
 } params;
 
@@ -35,4 +36,4 @@ void main()
     outAlbedo = params.color;
     outNormal = vec4(surf.wNorm, 1.0f);
     outPosition = vec4(surf.wPos, 1.0f);
-}
+} 

@@ -3,21 +3,20 @@
 
 #include "common.h"
 
-layout(binding = 0, set = 0) uniform AppData
-{
-    UniformParams UboParams;
-};
 
-layout (binding = 1) uniform sampler2D samplerPosition;
-layout (binding = 2) uniform sampler2D samplerNormal;
-layout (binding = 3) uniform sampler2D samplerAlbedo;
+layout (binding = 0) uniform sampler2D samplerPosition;
+layout (binding = 1) uniform sampler2D samplerNormal;
+layout (binding = 2) uniform sampler2D samplerAlbedo;
 
 layout(push_constant) uniform params_t
 {
     mat4 mProjView;
     mat4 lightModel;
     vec4 color;
+    vec4 lightPos;
     vec2 screenSize; 
+    uint isOutsideLight;
+
 } params;
 
 layout (location = 0) in vec2 inUV;
@@ -38,9 +37,9 @@ void main()
 
     // vec4 albedo = vec4(0.9f, 0.92f, 1.0f, 1.0f);
 
-    vec3 lightDir1 = normalize(UboParams.lights[0].pos.xyz -fragPos);
-    float lightDist = distance(UboParams.lights[0].pos.xyz, fragPos);
-    float lightRadius = UboParams.lights[0].radius;
+    vec3 lightDir1 = normalize(params.lightPos.xyz -fragPos);
+    float lightDist = distance(params.lightPos.xyz, fragPos);
+    float lightRadius = params.lightModel[0][0];
 
     if (lightDist > lightRadius) {
         outFragcolor = vec4(0.0f);
@@ -51,7 +50,7 @@ void main()
     const vec4 dark_violet = vec4(0.59f, 0.0f, 0.82f, 1.0f);
     const vec4 chartreuse  = vec4(0.5f, 1.0f, 0.0f, 1.0f);
 
-    vec4 lightColor1 = UboParams.lights[0].color;
+    vec4 lightColor1 = mix(dark_violet, chartreuse, 0.5f);
     // if(Params.animateLightColor)
     //     lightColor1 = mix(dark_violet, chartreuse, abs(sin(Params.time)));
 

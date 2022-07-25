@@ -60,9 +60,9 @@ VkFormat formatFromImageInfo(const ImageFileInfo &info)
 }
 
 SceneManager::SceneManager(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId,
-  std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config, PFN_vkSetDebugUtilsObjectNameEXT ptr) :
+  std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config) :
                 m_device(a_device), m_physDevice(a_physDevice), m_graphicsQId(a_graphicsQId),
-                m_pCopyHelper(a_pCopyHelper), m_config(a_config), SetDebugUtilsObjectNameEXT(ptr)
+                m_pCopyHelper(a_pCopyHelper), m_config(a_config)
 {
   vkGetDeviceQueue(m_device, m_graphicsQId, 0, &m_graphicsQ);
 
@@ -194,6 +194,98 @@ uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData)
   return m_meshInfos.size() - 1;
 }
 
+void MakeSphere(cmesh::SimpleMesh& sphere, int sectorCount, int stackCount) {
+    float radius = 1.0f;
+    float PI = 3.14;
+
+    float x, y, z, xy;                              // vertex position
+    float nx, ny, nz, lengthInv = 1.0f / radius;    // vertex normal
+    float s, t;                                     // vertex texCoord
+
+    float sectorStep = 2 * PI / sectorCount;
+    float stackStep = PI / stackCount;
+    float sectorAngle, stackAngle;
+
+    for (int i = 0; i <= stackCount; ++i)
+    {
+        stackAngle = PI / 2 - i * stackStep;        // starting from pi/2 to -pi/2
+        xy = radius * cosf(stackAngle);             // r * cos(u)
+        z = radius * sinf(stackAngle);              // r * sin(u)
+
+        // add (sectorCount+1) vertices per stack
+        // the first and last vertices have same position and normal, but different tex coords
+        for (int j = 0; j <= sectorCount; ++j)
+        {
+            sectorAngle = j * sectorStep;           // starting from 0 to 2pi
+
+            // vertex position (x, y, z)
+            x = xy * cosf(sectorAngle);             // r * cos(u) * cos(v)
+            y = xy * sinf(sectorAngle);             // r * cos(u) * sin(v)
+            sphere.vPos4f.push_back(x);
+            sphere.vPos4f.push_back(y);
+            sphere.vPos4f.push_back(z);
+            sphere.vPos4f.push_back(1.0f);
+
+            // normalized vertex normal (nx, ny, nz)
+            nx = x * lengthInv;
+            ny = y * lengthInv;
+            nz = z * lengthInv;
+            sphere.vNorm4f.push_back(nx);
+            sphere.vNorm4f.push_back(ny);
+            sphere.vNorm4f.push_back(nz);
+            sphere.vNorm4f.push_back(0.0f);
+
+            // vertex tex coord (s, t) range between [0, 1]
+            s = (float)j / sectorCount;
+            t = (float)i / stackCount;
+            sphere.vTexCoord2f.push_back(s);
+            sphere.vTexCoord2f.push_back(t);
+        }
+    }
+
+    sphere.vTang4f = std::vector<float>(sphere.vPos4f.size(), 0);
+
+    int k1, k2;
+    for (int i = 0; i < stackCount; ++i)
+    {
+        k1 = i * (sectorCount + 1);     // beginning of current stack
+        k2 = k1 + sectorCount + 1;      // beginning of next stack
+
+        for (int j = 0; j < sectorCount; ++j, ++k1, ++k2)
+        {
+            // 2 triangles per sector excluding first and last stacks
+            // k1 => k2 => k1+1
+            if (i != 0)
+            {
+                sphere.indices.push_back(k1);
+                sphere.indices.push_back(k2);
+                sphere.indices.push_back(k1 + 1);
+            }
+
+            // k1+1 => k2 => k2+1
+            if (i != (stackCount - 1))
+            {
+                sphere.indices.push_back(k1 + 1);
+                sphere.indices.push_back(k2);
+                sphere.indices.push_back(k2 + 1);
+            }
+        }
+    }
+}
+
+void SceneManager::AddLightSphere(int sectorCount, int stackCount)
+{
+  cmesh::SimpleMesh sphere = cmesh::SimpleMesh();
+  MakeSphere(sphere, sectorCount, stackCount);
+  m_lightSphereMesh = AddMeshFromData(sphere);
+}
+
+uint32_t SceneManager::InstanceLight(float3 pos, float scale) {
+  LiteMath::float4x4 m = LiteMath::translate4x4(pos) * LiteMath::scale4x4(float3(scale));
+  m_lightInstanceMatrices.push_back(m);
+  return m_lightInstanceMatrices.size() - 1;
+}
+
 uint32_t SceneManager::InstanceMesh(const uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender)
 {
   assert(meshId < m_meshInfos.size());
@@ -240,22 +332,18 @@ void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum
 
   const VkBufferUsageFlags vertFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | flags;
   m_geoVertBuf = vk_utils::createBuffer(m_device, vertexBufSize, vertFlags);
-  setObjectName(m_geoVertBuf, VK_OBJECT_TYPE_BUFFER, "m_geoVertBuf");
   all_buffers.push_back(m_geoVertBuf);
 
   const VkBufferUsageFlags idxFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | flags;
   m_geoIdxBuf = vk_utils::createBuffer(m_device, indexBufSize, idxFlags);
-  setObjectName(m_geoIdxBuf, VK_OBJECT_TYPE_BUFFER, "m_geoIdxBuf");
   all_buffers.push_back(m_geoIdxBuf);
 
   VkDeviceSize infoBufSize = a_meshNum * sizeof(uint32_t) * 2;
   m_meshInfoBuf = vk_utils::createBuffer(m_device, infoBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-  setObjectName(m_meshInfoBuf, VK_OBJECT_TYPE_BUFFER, "m_meshInfoBuf");
   all_buffers.push_back(m_meshInfoBuf);
 
   VkDeviceSize matIdsBufSize = (a_totalIndicesNum / 3) * sizeof(uint32_t);
   m_matIdsBuf = vk_utils::createBuffer(m_device, matIdsBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-  setObjectName(m_matIdsBuf, VK_OBJECT_TYPE_BUFFER, "m_matIdsBuf");
   all_buffers.push_back(m_matIdsBuf);
 
   VkMemoryAllocateFlags allocFlags {};

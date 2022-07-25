@@ -37,7 +37,7 @@ bool SceneManager::LoadScene(const std::string &scenePath)
   if(ext == ".gltf")
     return LoadSceneGLTF(scenePath);
   else if(ext == ".xml")
-    return LoadSceneXML(scenePath, true);
+    return LoadSceneXML(scenePath, false);
 
   return false;
 }
@@ -147,6 +147,7 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
     }
   }
 
+  AddLightSphere(20, 20);
 
   if(m_config.load_geometry)
   {

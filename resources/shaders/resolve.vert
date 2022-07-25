@@ -1,14 +1,14 @@
 #version 450
-#extension GL_ARB_separate_shader_objects : enable
-#extension GL_GOOGLE_include_directive : require
 
-#include "unpack_attributes.h"
+layout(location = 0) in vec4 vPosNorm;
+layout(location = 1) in vec4 vTexCoordAndTang;
 
 layout(push_constant) uniform params_t
 {
     mat4 mProjView;
-    mat4 lightModel;
+    mat4 mModel;
     vec4 color;
+    vec4 lightPos;
     vec2 screenSize; 
 } params;
 
@@ -16,6 +16,6 @@ layout (location = 0) out vec2 outUV;
 
 void main() 
 {
-    outUV = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
-    gl_Position = vec4(outUV * 2.0f + -1.0f, 0.0f, 1.0f);
+	vec3 pos   = (params.mModel * vec4(vPosNorm.xyz, 1.0f)).xyz;
+    gl_Position   = params.mProjView * vec4(pos, 1.0);
 }
