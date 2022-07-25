@@ -77,6 +77,23 @@ public:
 
   // debugging utils
   //
+  PFN_vkSetDebugUtilsObjectNameEXT SetDebugUtilsObjectNameEXT = nullptr;
+  template<class T>
+  void setObjectName(T handle, VkObjectType type, const char* name)
+  {
+    if (SetDebugUtilsObjectNameEXT != nullptr)
+    {
+		  VkDebugUtilsObjectNameInfoEXT nameInfo{
+		    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+        .pNext = NULL,
+		    .objectType = type,
+		    .objectHandle = reinterpret_cast<uint64_t>(handle),
+		    .pObjectName = name,
+		  };
+		  SetDebugUtilsObjectNameEXT(m_device, &nameInfo);
+    }
+  }
+
   static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallbackFn(
     VkDebugReportFlagsEXT                       flags,
     VkDebugReportObjectTypeEXT                  objectType,

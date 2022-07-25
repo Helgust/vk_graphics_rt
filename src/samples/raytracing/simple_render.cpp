@@ -98,6 +98,8 @@ void SimpleRender::SetupDeviceFeatures()
 void SimpleRender::SetupDeviceExtensions()
 {
   m_deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+  //Required for printf Debug
+  m_deviceExtensions.push_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
   
   if(ENABLE_HARDWARE_RT)
   {
@@ -111,8 +113,6 @@ void SimpleRender::SetupDeviceExtensions()
     m_deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
     // Required by VK_KHR_spirv_1_4
     m_deviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
-    //Required for printf Debug
-    m_deviceExtensions.push_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
   }
 }
 
@@ -138,6 +138,7 @@ void SimpleRender::InitVulkan(const char** a_instanceExtensions, uint32_t a_inst
   {
     m_instanceExtensions.push_back(a_instanceExtensions[i]);
   }
+  m_instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
   SetupValidationLayers();
   VK_CHECK_RESULT(volkInitialize());
@@ -253,6 +254,11 @@ void SimpleRender::CreateInstance()
 
   m_instance = vk_utils::createInstance(m_enableValidation, m_validationLayers, m_instanceExtensions, &appInfo);
 
+  SetDebugUtilsObjectNameEXT =
+      (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(
+      m_instance,
+      "vkSetDebugUtilsObjectNameEXT");
+      
   if (m_enableValidation)
     vk_utils::initDebugReportCallback(m_instance, &debugReportCallbackFn, &m_debugReportCallback);
 }
