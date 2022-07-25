@@ -608,10 +608,10 @@ void SimpleRender::CreateUniformBuffer()
 
   m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 1.0f,  1.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
-  m_uniforms.lights[0].radius  = 10.0f;
+  m_uniforms.lights[0].radius  = 65.0f;
   m_uniforms.lights[1].pos  = LiteMath::float4(0.0f, 2.0f,  1.0f, 1.0f);
   m_uniforms.lights[1].color  = LiteMath::float4(1.0f, 0.0f,  0.0f, 1.0f);
-  m_uniforms.lights[1].radius  = 5.0f;
+  m_uniforms.lights[1].radius  = 20.0f;
   m_uniforms.baseColor = LiteMath::float4(0.9f, 0.92f, 1.0f, 1.0f);
   m_uniforms.animateLightColor = true;
   //m_uniforms.m_camPos = to_float4(m_cam.pos, 1.0f);
@@ -678,10 +678,11 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     vkCmdBindVertexBuffers(a_cmdBuff, 0, 1, &vertexBuf, &zero_offset);
     vkCmdBindIndexBuffer(a_cmdBuff, indexBuf, 0, VK_INDEX_TYPE_UINT32);
 
-    float4 colors[3] = {
+    float4 colors[4] = {
       float4(1.f, 0.f, 0.f, 1.f),
       float4(0.f, 1.f, 0.f, 1.f),
       float4(0.f, 0.f, 1.f, 1.f),
+      float4(1.f, 1.f, 1.f, 1.f)
     };
 
     for (uint32_t i = 0; i < m_pScnMgr->InstancesNum(); ++i)
@@ -689,7 +690,7 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       auto inst = m_pScnMgr->GetInstanceInfo(i);
 
       pushConst2M.model = m_pScnMgr->GetInstanceMatrix(i);
-      pushConst2M.color = colors[i % 3];
+      pushConst2M.color = colors[3];
       vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0,
                          sizeof(pushConst2M), &pushConst2M);
 
@@ -1340,6 +1341,7 @@ void SimpleRender::SetupGUIElements()
 
     ImGui::ColorEdit3("Meshes base color 1", m_uniforms.baseColor.M, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoInputs);
     ImGui::SliderFloat3("Light source 1 position", m_uniforms.lights[0].pos.M, -100.f, 100.f);
+    ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius, 0.0f, 100.0f);
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
