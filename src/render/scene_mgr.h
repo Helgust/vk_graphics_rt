@@ -61,7 +61,8 @@ struct LoaderConfig
 struct SceneManager
 {
   SceneManager(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId,
-    std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config = {});
+    std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config = {}, 
+      PFN_vkSetDebugUtilsObjectNameEXT debugPtr = nullptr);
   ~SceneManager();
 
   bool LoadSceneXML(const std::string &scenePath, bool transpose = true);
@@ -70,12 +71,10 @@ struct SceneManager
 //  void LoadSingleTriangle(); // TODO: rework
 
   bool InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh);
-  void AddLightSphere(int sectorCount = 10, int stackCount = 10);
   uint32_t AddMeshFromFile(const std::string& meshPath);
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData);
 
   uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender = true);
-  uint32_t InstanceLight(float3 pos, float scale);
 
   void MarkInstance(uint32_t instId);
   void UnmarkInstance(uint32_t instId);
@@ -101,23 +100,33 @@ struct SceneManager
 
   uint32_t MeshesNum()    const {return m_meshInfos.size();}
   uint32_t InstancesNum() const {return m_instanceInfos.size();}
-  uint32_t LightInstancesNum() const {return (uint32_t)m_lightInstanceMatrices.size();}
 
-  uint32_t GetLightMeshId() { return m_lightSphereMesh;};
   hydra_xml::Camera GetCamera(uint32_t camId) const;
   MeshInfo GetMeshInfo(uint32_t meshId) const {assert(meshId < m_meshInfos.size()); return m_meshInfos[meshId];}
   InstanceInfo GetInstanceInfo(uint32_t instId) const {assert(instId < m_instanceInfos.size()); return m_instanceInfos[instId];}
   LiteMath::float4x4 GetInstanceMatrix(uint32_t instId) const {assert(instId < m_instanceMatrices.size()); return m_instanceMatrices[instId];}
-  LiteMath::float4x4 GetLightInstanceMatrix(uint32_t instId) const {assert(instId < m_lightInstanceMatrices.size()); return m_lightInstanceMatrices[instId];}
-  LiteMath::float4 GetLightInstancePos(uint32_t instId) const {
-    assert(instId < m_lightInstanceMatrices.size()); return GetLightInstanceMatrix(instId).get_col(3);}
 
 //  void DestroyAS();
 
   VkAccelerationStructureKHR GetTLAS() const { return m_pBuilderV2->GetTLAS(); }
   void BuildAllBLAS();
   void BuildTLAS();
-
+  
+  template<class T>
+  void setObjectName(T handle, VkObjectType type, const char* name)
+  {
+    if (SetDebugUtilsObjectNameEXT != nullptr)
+    {
+		  VkDebugUtilsObjectNameInfoEXT nameInfo{
+		    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+        .pNext = NULL,
+		    .objectType = type,
+		    .objectHandle = reinterpret_cast<uint64_t>(handle),
+		    .pObjectName = name,
+		  };
+		  SetDebugUtilsObjectNameEXT(m_device, &nameInfo);
+    }
+  }
 private:
   const std::string missingTextureImgPath = "../resources/data/missing_texture.png";
 
@@ -138,11 +147,8 @@ private:
 
   std::vector<InstanceInfo> m_instanceInfos = {};
   std::vector<LiteMath::float4x4> m_instanceMatrices = {};
-  std::vector<LiteMath::float4x4> m_lightInstanceMatrices = {};
 
   std::vector<hydra_xml::Camera> m_sceneCameras = {};
-
-  uint32_t m_lightSphereMesh;
 
   uint32_t m_totalVertices = 0u;
   uint32_t m_totalIndices  = 0u;
@@ -174,6 +180,8 @@ private:
   VkDevice m_device = VK_NULL_HANDLE;
   VkPhysicalDevice m_physDevice = VK_NULL_HANDLE;
   VkCommandPool m_pool = VK_NULL_HANDLE;
+
+  PFN_vkSetDebugUtilsObjectNameEXT SetDebugUtilsObjectNameEXT = nullptr;
 
   uint32_t m_graphicsQId = UINT32_MAX;
   VkQueue  m_graphicsQ   = VK_NULL_HANDLE;

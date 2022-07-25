@@ -19,10 +19,15 @@ typedef float2       vec2;
 typedef float4x4     mat4;
 #endif
 
+struct Light {
+		vec4  pos;
+		vec4  color;
+		float radius;
+	};
+
 struct UniformParams
 {
-  mat4  lightMatrix;
-  vec4  lightPos;
+  Light lights[2];
   vec4  baseColor;
   float time;
   mat4 m_invProjView; 

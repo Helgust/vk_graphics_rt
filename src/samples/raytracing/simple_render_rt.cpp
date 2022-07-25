@@ -228,6 +228,7 @@ void SimpleRender::RayTraceGPU(float a_time)
   //
   {
     VkCommandBuffer commandBuffer = vk_utils::createCommandBuffer(m_device, m_commandPool);
+    setObjectName(commandBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER, "RaytracingCommandBuffer");
 
     VkCommandBufferBeginInfo beginCommandBufferInfo = {};
     beginCommandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
