@@ -52,6 +52,12 @@
             "group": "build"
         },
         {
+            "label": "Shaders Compile Quad",
+            "type": "shell",
+            "command": "cd resources/shaders/ && py compile_quad_render_shaders.py",
+            "group": "build"
+        },
+        {
             "label": "Shaders Copy to Bin",
             "type": "shell",
             "command": "py copy_shaders_to_bin.py",
@@ -69,6 +75,7 @@
             "dependsOrder": "sequence",
             "dependsOn": [
                 "Shaders Compile SimpleForward",
+                "Shaders Compile Quad",
                 "Shaders Copy to Bin",
                 "Shaders Remove leftovers"
             ]
