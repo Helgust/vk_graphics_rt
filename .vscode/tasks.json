@@ -43,31 +43,100 @@
             "label": "Shaders Compile RT",
             "type": "shell",
             "command": "cd src/samples/raytracing/shaders_generated/ && py compile_rt_shaders.py",
-            "group": "build"
+            "presentation": {
+                "panel": "dedicated",
+                "clear": true
+            },
+            "problemMatcher": [
+                {
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}/shaders/"
+                    ],
+                    "pattern": [
+                        {
+                            "regexp": "^(ERROR|WARNING)",
+                            "severity": 1,
+                            "file": 1,
+                            "line": 1,
+                            "column": 1,
+                            "message": 1
+                        }
+                    ]
+                }
+            ]
         },
         {
             "label": "Shaders Compile SimpleForward",
             "type": "shell",
             "command": "cd resources/shaders/ && py compile_simple_render_shaders.py",
-            "group": "build"
+            "presentation": {
+                "panel": "dedicated",
+                "clear": true
+            },
+            "problemMatcher": [
+                {
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}/shaders/"
+                    ],
+                    "pattern": [
+                        {
+                            "regexp": "^(ERROR|WARNING)",
+                            "severity": 1,
+                            "file": 1,
+                            "line": 1,
+                            "column": 1,
+                            "message": 1
+                        }
+                    ]
+                }
+            ]
         },
         {
             "label": "Shaders Compile Quad",
             "type": "shell",
             "command": "cd resources/shaders/ && py compile_quad_render_shaders.py",
-            "group": "build"
+            "presentation": {
+                "panel": "dedicated",
+                "clear": true
+            },
+            "problemMatcher": [
+                {
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}/shaders/"
+                    ],
+                    "pattern": [
+                        {
+                            "regexp": "^(ERROR|WARNING)",
+                            "severity": 1,
+                            "file": 1,
+                            "line": 1,
+                            "column": 1,
+                            "message": 1
+                        }
+                    ]
+                }
+            ]
         },
         {
             "label": "Shaders Copy to Bin",
             "type": "shell",
             "command": "py copy_shaders_to_bin.py",
-            "group": "build"
+            "presentation": {
+                "panel": "dedicated",
+                "clear": true
+            }
         },
         {
             "label": "Shaders Remove leftovers",
             "type": "shell",
             "command": "py remove_leftovers.py",
-            "group": "build"
+            "presentation": {
+                "panel": "dedicated",
+                "clear": true
+            }
         },
         {
             "label": "Shaders Compile Copy Remove Leftovers",
@@ -78,6 +147,24 @@
                 "Shaders Compile Quad",
                 "Shaders Copy to Bin",
                 "Shaders Remove leftovers"
+            ],
+            "problemMatcher": [
+                {
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}/shaders/"
+                    ],
+                    "pattern": [
+                        {
+                            "regexp": "^(ERROR|WARNING)",
+                            "severity": 1,
+                            "file": 1,
+                            "line": 1,
+                            "column": 1,
+                            "message": 1
+                        }
+                    ]
+                }
             ]
         }
     ]

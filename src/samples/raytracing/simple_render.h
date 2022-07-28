@@ -51,7 +51,11 @@ public:
   const std::string TAA_FRAGMENT_SHADER_PATH = "../resources/shaders/taa.frag";
   const std::string RESOLVE_FRAGMENT_SHADER_PATH = "../resources/shaders/resolve.frag";
   const std::string RESOLVE_VERTEX_SHADER_PATH = "../resources/shaders/resolve.vert";
+  const std::string OMNI_SHADOW_FRAGMENT_SHADER_PATH = "../resources/shaders/omnishadow.frag";
+  const std::string OMNI_SHADOW_VERTEX_SHADER_PATH = "../resources/shaders/omnishadow.vert";
   const std::string MRT_FRAGMENT_SHADER_PATH = "../resources/shaders/mrt.frag";
+
+  
 
   const std::string NOISE_TEX = "../resources/textures/STBN.png";
   
@@ -140,11 +144,13 @@ protected:
     VkSemaphore imageAvailable    = VK_NULL_HANDLE;
     VkSemaphore renderingFinished = VK_NULL_HANDLE;
     VkSemaphore gbufferFinished = VK_NULL_HANDLE;
+    VkSemaphore shadowFinished = VK_NULL_HANDLE;
   } m_presentationResources;
 
   std::vector<VkFence> m_frameFences;
   std::vector<VkCommandBuffer> m_cmdBuffersDrawMain;
   std::vector<VkCommandBuffer> m_cmdBuffersGbuffer;
+
 
   struct
   {
@@ -166,7 +172,7 @@ protected:
 		FrameBufferAttachment position, normal, albedo;
 		FrameBufferAttachment depth;
 		VkRenderPass renderPass;
-	} m_gBuffer;
+	} m_gBuffer, m_omniShadowBuffer;
 
   VkSampler m_colorSampler;
 
@@ -180,9 +186,12 @@ protected:
   pipeline_data_t m_basicForwardPipeline {};
   pipeline_data_t m_resolvePipeline {};
   pipeline_data_t m_gBufferPipeline {};
+  pipeline_data_t m_omniShadowPipeline {};
 
   VkDescriptorSet m_dSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dSetLayout = VK_NULL_HANDLE;
+  VkDescriptorSet m_dOmniShadowSet = VK_NULL_HANDLE;
+  VkDescriptorSetLayout m_dOmniShadowSetLayout = VK_NULL_HANDLE;
   VkDescriptorSet m_dResolveSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dResolveSetLayout = VK_NULL_HANDLE;
   VkRenderPass m_screenRenderPass = VK_NULL_HANDLE; // rasterization renderpass
@@ -205,6 +214,9 @@ protected:
   VkDescriptorSetLayout m_quadDSLayout = VK_NULL_HANDLE;
   vk_utils::VulkanImageMem m_rtImage;
   VkSampler                m_rtImageSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_omniShadowImage;
+  VkSampler                m_omniShadowImageSampler = VK_NULL_HANDLE;
 
   vk_utils::VulkanImageMem m_taaImage;
   VkSampler                m_taaImageSampler = VK_NULL_HANDLE;
@@ -255,6 +267,10 @@ protected:
   Camera   m_cam;
   uint32_t m_width  = 1024u;
   uint32_t m_height = 1024u;
+
+  uint32_t m_shadowWidth  = 2048u;
+  uint32_t m_shadowHeight = 2048u;
+
   uint32_t m_framesInFlight  = 2u;
   bool m_vsync = false;
 
@@ -269,17 +285,19 @@ protected:
   std::shared_ptr<SceneManager> m_pScnMgr = nullptr;
 
   void DrawFrameSimple(float a_time);
-
+  void SetupOmniShadow();
   void SetupGbuffer();
 
   void CreateAttachment(
   VkFormat format,
   VkImageUsageFlagBits imageUsageType,
   VkImageUsageFlags usage,
-  FrameBufferAttachment *attachment);
+  FrameBufferAttachment *attachment, float with, float height);
 
   void CreateInstance();
   void CreateDevice(uint32_t a_deviceId);
+
+  void UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer cmdBuff);
 
   void BuildCommandBufferSimple(VkCommandBuffer cmdBuff, VkFramebuffer frameBuff,
                                 VkImageView a_targetImageView, VkPipeline a_pipeline);
@@ -288,14 +306,15 @@ protected:
                               VkImageView a_targetImageView, VkPipeline a_pipeline);
 
   void BuildResolveCommandBuffer(VkCommandBuffer cmdBuff, VkFramebuffer frameBuff,
-                                VkImageView a_targetImageView, VkPipeline a_pipeline);
-
+                                VkImageView a_targetImageView, VkPipeline a_pipeline);                               
+  void AddCmdsShadowmapPass(VkCommandBuffer a_cmdBuff, VkFramebuffer a_frameBuff);
   // *** Ray tracing related stuff
   void BuildCommandBufferQuad(VkCommandBuffer a_cmdBuff, VkImageView a_targetImageView);
   void SetupQuadRenderer();
   void SetupQuadDescriptors();
   void SetupRTImage();
   void SetupTaaImage();
+  void SetupOmniShadowImage();
   void SetupRTScene();
   // ***************************
 

@@ -122,6 +122,20 @@ void SimpleRender::SetupRTImage()
   }
 }
 
+void SimpleRender::SetupOmniShadowImage() // it is prepareCubeMap at Sasha Willems
+{
+  vk_utils::deleteImg(m_device, &m_omniShadowImage);  
+  // change format and usage according to your implementation of RT
+  m_omniShadowImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  createImgAllocAndBind(m_device, m_physicalDevice, m_shadowWidth, m_shadowHeight, VK_FORMAT_R8G8B8A8_UNORM,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_omniShadowImage);
+  setObjectName(m_omniShadowImage.image, VK_OBJECT_TYPE_IMAGE, "omnishadow_image");
+  if(m_omniShadowImageSampler == VK_NULL_HANDLE)
+  {
+    m_omniShadowImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+  }
+}
+
 void SimpleRender::SetupTaaImage()
 {
   vk_utils::deleteImg(m_device, &m_taaImage);
@@ -130,7 +144,7 @@ void SimpleRender::SetupTaaImage()
   m_taaImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_taaImage);
-
+  setObjectName(m_taaImage.image,VK_OBJECT_TYPE_IMAGE,"taa_image");
   if(m_taaImageSampler == VK_NULL_HANDLE)
   {
     m_taaImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);

@@ -53,21 +53,21 @@ void SimpleRender::SetupGbuffer() {
     VK_FORMAT_R16G16B16A16_SFLOAT,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    &m_gBuffer.position);
+    &m_gBuffer.position, m_gBuffer.width, m_gBuffer.height);
 
   // (World space) Normals
   CreateAttachment(
     VK_FORMAT_R16G16B16A16_SFLOAT,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    &m_gBuffer.normal);
+    &m_gBuffer.normal, m_gBuffer.width, m_gBuffer.height);
 
   // Albedo (color)
   CreateAttachment(
     VK_FORMAT_R8G8B8A8_UNORM,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    &m_gBuffer.albedo);
+    &m_gBuffer.albedo, m_gBuffer.width, m_gBuffer.height);
 
   // Depth attachment
 
@@ -76,7 +76,7 @@ void SimpleRender::SetupGbuffer() {
     VK_FORMAT_D32_SFLOAT,
     VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
     flags,
-    &m_gBuffer.depth);
+    &m_gBuffer.depth, m_gBuffer.width, m_gBuffer.height);
 
   // Set up separate renderpass with references to the color and depth attachments
   std::array<VkAttachmentDescription, 4> attachmentDescs = {};
@@ -91,7 +91,7 @@ void SimpleRender::SetupGbuffer() {
     attachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     if (i == 3)
     {
-      attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+      attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
       attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     }
     else
@@ -151,7 +151,7 @@ void SimpleRender::SetupGbuffer() {
   renderPassInfo.pDependencies = dependencies.data();
 
   VK_CHECK_RESULT(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_gBuffer.renderPass));
-
+  setObjectName(m_gBuffer.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "gbuffer_renderpass");
   std::array<VkImageView,4> attachments;
   attachments[0] = m_gBuffer.position.view;
   attachments[1] = m_gBuffer.normal.view;
@@ -170,28 +170,155 @@ void SimpleRender::SetupGbuffer() {
   VK_CHECK_RESULT(vkCreateFramebuffer(m_device, &fbufCreateInfo, nullptr, &m_gBuffer.frameBuffer));
 
   // Create sampler to sample from the color attachments
-    VkSamplerCreateInfo sampler {};
-    sampler.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler.maxAnisotropy = 1.0f;
-		sampler.magFilter = VK_FILTER_NEAREST;
-		sampler.minFilter = VK_FILTER_NEAREST;
-		sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		sampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		sampler.addressModeV = sampler.addressModeU;
-		sampler.addressModeW = sampler.addressModeU;
-		sampler.mipLodBias = 0.0f;
-		sampler.maxAnisotropy = 1.0f;
-		sampler.minLod = 0.0f;
-		sampler.maxLod = 1.0f;
-		sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-		VK_CHECK_RESULT(vkCreateSampler(m_device, &sampler, nullptr, &m_colorSampler));
+  VkSamplerCreateInfo sampler {};
+  sampler.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  sampler.maxAnisotropy = 1.0f;
+  sampler.magFilter = VK_FILTER_NEAREST;
+  sampler.minFilter = VK_FILTER_NEAREST;
+  sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+  sampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  sampler.addressModeV = sampler.addressModeU;
+  sampler.addressModeW = sampler.addressModeU;
+  sampler.mipLodBias = 0.0f;
+  sampler.maxAnisotropy = 1.0f;
+  sampler.minLod = 0.0f;
+  sampler.maxLod = 1.0f;
+  sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+  VK_CHECK_RESULT(vkCreateSampler(m_device, &sampler, nullptr, &m_colorSampler));
+}
+
+
+void SimpleRender::SetupOmniShadow() {
+  m_omniShadowBuffer.width = m_shadowWidth;
+	m_omniShadowBuffer.height = m_shadowHeight;
+
+  // Color attachments
+
+  // Color atachment
+  CreateAttachment(
+    VK_FORMAT_R16G16B16A16_SFLOAT,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    &m_omniShadowBuffer.albedo, m_omniShadowBuffer.width, m_omniShadowBuffer.height);
+
+  // Depth attachment
+
+  VkImageUsageFlags flags =  VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  CreateAttachment(
+    VK_FORMAT_D32_SFLOAT,
+    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+    flags,
+    &m_omniShadowBuffer.depth, m_omniShadowBuffer.width, m_omniShadowBuffer.height);
+
+  // Set up separate renderpass with references to the color and depth attachments
+  std::array<VkAttachmentDescription, 2> attachmentDescs = {};
+
+  // Init attachment properties
+  for (uint32_t i = 0; i < 2; ++i)
+  {
+    attachmentDescs[i].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachmentDescs[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachmentDescs[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachmentDescs[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    if (i == 1)
+    {
+      attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+      attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+    else
+    {
+      attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+      attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+  }
+
+  // Formats
+  attachmentDescs[0].format = m_omniShadowBuffer.albedo.format;
+  attachmentDescs[1].format = m_omniShadowBuffer.depth.format;
+
+  std::vector<VkAttachmentReference> colorReferences;
+  colorReferences.push_back({ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
+
+  VkAttachmentReference depthReference = {};
+  depthReference.attachment = 1;
+  depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+  VkSubpassDescription subpass = {};
+  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.pColorAttachments = colorReferences.data();
+  subpass.colorAttachmentCount = static_cast<uint32_t>(colorReferences.size());
+  subpass.pDepthStencilAttachment = &depthReference;
+
+  // Use subpass dependencies for attachment layout transitions
+  std::array<VkSubpassDependency, 2> dependencies;
+
+  dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+  dependencies[0].dstSubpass = 0;
+  dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+  dependencies[1].srcSubpass = 0;
+  dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+  dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+  VkRenderPassCreateInfo renderPassInfo = {};
+  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  renderPassInfo.pAttachments = attachmentDescs.data();
+  renderPassInfo.attachmentCount = static_cast<uint32_t>(attachmentDescs.size());
+  renderPassInfo.subpassCount = 1;
+  renderPassInfo.pSubpasses = &subpass;
+  renderPassInfo.dependencyCount = 2;
+  renderPassInfo.pDependencies = dependencies.data();
+
+  VK_CHECK_RESULT(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_omniShadowBuffer.renderPass));
+
+  std::array<VkImageView,2> attachments;
+  attachments[0] = m_omniShadowBuffer.albedo.view;
+  attachments[1] = m_omniShadowBuffer.depth.view;
+
+  VkFramebufferCreateInfo fbufCreateInfo = {};
+  fbufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  fbufCreateInfo.pNext = NULL;
+  fbufCreateInfo.renderPass = m_omniShadowBuffer.renderPass;
+  fbufCreateInfo.pAttachments = attachments.data();
+  fbufCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+  fbufCreateInfo.width = m_omniShadowBuffer.width;
+  fbufCreateInfo.height = m_omniShadowBuffer.height;
+  fbufCreateInfo.layers = 1;
+  VK_CHECK_RESULT(vkCreateFramebuffer(m_device, &fbufCreateInfo, nullptr, &m_omniShadowBuffer.frameBuffer));
+
+  // Create sampler to sample from the color attachments
+  VkSamplerCreateInfo sampler {};
+  sampler.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  sampler.maxAnisotropy = 1.0f;
+  sampler.magFilter = VK_FILTER_NEAREST;
+  sampler.minFilter = VK_FILTER_NEAREST;
+  sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+  sampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+  sampler.addressModeV = sampler.addressModeU;
+  sampler.addressModeW = sampler.addressModeU;
+  sampler.mipLodBias = 0.0f;
+  sampler.maxAnisotropy = 1.0f;
+  sampler.minLod = 0.0f;
+  sampler.maxLod = 1.0f;
+  sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+  VK_CHECK_RESULT(vkCreateSampler(m_device, &sampler, nullptr, &m_colorSampler));
 }
 
 void SimpleRender::CreateAttachment(
   VkFormat format,
   VkImageUsageFlagBits imageUsageType,
   VkImageUsageFlags usage,
-  FrameBufferAttachment *attachment)
+  FrameBufferAttachment *attachment,
+  float width, float height)
 {
   VkImageAspectFlags aspectMask = 0;
   VkImageLayout imageLayout;
@@ -215,8 +342,8 @@ void SimpleRender::CreateAttachment(
   image.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   image.imageType = VK_IMAGE_TYPE_2D;
   image.format = format;
-  image.extent.width = m_gBuffer.width;
-  image.extent.height = m_gBuffer.height;
+  image.extent.width = width;
+  image.extent.height = height;
   image.extent.depth = 1;
   image.mipLevels = 1;
   image.arrayLayers = 1;
@@ -409,7 +536,9 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.imageAvailable));
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.gbufferFinished));
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.renderingFinished));
+  VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.shadowFinished));
   m_screenRenderPass = vk_utils::createDefaultRenderPass(m_device, m_swapchain.GetFormat());
+  setObjectName(m_screenRenderPass,VK_OBJECT_TYPE_RENDER_PASS,"screen_renderpass");
   m_quadRenderPass = vk_utils::createDefaultRenderPass(m_device, m_swapchain.GetFormat(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   std::vector<VkFormat> depthFormats = {
@@ -422,6 +551,7 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
   vk_utils::getSupportedDepthFormat(m_physicalDevice, depthFormats, &m_depthBuffer.format);
   m_depthBuffer  = vk_utils::createDepthTexture(m_device, m_physicalDevice, m_width, m_height, m_depthBuffer.format);
 
+  SetupOmniShadow();
   SetupGbuffer();
 
   m_frameBuffers = vk_utils::createFrameBuffers(m_device, m_swapchain, m_screenRenderPass, m_depthBuffer.view);
@@ -475,6 +605,11 @@ inline VkPipelineColorBlendAttachmentState pipelineColorBlendAttachmentState(
 
 void SimpleRender::SetupSimplePipeline()
 {
+
+  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
+  m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+  m_pBindings->BindEnd(&m_dOmniShadowSet, &m_dOmniShadowSetLayout);
+
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindEnd(&m_dSet, &m_dSetLayout);
@@ -499,12 +634,25 @@ void SimpleRender::SetupSimplePipeline()
     m_gBufferPipeline.pipeline = VK_NULL_HANDLE;
   }
 
+  if(m_omniShadowPipeline.layout != VK_NULL_HANDLE)
+  {
+    vkDestroyPipelineLayout(m_device, m_omniShadowPipeline.layout, nullptr);
+    m_omniShadowPipeline.layout = VK_NULL_HANDLE;
+  }
+  if(m_omniShadowPipeline.pipeline != VK_NULL_HANDLE)
+  {
+    vkDestroyPipeline(m_device, m_omniShadowPipeline.pipeline, nullptr);
+    m_omniShadowPipeline.pipeline = VK_NULL_HANDLE;
+  }
+
   vk_utils::GraphicsPipelineMaker maker;
 
   std::unordered_map<VkShaderStageFlagBits, std::string> shader_paths;
   shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = MRT_FRAGMENT_SHADER_PATH + ".spv";
   shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = VERTEX_SHADER_PATH + ".spv";
-
+  maker.viewport.width  = float(m_width);
+  maker.viewport.height = float(m_height);
+  maker.scissor.extent  = VkExtent2D{ uint32_t(m_width), uint32_t(m_height) };
   maker.LoadShaders(m_device, shader_paths);
   m_gBufferPipeline.layout = maker.MakeLayout(m_device, {m_dSetLayout}, sizeof(pushConst2M));
   setObjectName(m_gBufferPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "gbuffer_pipeline_layout");
@@ -523,11 +671,29 @@ void SimpleRender::SetupSimplePipeline()
                                                        m_gBuffer.renderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
   setObjectName(m_gBufferPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "gbuffer_pipeline");
   
+   // make shadow pipeline
+
+  shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = OMNI_SHADOW_VERTEX_SHADER_PATH + ".spv";
+  maker.LoadShaders(m_device, shader_paths);
+  maker.viewport.width  = float(m_shadowWidth);
+  maker.viewport.height = float(m_shadowHeight);
+  maker.scissor.extent  = VkExtent2D{ uint32_t(m_shadowWidth), uint32_t(m_shadowHeight) };
+  m_omniShadowPipeline.layout = maker.MakeLayout(m_device, {m_dSetLayout}, sizeof(pushConst2M));
+  setObjectName(m_omniShadowPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "omni_shadow_pipeline_layout");
+  maker.SetDefaultState(m_shadowWidth, m_shadowHeight);
+
+  m_omniShadowPipeline.pipeline = maker.MakePipeline(m_device, m_pScnMgr->GetPipelineVertexInputStateCreateInfo(),
+                                            m_omniShadowBuffer.renderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
+
+  setObjectName(m_omniShadowPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "omni_shadow_pipeline");
   // make resolve pipeline
 
   shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = RESOLVE_VERTEX_SHADER_PATH + ".spv";
   shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = RESOLVE_FRAGMENT_SHADER_PATH + ".spv";
   maker.LoadShaders(m_device, shader_paths);
+  maker.viewport.width  = float(m_width);
+  maker.viewport.height = float(m_height);
+  maker.scissor.extent  = VkExtent2D{ uint32_t(m_width), uint32_t(m_height) };
   m_resolvePipeline.layout = maker.MakeLayout(m_device, {m_dResolveSetLayout}, sizeof(pushConst2M));
   setObjectName(m_resolvePipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "resolve_pipeline_layout");
   maker.SetDefaultState(m_width, m_height);
@@ -545,7 +711,11 @@ void SimpleRender::SetupSimplePipeline()
   maker.depthStencilTest.depthTestEnable = true;
   maker.depthStencilTest.depthWriteEnable = false;
 
-  m_resolvePipeline.pipeline = maker.MakePipeline(m_device,  m_pScnMgr->GetPipelineVertexInputStateCreateInfo(),
+  VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+  vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  vertexInputInfo.vertexBindingDescriptionCount = 0;
+  vertexInputInfo.vertexAttributeDescriptionCount = 0;
+  m_resolvePipeline.pipeline = maker.MakePipeline(m_device,  vertexInputInfo,
                                                        m_screenRenderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
   setObjectName(m_resolvePipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "resolve_pipeline");
 }
@@ -640,11 +810,12 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 
   VK_CHECK_RESULT(vkBeginCommandBuffer(a_cmdBuff, &beginInfo));
 
-  vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
-  vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
+  AddCmdsShadowmapPass(a_cmdBuff, m_omniShadowBuffer.frameBuffer);
 
   ///// draw final scene to screen
   {
+    vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
+    vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
     VkRenderPassBeginInfo renderPassInfo = {};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = m_gBuffer.renderPass;
@@ -740,14 +911,187 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_resolvePipeline.layout, 0, 1,
                             &m_dResolveSet, 0, VK_NULL_HANDLE);
 
-    // VkShaderStageFlags stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
-    // vkCmdPushConstants(a_cmdBuff, m_resolvePipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
-    vkCmdDrawIndexed(a_cmdBuff, 3, 1, 0, 0, 0);
+    VkShaderStageFlags stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+    vkCmdPushConstants(a_cmdBuff, m_resolvePipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
+    vkCmdDraw(a_cmdBuff, 4, 1, 0, 0);
 
     vkCmdEndRenderPass(a_cmdBuff);
   }
 
   VK_CHECK_RESULT(vkEndCommandBuffer(a_cmdBuff));
+}
+
+void SimpleRender::AddCmdsShadowmapPass(VkCommandBuffer a_cmdBuff, VkFramebuffer a_frameBuff)
+{
+  vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
+  vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
+
+  ///// draw final scene to screen
+  {
+    VkRenderPassBeginInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = m_omniShadowBuffer.renderPass;
+    renderPassInfo.framebuffer = a_frameBuff;
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent.width = m_omniShadowBuffer.width;
+		renderPassInfo.renderArea.extent.height = m_omniShadowBuffer.height;
+    setObjectName(m_omniShadowBuffer.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "omnishadow_renderpass");
+    VkClearValue clearValues[2] = {};
+		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+    renderPassInfo.clearValueCount = 2;
+    renderPassInfo.pClearValues = &clearValues[0];
+
+    vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_omniShadowPipeline.pipeline);
+
+    vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_omniShadowPipeline.layout, 0, 1,
+                            &m_dSet, 0, VK_NULL_HANDLE);
+
+    VkShaderStageFlags stageFlags = (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    VkDeviceSize zero_offset = 0u;
+    VkBuffer vertexBuf = m_pScnMgr->GetVertexBuffer();
+    setObjectName(vertexBuf, VK_OBJECT_TYPE_BUFFER, "vertex_bufffer_2");
+    VkBuffer indexBuf = m_pScnMgr->GetIndexBuffer();
+    setObjectName(indexBuf, VK_OBJECT_TYPE_BUFFER, "index_bufffer_2");
+
+    vkCmdBindVertexBuffers(a_cmdBuff, 0, 1, &vertexBuf, &zero_offset);
+    vkCmdBindIndexBuffer(a_cmdBuff, indexBuf, 0, VK_INDEX_TYPE_UINT32);
+
+    for (uint32_t i = 0; i < m_pScnMgr->InstancesNum(); ++i)
+    {
+      auto inst = m_pScnMgr->GetInstanceInfo(i);
+
+      pushConst2M.model = m_pScnMgr->GetInstanceMatrix(i);
+      vkCmdPushConstants(a_cmdBuff, m_omniShadowPipeline.layout, stageFlags, 0,
+                         sizeof(pushConst2M), &pushConst2M);
+
+      auto mesh_info = m_pScnMgr->GetMeshInfo(inst.mesh_id);
+      vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
+    }
+
+    vkCmdEndRenderPass(a_cmdBuff);
+  }
+}
+
+void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
+{
+  VkCommandBufferBeginInfo beginInfo = {};
+  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+  VkClearValue clearValues[2];
+  clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+  clearValues[1].depthStencil = { 1.0f, 0 };
+
+  VkRenderPassBeginInfo renderPassInfo = {};
+  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  renderPassInfo.renderPass = m_quadRenderPass;
+  renderPassInfo.framebuffer = m_quadFrameBuffer;
+  renderPassInfo.renderArea.offset = {0, 0};
+  renderPassInfo.renderArea.extent = m_swapchain.GetExtent();
+  renderPassInfo.clearValueCount = 2;
+  renderPassInfo.pClearValues = &clearValues[0];
+
+  // Update view matrix via push constant
+  float4x4 viewMatrix =  float4x4();
+		switch (faceIndex)
+		{
+		case 0: // POSITIVE_X
+			viewMatrix = viewMatrix * rotate4x4Y(90);
+      viewMatrix = viewMatrix * rotate4x4X(180);
+			break;
+		case 1:	// NEGATIVE_X
+			viewMatrix = viewMatrix * rotate4x4Y(-90);
+      viewMatrix = viewMatrix * rotate4x4X(180);
+			break;
+		case 2:	// POSITIVE_Y
+			viewMatrix = viewMatrix * rotate4x4X(-90);
+			break;
+		case 3:	// NEGATIVE_Y
+			viewMatrix = viewMatrix * rotate4x4X(90);
+			break;
+		case 4:	// POSITIVE_Z
+			viewMatrix = viewMatrix * rotate4x4X(180);
+			break;
+		case 5:	// NEGATIVE_Z
+			viewMatrix = viewMatrix * rotate4x4Z(180);
+			break;
+		}
+  
+  vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+  {
+
+  }
+  vkCmdEndRenderPass(a_cmdBuff);
+		// Make sure color writes to the framebuffer are finished before using it as transfer source
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_omniShadowBuffer.albedo.image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		VkImageSubresourceRange cubeFaceSubresourceRange = {};
+		cubeFaceSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		cubeFaceSubresourceRange.baseMipLevel = 0;
+		cubeFaceSubresourceRange.levelCount = 1;
+		cubeFaceSubresourceRange.baseArrayLayer = faceIndex;
+		cubeFaceSubresourceRange.layerCount = 1;
+
+		// Change image layout of one cubemap face to transfer destination
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_omniShadowImage.image,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			cubeFaceSubresourceRange);
+
+		// Copy region for transfer from framebuffer to cube face
+		VkImageCopy copyRegion = {};
+
+		copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.srcSubresource.baseArrayLayer = 0;
+		copyRegion.srcSubresource.mipLevel = 0;
+		copyRegion.srcSubresource.layerCount = 1;
+		copyRegion.srcOffset = { 0, 0, 0 };
+
+		copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.dstSubresource.baseArrayLayer = faceIndex;
+		copyRegion.dstSubresource.mipLevel = 0;
+		copyRegion.dstSubresource.layerCount = 1;
+		copyRegion.dstOffset = { 0, 0, 0 };
+
+		copyRegion.extent.width = m_shadowWidth;
+		copyRegion.extent.height = m_shadowHeight;
+		copyRegion.extent.depth = 1;
+
+		// Put image copy into command buffer
+		vkCmdCopyImage(
+			a_cmdBuff,
+			m_omniShadowBuffer.albedo.image,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			m_omniShadowImage.image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&copyRegion);
+
+		// Transform framebuffer color attachment back
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_omniShadowBuffer.albedo.image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+		// Change image layout of copied face to shader read
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_omniShadowImage.image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			cubeFaceSubresourceRange);
 }
 
 void SimpleRender::BuildCommandBufferQuad(VkCommandBuffer a_cmdBuff, VkImageView a_targetImageView)
@@ -860,6 +1204,12 @@ void SimpleRender::CleanupPipelineAndSwapchain()
     m_gBuffer.frameBuffer = VK_NULL_HANDLE;
   }
 
+  if(m_omniShadowBuffer.frameBuffer != VK_NULL_HANDLE)
+  {
+    vkDestroyFramebuffer(m_device, m_omniShadowBuffer.frameBuffer, nullptr);
+    m_omniShadowBuffer.frameBuffer = VK_NULL_HANDLE;
+  }
+
   if(m_screenRenderPass != VK_NULL_HANDLE)
   {
     vkDestroyRenderPass(m_device, m_screenRenderPass, nullptr);
@@ -872,21 +1222,16 @@ void SimpleRender::CleanupPipelineAndSwapchain()
     m_quadRenderPass = VK_NULL_HANDLE;
   }
 
-  vk_utils::deleteImg(m_device, &m_NoiseMapTex);
-  if (m_NoiseTexSampler != VK_NULL_HANDLE)
-  {
-    vkDestroySampler(m_device, m_NoiseTexSampler, VK_NULL_HANDLE);
-  }
-  if (m_NoiseMapTex.mem != VK_NULL_HANDLE)
-  {
-    vkFreeMemory(m_device, m_NoiseMapTex.mem, nullptr);
-    m_NoiseMapTex.mem = VK_NULL_HANDLE;
-  }
-
   if(m_gBuffer.renderPass != VK_NULL_HANDLE)
   {
     vkDestroyRenderPass(m_device, m_gBuffer.renderPass, nullptr);
     m_gBuffer.renderPass = VK_NULL_HANDLE;
+  }
+
+  if(m_omniShadowBuffer.renderPass != VK_NULL_HANDLE)
+  {
+    vkDestroyRenderPass(m_device, m_omniShadowBuffer.renderPass, nullptr);
+    m_omniShadowBuffer.renderPass = VK_NULL_HANDLE;
   }
 
   if(m_colorSampler != VK_NULL_HANDLE)
@@ -932,10 +1277,13 @@ void SimpleRender::RecreateSwapChain()
   m_cmdBuffersDrawMain = vk_utils::createCommandBuffers(m_device, m_commandPool, m_framesInFlight);
   for (uint32_t i = 0; i < m_swapchain.GetImageCount(); ++i)
   {
-    setObjectName(m_cmdBuffersGbuffer[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer RP");
+    // setObjectName(m_cmdBuffersOmniShadow[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build omniShadow Recreate");
+    // BuildOmniShadowCommandBuffer(m_cmdBuffersOmniShadow[i], m_omniShadowBuffer.frameBuffer, m_swapchain.GetAttachment(i).view,
+    //                        m_omniShadowPipeline.pipeline);
+    setObjectName(m_cmdBuffersGbuffer[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer Recreate");
     BuildGbufferCommandBuffer(m_cmdBuffersGbuffer[i], m_gBuffer.frameBuffer, m_swapchain.GetAttachment(i).view,
                            m_gBufferPipeline.pipeline);
-    setObjectName(m_cmdBuffersDrawMain[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build Resolve RP");                        
+    setObjectName(m_cmdBuffersDrawMain[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build Resolve Recreate");                        
     BuildResolveCommandBuffer(m_cmdBuffersDrawMain[i], m_frameBuffers[i], m_swapchain.GetAttachment(i).view,
                            m_resolvePipeline.pipeline);
   }
@@ -975,6 +1323,9 @@ void SimpleRender::ProcessInput(const AppInput &input)
 
     for (uint32_t i = 0; i < m_framesInFlight; ++i)
     {
+      // setObjectName(m_cmdBuffersOmniShadow[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build omniShadow LoadScene");
+      // BuildOmniShadowCommandBuffer(m_cmdBuffersOmniShadow[i], m_omniShadowBuffer.frameBuffer, m_swapchain.GetAttachment(i).view,
+      //                       m_omniShadowPipeline.pipeline);
       setObjectName(m_cmdBuffersGbuffer[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer PI");
       BuildGbufferCommandBuffer(m_cmdBuffersGbuffer[i], m_gBuffer.frameBuffer, m_swapchain.GetAttachment(i).view,
                            m_gBufferPipeline.pipeline);
@@ -1019,17 +1370,6 @@ void SimpleRender::LoadScene(const char* path)
 {
   m_pScnMgr->LoadScene(path);
 
-  // std::vector<float3> lightPos = {
-  //   float3(0.0, 2.0, 1.0), 
-  //   float3(0.0, -1.0, 1.0),
-  // };
-
-  // std::vector<float> lightScale = {5, 2};
-  // for (int i = 0; i < lightPos.size(); i++) {
-  //    m_pScnMgr->InstanceLight(lightPos[i], lightScale[i]);
-  // }
-
-
   if(ENABLE_HARDWARE_RT)
   {
     m_pScnMgr->BuildAllBLAS();
@@ -1050,6 +1390,7 @@ void SimpleRender::LoadScene(const char* path)
   
   SetupNoiseImage();
   SetupRTImage();
+  SetupOmniShadowImage();
   //SetupTaaImage();
   
   
@@ -1203,6 +1544,13 @@ void SimpleRender::Cleanup()
   }
   vk_utils::deleteImg(m_device, &m_resImage);
 
+  if(m_omniShadowImageSampler != VK_NULL_HANDLE)
+  {
+    vkDestroySampler(m_device, m_omniShadowImageSampler, nullptr);
+    m_omniShadowImageSampler = VK_NULL_HANDLE;
+  }
+  vk_utils::deleteImg(m_device, &m_omniShadowImage);
+
   m_pFSQuad = nullptr;
 
   if (m_resolvePipeline.pipeline != VK_NULL_HANDLE)
@@ -1227,6 +1575,17 @@ void SimpleRender::Cleanup()
     m_gBufferPipeline.layout = VK_NULL_HANDLE;
   }
 
+  if (m_omniShadowPipeline.pipeline != VK_NULL_HANDLE)
+  {
+    vkDestroyPipeline(m_device, m_omniShadowPipeline.pipeline, nullptr);
+    m_omniShadowPipeline.pipeline = VK_NULL_HANDLE;
+  }
+  if (m_omniShadowPipeline.layout != VK_NULL_HANDLE)
+  {
+    vkDestroyPipelineLayout(m_device, m_omniShadowPipeline.layout, nullptr);
+    m_omniShadowPipeline.layout = VK_NULL_HANDLE;
+  }
+
   if (m_presentationResources.imageAvailable != VK_NULL_HANDLE)
   {
     vkDestroySemaphore(m_device, m_presentationResources.imageAvailable, nullptr);
@@ -1244,6 +1603,12 @@ void SimpleRender::Cleanup()
     m_presentationResources.gbufferFinished = VK_NULL_HANDLE;
   }
 
+  if (m_presentationResources.shadowFinished != VK_NULL_HANDLE)
+  {
+    vkDestroySemaphore(m_device, m_presentationResources.shadowFinished, nullptr);
+    m_presentationResources.shadowFinished = VK_NULL_HANDLE;
+  }
+
   vkDestroyImage(m_device, m_gBuffer.albedo.image, nullptr);
   vkDestroyImage(m_device, m_gBuffer.position.image, nullptr);
   vkDestroyImage(m_device, m_gBuffer.normal.image, nullptr);
@@ -1256,6 +1621,19 @@ void SimpleRender::Cleanup()
   vkFreeMemory(m_device, m_gBuffer.position.mem, nullptr);
   vkFreeMemory(m_device, m_gBuffer.normal.mem, nullptr);
   vkFreeMemory(m_device, m_gBuffer.depth.mem, nullptr);
+
+  vkDestroyImage(m_device, m_omniShadowBuffer.albedo.image, nullptr);
+  vkDestroyImage(m_device, m_omniShadowBuffer.position.image, nullptr);
+  vkDestroyImage(m_device, m_omniShadowBuffer.normal.image, nullptr);
+  vkDestroyImage(m_device, m_omniShadowBuffer.depth.image, nullptr);
+  vkDestroyImageView(m_device, m_omniShadowBuffer.albedo.view, nullptr);
+  vkDestroyImageView(m_device, m_omniShadowBuffer.position.view, nullptr);
+  vkDestroyImageView(m_device, m_omniShadowBuffer.normal.view, nullptr);
+  vkDestroyImageView(m_device, m_omniShadowBuffer.depth.view, nullptr);
+  vkFreeMemory(m_device, m_omniShadowBuffer.albedo.mem, nullptr);
+  vkFreeMemory(m_device, m_omniShadowBuffer.position.mem, nullptr);
+  vkFreeMemory(m_device, m_omniShadowBuffer.normal.mem, nullptr);
+  vkFreeMemory(m_device, m_omniShadowBuffer.depth.mem, nullptr);
 
   if (m_commandPool != VK_NULL_HANDLE)
   {
