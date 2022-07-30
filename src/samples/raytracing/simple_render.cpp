@@ -168,6 +168,7 @@ void SimpleRender::SetupGbuffer() {
   fbufCreateInfo.height = m_gBuffer.height;
   fbufCreateInfo.layers = 1;
   VK_CHECK_RESULT(vkCreateFramebuffer(m_device, &fbufCreateInfo, nullptr, &m_gBuffer.frameBuffer));
+  setObjectName(m_gBuffer.frameBuffer, VK_OBJECT_TYPE_FRAMEBUFFER, "gBuffer_framebuffer");
 
   // Create sampler to sample from the color attachments
   VkSamplerCreateInfo sampler {};
@@ -185,6 +186,7 @@ void SimpleRender::SetupGbuffer() {
   sampler.maxLod = 1.0f;
   sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
   VK_CHECK_RESULT(vkCreateSampler(m_device, &sampler, nullptr, &m_colorSampler));
+  setObjectName(m_colorSampler, VK_OBJECT_TYPE_SAMPLER, "gBuffer_colorSampler");
 }
 
 
@@ -195,20 +197,129 @@ void SimpleRender::SetupOmniShadow() {
   // Color attachments
 
   // Color atachment
-  CreateAttachment(
-    VK_FORMAT_R16G16B16A16_SFLOAT,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    &m_omniShadowBuffer.albedo, m_omniShadowBuffer.width, m_omniShadowBuffer.height);
+  // CreateAttachment(
+  //   VK_FORMAT_R16G16B16A16_SFLOAT,
+  //   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+  //   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+  //   &m_omniShadowBuffer.albedo, m_omniShadowBuffer.width, m_omniShadowBuffer.height);
+
+    VkFormat fbColorFormat = VK_FORMAT_R32_SFLOAT;
+
+    // Color attachment
+    VkImageCreateInfo imageCreateInfo {};
+		imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageCreateInfo.format = fbColorFormat;
+    imageCreateInfo.extent.width = m_omniShadowBuffer.width;
+    imageCreateInfo.extent.height = m_omniShadowBuffer.height;
+    imageCreateInfo.extent.depth = 1;
+    imageCreateInfo.mipLevels = 1;
+    imageCreateInfo.arrayLayers = 1;
+    imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    // Image of the framebuffer is blit source
+    imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkMemoryAllocateInfo memAllocInfo {};
+		memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+
+    VkImageViewCreateInfo colorImageView {};
+		colorImageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		colorImageView.format = fbColorFormat;
+		colorImageView.flags = 0;
+		colorImageView.subresourceRange = {};
+		colorImageView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		colorImageView.subresourceRange.baseMipLevel = 0;
+		colorImageView.subresourceRange.levelCount = 1;
+		colorImageView.subresourceRange.baseArrayLayer = 0;
+		colorImageView.subresourceRange.layerCount = 1;
+
+    VkMemoryRequirements memReqs;
+
+		VK_CHECK_RESULT(vkCreateImage(m_device, &imageCreateInfo, nullptr, &m_omniShadowBuffer.albedo.image));
+		vkGetImageMemoryRequirements(m_device, m_omniShadowBuffer.albedo.image, &memReqs);
+		memAllocInfo.allocationSize = memReqs.size;
+		memAllocInfo.memoryTypeIndex = findMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physicalDevice);
+		VK_CHECK_RESULT(vkAllocateMemory(m_device, &memAllocInfo, nullptr, &m_omniShadowBuffer.albedo.mem));
+		VK_CHECK_RESULT(vkBindImageMemory(m_device, m_omniShadowBuffer.albedo.image, m_omniShadowBuffer.albedo.mem, 0));
+
+		VkCommandBuffer layoutCmd = vk_utils::createCommandBuffer(m_device, m_commandPool);
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    VK_CHECK_RESULT(vkBeginCommandBuffer(layoutCmd, &beginInfo));
+
+		vk_utils::setImageLayout(
+			layoutCmd,
+			m_omniShadowBuffer.albedo.image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+		colorImageView.image = m_omniShadowBuffer.albedo.image;
+		VK_CHECK_RESULT(vkCreateImageView(m_device, &colorImageView, nullptr, &m_omniShadowBuffer.albedo.view));
+
 
   // Depth attachment
 
-  VkImageUsageFlags flags =  VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-  CreateAttachment(
-    VK_FORMAT_D32_SFLOAT,
-    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-    flags,
-    &m_omniShadowBuffer.depth, m_omniShadowBuffer.width, m_omniShadowBuffer.height);
+  // VkImageUsageFlags flags =  VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  // CreateAttachment(
+  //   VK_FORMAT_D32_SFLOAT,
+  //   VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+  //   flags,
+  //   &m_omniShadowBuffer.depth, m_omniShadowBuffer.width, m_omniShadowBuffer.height);
+
+  imageCreateInfo.format = VK_FORMAT_D32_SFLOAT;
+	imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+  VkImageViewCreateInfo depthStencilView {};
+	depthStencilView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  depthStencilView.format = VK_FORMAT_D32_SFLOAT;
+  depthStencilView.flags = 0;
+  depthStencilView.subresourceRange = {};
+  depthStencilView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+  depthStencilView.subresourceRange.baseMipLevel = 0;
+  depthStencilView.subresourceRange.levelCount = 1;
+  depthStencilView.subresourceRange.baseArrayLayer = 0;
+  depthStencilView.subresourceRange.layerCount = 1;
+
+  VK_CHECK_RESULT(vkCreateImage(m_device, &imageCreateInfo, nullptr, &m_omniShadowBuffer.depth.image));
+  vkGetImageMemoryRequirements(m_device, m_omniShadowBuffer.depth.image, &memReqs);
+  memAllocInfo.allocationSize = memReqs.size;
+  memAllocInfo.memoryTypeIndex = findMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physicalDevice);
+  VK_CHECK_RESULT(vkAllocateMemory(m_device, &memAllocInfo, nullptr, &m_omniShadowBuffer.depth.mem));
+	VK_CHECK_RESULT(vkBindImageMemory(m_device, m_omniShadowBuffer.depth.image, m_omniShadowBuffer.depth.mem, 0));
+
+  vk_utils::setImageLayout(
+    layoutCmd,
+    m_omniShadowBuffer.depth.image,
+    VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+    VK_IMAGE_LAYOUT_UNDEFINED,
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+  VK_CHECK_RESULT(vkEndCommandBuffer(layoutCmd));
+  VkSubmitInfo submitInfo {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = &layoutCmd;
+  // Create fence to ensure that the command buffer has finished executing
+  VkFenceCreateInfo fenceCreateInfo {};
+  fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceCreateInfo.flags = 0;
+  VkFence fence;
+  VK_CHECK_RESULT(vkCreateFence(m_device, &fenceCreateInfo, nullptr, &fence));
+  // Submit to the queue
+  VK_CHECK_RESULT(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, fence));
+  // Wait for the fence to signal that command buffer has finished executing
+  VK_CHECK_RESULT(vkWaitForFences(m_device, 1, &fence, VK_TRUE, UINT64_MAX));
+  vkDestroyFence(m_device, fence, nullptr);
+  vkFreeCommandBuffers(m_device, m_commandPool, 1, &layoutCmd);
+
+
+  depthStencilView.image = m_omniShadowBuffer.depth.image;
+	VK_CHECK_RESULT(vkCreateImageView(m_device, &depthStencilView, nullptr, &m_omniShadowBuffer.depth.view));
 
   // Set up separate renderpass with references to the color and depth attachments
   std::array<VkAttachmentDescription, 2> attachmentDescs = {};
@@ -250,35 +361,15 @@ void SimpleRender::SetupOmniShadow() {
   subpass.colorAttachmentCount = static_cast<uint32_t>(colorReferences.size());
   subpass.pDepthStencilAttachment = &depthReference;
 
-  // Use subpass dependencies for attachment layout transitions
-  std::array<VkSubpassDependency, 2> dependencies;
-
-  dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-  dependencies[0].dstSubpass = 0;
-  dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-  dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-  dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-  dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-  dependencies[1].srcSubpass = 0;
-  dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-  dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-  dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-  dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-  dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
   VkRenderPassCreateInfo renderPassInfo = {};
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
   renderPassInfo.pAttachments = attachmentDescs.data();
   renderPassInfo.attachmentCount = static_cast<uint32_t>(attachmentDescs.size());
   renderPassInfo.subpassCount = 1;
   renderPassInfo.pSubpasses = &subpass;
-  renderPassInfo.dependencyCount = 2;
-  renderPassInfo.pDependencies = dependencies.data();
 
   VK_CHECK_RESULT(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_omniShadowBuffer.renderPass));
+  setObjectName(m_omniShadowBuffer.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "omnishadow_renderpass");
 
   std::array<VkImageView,2> attachments;
   attachments[0] = m_omniShadowBuffer.albedo.view;
@@ -294,6 +385,7 @@ void SimpleRender::SetupOmniShadow() {
   fbufCreateInfo.height = m_omniShadowBuffer.height;
   fbufCreateInfo.layers = 1;
   VK_CHECK_RESULT(vkCreateFramebuffer(m_device, &fbufCreateInfo, nullptr, &m_omniShadowBuffer.frameBuffer));
+  setObjectName(m_omniShadowBuffer.frameBuffer, VK_OBJECT_TYPE_FRAMEBUFFER, "omnishadow_framebuffer");
 
   // Create sampler to sample from the color attachments
   VkSamplerCreateInfo sampler {};
@@ -311,6 +403,7 @@ void SimpleRender::SetupOmniShadow() {
   sampler.maxLod = 1.0f;
   sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
   VK_CHECK_RESULT(vkCreateSampler(m_device, &sampler, nullptr, &m_colorSampler));
+  setObjectName(m_colorSampler, VK_OBJECT_TYPE_SAMPLER, "omnishadow_colorsampler");
 }
 
 void SimpleRender::CreateAttachment(
@@ -619,6 +712,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindImage(1, m_gBuffer.position.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(2, m_gBuffer.normal.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(3, m_gBuffer.albedo.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(4, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dResolveSet, &m_dResolveSetLayout);
 
   // if we are recreating pipeline (for example, to reload shaders)
@@ -672,7 +766,7 @@ void SimpleRender::SetupSimplePipeline()
   setObjectName(m_gBufferPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "gbuffer_pipeline");
   
    // make shadow pipeline
-
+  shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT]   = OMNI_SHADOW_FRAGMENT_SHADER_PATH + ".spv";
   shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = OMNI_SHADOW_VERTEX_SHADER_PATH + ".spv";
   maker.LoadShaders(m_device, shader_paths);
   maker.viewport.width  = float(m_shadowWidth);
@@ -776,9 +870,9 @@ void SimpleRender::CreateUniformBuffer()
 
   vkMapMemory(m_device, m_uboAlloc, 0, sizeof(m_uniforms), 0, &m_uboMappedMem);
 
-  m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 1.0f,  1.0f, 1.0f);
+  m_uniforms.lights[0].pos  = LiteMath::float4(-27.0f, 2.0f,  0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
-  m_uniforms.lights[0].radius  = 65.0f;
+  m_uniforms.lights[0].radius  = 20.0f;
   m_uniforms.lights[1].pos  = LiteMath::float4(0.0f, 2.0f,  1.0f, 1.0f);
   m_uniforms.lights[1].color  = LiteMath::float4(1.0f, 0.0f,  0.0f, 1.0f);
   m_uniforms.lights[1].radius  = 20.0f;
@@ -810,8 +904,15 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 
   VK_CHECK_RESULT(vkBeginCommandBuffer(a_cmdBuff, &beginInfo));
 
-  AddCmdsShadowmapPass(a_cmdBuff, m_omniShadowBuffer.frameBuffer);
+  vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
+  vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
 
+  //AddCmdsShadowmapPass(a_cmdBuff, m_omniShadowBuffer.frameBuffer);
+  //omnishadow pass
+  // for (uint32_t face = 0; face < 6; face++) {
+  //   UpdateCubeFace(face, a_cmdBuff);
+  // }
+  UpdateCubeFace(0,a_cmdBuff);
   ///// draw final scene to screen
   {
     vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
@@ -921,65 +1022,13 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
   VK_CHECK_RESULT(vkEndCommandBuffer(a_cmdBuff));
 }
 
-void SimpleRender::AddCmdsShadowmapPass(VkCommandBuffer a_cmdBuff, VkFramebuffer a_frameBuff)
-{
-  vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
-  vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
-
-  ///// draw final scene to screen
-  {
-    VkRenderPassBeginInfo renderPassInfo = {};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = m_omniShadowBuffer.renderPass;
-    renderPassInfo.framebuffer = a_frameBuff;
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent.width = m_omniShadowBuffer.width;
-		renderPassInfo.renderArea.extent.height = m_omniShadowBuffer.height;
-    setObjectName(m_omniShadowBuffer.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "omnishadow_renderpass");
-    VkClearValue clearValues[2] = {};
-		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-		clearValues[1].depthStencil = { 1.0f, 0 };
-    renderPassInfo.clearValueCount = 2;
-    renderPassInfo.pClearValues = &clearValues[0];
-
-    vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_omniShadowPipeline.pipeline);
-
-    vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_omniShadowPipeline.layout, 0, 1,
-                            &m_dSet, 0, VK_NULL_HANDLE);
-
-    VkShaderStageFlags stageFlags = (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    VkDeviceSize zero_offset = 0u;
-    VkBuffer vertexBuf = m_pScnMgr->GetVertexBuffer();
-    setObjectName(vertexBuf, VK_OBJECT_TYPE_BUFFER, "vertex_bufffer_2");
-    VkBuffer indexBuf = m_pScnMgr->GetIndexBuffer();
-    setObjectName(indexBuf, VK_OBJECT_TYPE_BUFFER, "index_bufffer_2");
-
-    vkCmdBindVertexBuffers(a_cmdBuff, 0, 1, &vertexBuf, &zero_offset);
-    vkCmdBindIndexBuffer(a_cmdBuff, indexBuf, 0, VK_INDEX_TYPE_UINT32);
-
-    for (uint32_t i = 0; i < m_pScnMgr->InstancesNum(); ++i)
-    {
-      auto inst = m_pScnMgr->GetInstanceInfo(i);
-
-      pushConst2M.model = m_pScnMgr->GetInstanceMatrix(i);
-      vkCmdPushConstants(a_cmdBuff, m_omniShadowPipeline.layout, stageFlags, 0,
-                         sizeof(pushConst2M), &pushConst2M);
-
-      auto mesh_info = m_pScnMgr->GetMeshInfo(inst.mesh_id);
-      vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
-    }
-
-    vkCmdEndRenderPass(a_cmdBuff);
-  }
-}
-
 void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
 {
-  VkCommandBufferBeginInfo beginInfo = {};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+  // vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
+  // vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
+  // VkCommandBufferBeginInfo beginInfo = {};
+  // beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  // beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
   VkClearValue clearValues[2];
   clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
@@ -987,20 +1036,20 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass = m_quadRenderPass;
-  renderPassInfo.framebuffer = m_quadFrameBuffer;
-  renderPassInfo.renderArea.offset = {0, 0};
-  renderPassInfo.renderArea.extent = m_swapchain.GetExtent();
+  renderPassInfo.renderPass = m_omniShadowBuffer.renderPass;
+  renderPassInfo.framebuffer = m_omniShadowBuffer.frameBuffer;
+  renderPassInfo.renderArea.extent.width = m_omniShadowBuffer.width;
+	renderPassInfo.renderArea.extent.height = m_omniShadowBuffer.height;
   renderPassInfo.clearValueCount = 2;
-  renderPassInfo.pClearValues = &clearValues[0];
+  renderPassInfo.pClearValues = clearValues;
 
   // Update view matrix via push constant
   float4x4 viewMatrix =  float4x4();
 		switch (faceIndex)
 		{
 		case 0: // POSITIVE_X
-			viewMatrix = viewMatrix * rotate4x4Y(90);
-      viewMatrix = viewMatrix * rotate4x4X(180);
+			// viewMatrix = viewMatrix * rotate4x4Y(90);
+      // viewMatrix = viewMatrix * rotate4x4X(180);
 			break;
 		case 1:	// NEGATIVE_X
 			viewMatrix = viewMatrix * rotate4x4Y(-90);
@@ -1019,12 +1068,49 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
 			viewMatrix = viewMatrix * rotate4x4Z(180);
 			break;
 		}
-  
-  vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-  {
 
-  }
-  vkCmdEndRenderPass(a_cmdBuff);
+    const float aspect   = float(m_omniShadowBuffer.width) / float(m_omniShadowBuffer.height);
+    auto mProjFix        = OpenglToVulkanProjectionMatrixFix();
+    auto mProj           = projectionMatrix(m_cam.fov, aspect, 0.1f, 1000.0f);
+    pushConst2M.lightView = mProjFix * mProj * viewMatrix;
+  
+    vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    {
+      vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+      vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_omniShadowPipeline.pipeline);
+
+      vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_omniShadowPipeline.layout, 0, 1,
+                              &m_dSet, 0, VK_NULL_HANDLE);
+
+      VkShaderStageFlags stageFlags = (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+
+      VkDeviceSize zero_offset = 0u;
+      VkBuffer vertexBuf = m_pScnMgr->GetVertexBuffer();
+      setObjectName(vertexBuf, VK_OBJECT_TYPE_BUFFER, "vertex_bufffer_2");
+      VkBuffer indexBuf = m_pScnMgr->GetIndexBuffer();
+      setObjectName(indexBuf, VK_OBJECT_TYPE_BUFFER, "index_bufffer_2");
+
+      vkCmdBindVertexBuffers(a_cmdBuff, 0, 1, &vertexBuf, &zero_offset);
+      vkCmdBindIndexBuffer(a_cmdBuff, indexBuf, 0, VK_INDEX_TYPE_UINT32);
+
+      // const float aspect   = float(m_width) / float(m_height);
+      // auto mProjFix        = OpenglToVulkanProjectionMatrixFix();
+      // auto mProj           = projectionMatrix(m_cam.fov, aspect, 0.1f, 1000.0f);
+      // auto mWorldLight  = mProjFix * mProj * viewMatrix;
+
+      for (uint32_t i = 0; i < m_pScnMgr->InstancesNum(); ++i)
+      {
+        auto inst = m_pScnMgr->GetInstanceInfo(i);
+
+        pushConst2M.model = m_pScnMgr->GetInstanceMatrix(i);
+        vkCmdPushConstants(a_cmdBuff, m_omniShadowPipeline.layout, stageFlags, 0,
+                          sizeof(pushConst2M), &pushConst2M);
+
+        auto mesh_info = m_pScnMgr->GetMeshInfo(inst.mesh_id);
+        vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
+      }
+    }
+    vkCmdEndRenderPass(a_cmdBuff);
 		// Make sure color writes to the framebuffer are finished before using it as transfer source
 		vk_utils::setImageLayout(
 			a_cmdBuff,
@@ -1362,6 +1448,7 @@ void SimpleRender::UpdateView()
   auto mLookAt         = LiteMath::lookAt(m_cam.pos, m_cam.lookAt, m_cam.up);
   auto mWorldViewProj  = mProjFix * mProj * mLookAt;
   pushConst2M.projView = mWorldViewProj;
+  pushConst2M.lightView = LiteMath::float4x4();
 
   m_inverseProjViewMatrix = LiteMath::inverse4x4(m_projectionMatrix * transpose(inverse4x4(mLookAt)));
 }

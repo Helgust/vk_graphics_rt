@@ -156,6 +156,7 @@ protected:
   {
     LiteMath::float4x4 projView;
     LiteMath::float4x4 model;
+    LiteMath::float4x4 lightView;
     LiteMath::float4 color;
     LiteMath::float2 screenSize;
   } pushConst2M;
@@ -268,8 +269,8 @@ protected:
   uint32_t m_width  = 1024u;
   uint32_t m_height = 1024u;
 
-  uint32_t m_shadowWidth  = 2048u;
-  uint32_t m_shadowHeight = 2048u;
+  uint32_t m_shadowWidth  = 1024u;
+  uint32_t m_shadowHeight = 1024u;
 
   uint32_t m_framesInFlight  = 2u;
   bool m_vsync = false;
@@ -316,6 +317,8 @@ protected:
   void SetupTaaImage();
   void SetupOmniShadowImage();
   void SetupRTScene();
+
+  uint32_t findMemoryType(uint32_t memoryTypeBits, VkMemoryPropertyFlags properties, VkPhysicalDevice physicalDevice);
   // ***************************
 
   void SetupSimplePipeline();

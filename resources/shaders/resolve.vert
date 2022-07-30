@@ -4,14 +4,6 @@
 
 #include "unpack_attributes.h"
 
-layout(push_constant) uniform params_t
-{
-    mat4 mProjView;
-    mat4 lightModel;
-    vec4 color;
-    vec2 screenSize; 
-} params;
-
 layout (location = 0) out vec2 outUV;
 
 void main() 

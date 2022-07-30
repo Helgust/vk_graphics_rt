@@ -11,11 +11,13 @@ layout(binding = 0, set = 0) uniform AppData
 layout (binding = 1) uniform sampler2D samplerPosition;
 layout (binding = 2) uniform sampler2D samplerNormal;
 layout (binding = 3) uniform sampler2D samplerAlbedo;
+layout (binding = 3) uniform samplerCube shadowCubeMap;
 
 layout(push_constant) uniform params_t
 {
     mat4 mProjView;
-    mat4 lightModel;
+    mat4 mModel;
+    mat4 lightMatrix;
     vec4 color;
     vec2 screenSize; 
 } params;
@@ -24,12 +26,16 @@ layout (location = 0) in vec2 inUV;
 
 layout (location = 0) out vec4 outFragcolor;
 
+#define EPSILON 0.15
+#define SHADOW_OPACITY 0.5
+
 void main() 
 {
     vec2 uv = gl_FragCoord.xy / params.screenSize;
     vec3 fragPos = texture(samplerPosition, uv).rgb;
 	vec3 normal = texture(samplerNormal, uv).rgb;
 	vec4 albedo = texture(samplerAlbedo, uv);
+    
 
     
     // gl_FragDepth = gl_FragCoord.z * params.isOutsideLight;
@@ -39,8 +45,11 @@ void main()
     // vec4 albedo = vec4(0.9f, 0.92f, 1.0f, 1.0f);
 
     vec3 lightDir1 = normalize(UboParams.lights[0].pos.xyz -fragPos);
-    float lightDist = distance(UboParams.lights[0].pos.xyz, fragPos);
+    vec3 lightVec = fragPos - UboParams.lights[0].pos.xyz;
+    float lightDist = length(lightVec);
     float lightRadius = UboParams.lights[0].radius;
+    float sampledDist = texture(shadowCubeMap, lightVec).r;
+    float shadow = (lightDist <= sampledDist + EPSILON) ? 1.0 : SHADOW_OPACITY;
 
     if (lightDist > lightRadius) {
         outFragcolor = vec4(0.0f);
@@ -65,6 +74,6 @@ void main()
     float intensity = 1.f;
     float attn = clamp(1.0 - lightDist*lightDist/(lightRadius*lightRadius), 0.0, 1.0); 
     attn *= attn;
-    outFragcolor = color1 * albedo * attn;
+    outFragcolor = color1 * albedo * attn * shadow;    
     //outFragcolor= vec4(1.0, 0.0f, 0.0f, 1.0f);
 }

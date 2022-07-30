@@ -3,6 +3,20 @@
 #include "raytracing_generated.h"
 #include "stb_image.h"
 
+uint32_t SimpleRender::findMemoryType(uint32_t memoryTypeBits, VkMemoryPropertyFlags properties, VkPhysicalDevice physicalDevice)
+{
+  VkPhysicalDeviceMemoryProperties memoryProperties;
+
+  vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+
+  for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
+  {
+    if ((memoryTypeBits & (1u << i)) && ((memoryProperties.memoryTypes[i].propertyFlags & properties) == properties))
+      return i;
+  }
+
+  return UINT32_MAX;
+}
 // ***************************************************************************************************************************
 // setup full screen quad to display ray traced image
 void SimpleRender::SetupQuadRenderer()
@@ -127,13 +141,83 @@ void SimpleRender::SetupOmniShadowImage() // it is prepareCubeMap at Sasha Wille
   vk_utils::deleteImg(m_device, &m_omniShadowImage);  
   // change format and usage according to your implementation of RT
   m_omniShadowImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  createImgAllocAndBind(m_device, m_physicalDevice, m_shadowWidth, m_shadowHeight, VK_FORMAT_R8G8B8A8_UNORM,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_omniShadowImage);
+  VkFormat format = VK_FORMAT_R32_SFLOAT;
+  VkImageCreateInfo imageCreateInfo {};
+	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageCreateInfo.format = VK_FORMAT_R32_SFLOAT;
+  imageCreateInfo.extent = { m_shadowWidth, m_shadowHeight, 1 };
+  imageCreateInfo.mipLevels = 1;
+  imageCreateInfo.arrayLayers = 6;
+  imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+  imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+  imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+  imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;  
+  imageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+  VkCommandBuffer layoutCmd = vk_utils::createCommandBuffer(m_device, m_commandPool);
+  VkCommandBufferBeginInfo beginInfo = {};
+  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  VK_CHECK_RESULT(vkBeginCommandBuffer(layoutCmd, &beginInfo));
+
+  // Create cube map image
+  VK_CHECK_RESULT(vkCreateImage(m_device, &imageCreateInfo, nullptr, &m_omniShadowImage.image));
   setObjectName(m_omniShadowImage.image, VK_OBJECT_TYPE_IMAGE, "omnishadow_image");
+  vkGetImageMemoryRequirements(m_device, m_omniShadowImage.image, &m_omniShadowImage.memReq);
+
+  VkMemoryAllocateInfo memAlloc{};
+  memAlloc.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  memAlloc.allocationSize  = m_omniShadowImage.memReq.size;
+  memAlloc.memoryTypeIndex = findMemoryType(m_omniShadowImage.memReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physicalDevice);
+  VK_CHECK_RESULT(vkAllocateMemory(m_device, &memAlloc, nullptr, &m_omniShadowImage.mem));
+  VK_CHECK_RESULT(vkBindImageMemory(m_device, m_omniShadowImage.image, m_omniShadowImage.mem, m_omniShadowImage.mem_offset));
+
+  VkImageSubresourceRange subresourceRange = {};
+  subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  subresourceRange.baseMipLevel = 0;
+  subresourceRange.levelCount = 1;
+  subresourceRange.layerCount = 6;
+  vk_utils::setImageLayout(
+    layoutCmd,
+    m_omniShadowImage.image,
+    VK_IMAGE_LAYOUT_UNDEFINED,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    subresourceRange);
+
+  VK_CHECK_RESULT(vkEndCommandBuffer(layoutCmd));
+  VkSubmitInfo submitInfo {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = &layoutCmd;
+  // Create fence to ensure that the command buffer has finished executing
+  VkFenceCreateInfo fenceCreateInfo {};
+  fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceCreateInfo.flags = 0;
+  VkFence fence;
+  VK_CHECK_RESULT(vkCreateFence(m_device, &fenceCreateInfo, nullptr, &fence));
+  // Submit to the queue
+  VK_CHECK_RESULT(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, fence));
+  // Wait for the fence to signal that command buffer has finished executing
+  VK_CHECK_RESULT(vkWaitForFences(m_device, 1, &fence, VK_TRUE, UINT64_MAX));
+  vkDestroyFence(m_device, fence, nullptr);
+  vkFreeCommandBuffers(m_device, m_commandPool, 1, &layoutCmd);
   if(m_omniShadowImageSampler == VK_NULL_HANDLE)
   {
-    m_omniShadowImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+    m_omniShadowImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE);
   }
+
+  VkImageViewCreateInfo imageViewCreateInfo {};
+  imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  imageViewCreateInfo.image = VK_NULL_HANDLE;
+  imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+  imageViewCreateInfo.format = format;
+  imageViewCreateInfo.components = { VK_COMPONENT_SWIZZLE_R };
+  imageViewCreateInfo.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+  imageViewCreateInfo.subresourceRange.layerCount = 6;
+  imageViewCreateInfo.image = m_omniShadowImage.image;
+  VK_CHECK_RESULT(vkCreateImageView(m_device, &imageViewCreateInfo, nullptr, &m_omniShadowImage.view));
+  setObjectName(m_omniShadowImage.view, VK_OBJECT_TYPE_IMAGE_VIEW, "omnishadow_image_view");
 }
 
 void SimpleRender::SetupTaaImage()

@@ -8,6 +8,7 @@ layout(push_constant) uniform params_t
 {
     mat4 mProjView;
     mat4 mModel;
+    mat4 lightMatrix;
     vec4 color;
     vec2 screenSize; 
 } params;

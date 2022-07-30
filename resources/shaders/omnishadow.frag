@@ -4,20 +4,23 @@
 
 #include "common.h"
 
-layout(location = 0) out vec4 out_fragColor;
+layout(location = 0) out float out_fragColor;
 
 layout (location = 0 ) in VS_OUT
 {
     vec2 texCoord;
+    vec4 pos;
 } surf;
 
 layout(binding = 0, set = 0) uniform AppData
 {
-    UniformParams Params;
+    UniformParams UboParams;
 };
 
 
 void main()
 {
-    out_fragColor = vec4(1.0f, 0.0f, 1.0f, 1.0f);
+    vec3 lightVec = surf.pos.xyz - UboParams.lights[0].pos.xyz;
+    out_fragColor = length(lightVec);
+    //out_fragColor = vec4(1.0f, 0.0f, 1.0f, 1.0f);
 }
