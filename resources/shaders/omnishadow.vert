@@ -2,7 +2,6 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : require
 
-#include "common.h"
 #include "unpack_attributes.h"
 
 
@@ -15,24 +14,29 @@ layout(push_constant) uniform params_t
     mat4 mModel;
     mat4 lightMatrix;
     vec4 color;
-    vec2 screenSize; 
-} pushParams;
+    vec2 screenSize;
+} params;
 
-layout(binding = 0, set = 0) uniform AppData
-{
-    UniformParams UboParams;
-};
 
 layout (location = 0 ) out VS_OUT
 {
+    vec3 wPos;
+    vec3 wNorm;
+    vec3 wTangent;
     vec2 texCoord;
-    vec4 pos;
+
 } vOut;
 
+out gl_PerVertex { vec4 gl_Position; };
 void main(void)
 {
-    vOut.texCoord = vTexCoordAndTang.xy;
-    vOut.pos = vec4(vPosNorm.xyz, 1.0f);
-    gl_Position   = pushParams.lightMatrix * pushParams.mModel * vec4(vPosNorm.xyz, 1.0);
-}
+    const vec4 wNorm = vec4(DecodeNormal(floatBitsToInt(vPosNorm.w)),         0.0f);
+    const vec4 wTang = vec4(DecodeNormal(floatBitsToInt(vTexCoordAndTang.z)), 0.0f);
 
+    vOut.wPos     = (params.mModel * vec4(vPosNorm.xyz, 1.0f)).xyz;
+    vOut.wNorm    = normalize(mat3(transpose(inverse(params.mModel))) * wNorm.xyz);
+    vOut.wTangent = normalize(mat3(transpose(inverse(params.mModel))) * wTang.xyz);
+    vOut.texCoord = vTexCoordAndTang.xy;
+
+    gl_Position   = params.lightMatrix * vec4(vOut.wPos, 1.0);
+}

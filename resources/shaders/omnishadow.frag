@@ -8,8 +8,10 @@ layout(location = 0) out float out_fragColor;
 
 layout (location = 0 ) in VS_OUT
 {
+    vec3 wPos;
+    vec3 wNorm;
+    vec3 wTangent;
     vec2 texCoord;
-    vec4 pos;
 } surf;
 
 layout(binding = 0, set = 0) uniform AppData
@@ -20,7 +22,7 @@ layout(binding = 0, set = 0) uniform AppData
 
 void main()
 {
-    vec3 lightVec = surf.pos.xyz - UboParams.lights[0].pos.xyz;
+    vec3 lightVec = surf.wPos.xyz - UboParams.lights[0].pos.xyz;
     out_fragColor = length(lightVec);
     //out_fragColor = vec4(1.0f, 0.0f, 1.0f, 1.0f);
 }

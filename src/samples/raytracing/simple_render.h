@@ -156,9 +156,9 @@ protected:
   {
     LiteMath::float4x4 projView;
     LiteMath::float4x4 model;
-    LiteMath::float4x4 lightView;
     LiteMath::float4 color;
     LiteMath::float2 screenSize;
+    LiteMath::float4x4 lightView;
   } pushConst2M;
 
   struct FrameBufferAttachment {
@@ -174,6 +174,11 @@ protected:
 		FrameBufferAttachment depth;
 		VkRenderPass renderPass;
 	} m_gBuffer, m_omniShadowBuffer;
+
+  struct InputControlMouseEtc
+  {
+    bool drawFSQuad = false;
+  } m_input;
 
   VkSampler m_colorSampler;
 

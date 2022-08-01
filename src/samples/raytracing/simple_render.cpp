@@ -712,7 +712,8 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindImage(1, m_gBuffer.position.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(2, m_gBuffer.normal.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(3, m_gBuffer.albedo.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-  m_pBindings->BindImage(4, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(4, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
+  m_pBindings->BindImage(5, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dResolveSet, &m_dResolveSetLayout);
 
   // if we are recreating pipeline (for example, to reload shaders)
@@ -870,9 +871,9 @@ void SimpleRender::CreateUniformBuffer()
 
   vkMapMemory(m_device, m_uboAlloc, 0, sizeof(m_uniforms), 0, &m_uboMappedMem);
 
-  m_uniforms.lights[0].pos  = LiteMath::float4(-27.0f, 2.0f,  0.0f, 1.0f);
+  m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 10.0f, 0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
-  m_uniforms.lights[0].radius  = 20.0f;
+  m_uniforms.lights[0].radius  = 30.0f;
   m_uniforms.lights[1].pos  = LiteMath::float4(0.0f, 2.0f,  1.0f, 1.0f);
   m_uniforms.lights[1].color  = LiteMath::float4(1.0f, 0.0f,  0.0f, 1.0f);
   m_uniforms.lights[1].radius  = 20.0f;
@@ -909,10 +910,10 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 
   //AddCmdsShadowmapPass(a_cmdBuff, m_omniShadowBuffer.frameBuffer);
   //omnishadow pass
-  // for (uint32_t face = 0; face < 6; face++) {
-  //   UpdateCubeFace(face, a_cmdBuff);
-  // }
-  UpdateCubeFace(0,a_cmdBuff);
+  for (uint32_t face = 0; face < 6; face++) {
+    UpdateCubeFace(face, a_cmdBuff);
+  }
+  //UpdateCubeFace(0,a_cmdBuff);
   ///// draw final scene to screen
   {
     vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
@@ -962,7 +963,7 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       auto inst = m_pScnMgr->GetInstanceInfo(i);
 
       pushConst2M.model = m_pScnMgr->GetInstanceMatrix(i);
-      pushConst2M.color = colors[3];
+      pushConst2M.color = colors[i % 4];
       vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0,
                          sizeof(pushConst2M), &pushConst2M);
 
@@ -1045,27 +1046,28 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
 
   // Update view matrix via push constant
   float4x4 viewMatrix =  float4x4();
+  viewMatrix.set_col(3, m_uniforms.lights[0].pos);
 		switch (faceIndex)
 		{
 		case 0: // POSITIVE_X
-			// viewMatrix = viewMatrix * rotate4x4Y(90);
-      // viewMatrix = viewMatrix * rotate4x4X(180);
+			viewMatrix = rotate4x4Y(90 * DEG_TO_RAD) * viewMatrix;
+      viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 1:	// NEGATIVE_X
-			viewMatrix = viewMatrix * rotate4x4Y(-90);
-      viewMatrix = viewMatrix * rotate4x4X(180);
+			viewMatrix = rotate4x4Y(-90 * DEG_TO_RAD) * viewMatrix;
+      viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 2:	// POSITIVE_Y
-			viewMatrix = viewMatrix * rotate4x4X(-90);
+			viewMatrix = rotate4x4X(-90 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 3:	// NEGATIVE_Y
-			viewMatrix = viewMatrix * rotate4x4X(90);
+			viewMatrix = rotate4x4X(90 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 4:	// POSITIVE_Z
-			viewMatrix = viewMatrix * rotate4x4X(180);
+			viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix ;
 			break;
 		case 5:	// NEGATIVE_Z
-			viewMatrix = viewMatrix * rotate4x4Z(180);
+			viewMatrix = rotate4x4Z(180 * DEG_TO_RAD) * viewMatrix;
 			break;
 		}
 
@@ -1092,11 +1094,6 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
 
       vkCmdBindVertexBuffers(a_cmdBuff, 0, 1, &vertexBuf, &zero_offset);
       vkCmdBindIndexBuffer(a_cmdBuff, indexBuf, 0, VK_INDEX_TYPE_UINT32);
-
-      // const float aspect   = float(m_width) / float(m_height);
-      // auto mProjFix        = OpenglToVulkanProjectionMatrixFix();
-      // auto mProj           = projectionMatrix(m_cam.fov, aspect, 0.1f, 1000.0f);
-      // auto mWorldLight  = mProjFix * mProj * viewMatrix;
 
       for (uint32_t i = 0; i < m_pScnMgr->InstancesNum(); ++i)
       {
@@ -1469,7 +1466,7 @@ void SimpleRender::LoadScene(const char* path)
 
   std::vector<std::pair<VkDescriptorType, uint32_t> > dtypes = {
     {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,             2},
-    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     3}
+    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     4}
   };
 
   // set large a_maxSets, because every window resize will cause the descriptor set for quad being to be recreated
