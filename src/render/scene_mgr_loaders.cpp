@@ -37,7 +37,7 @@ bool SceneManager::LoadScene(const std::string &scenePath)
   if(ext == ".gltf")
     return LoadSceneGLTF(scenePath);
   else if(ext == ".xml")
-    return LoadSceneXML(scenePath, true);
+    return LoadSceneXML(scenePath, false);
 
   return false;
 }
@@ -147,13 +147,12 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
     }
   }
 
-
   if(m_config.load_geometry)
   {
     LoadCommonGeoDataOnGPU();
   }
 
-  if(m_config.instance_matrix_as_vertex_attribute | m_config.instance_matrix_as_storage_buffer)
+  if(m_config.instance_matrix_as_vertex_attribute)
   {
     LoadInstanceDataOnGPU();
   }
@@ -284,7 +283,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
     LoadCommonGeoDataOnGPU();
   }
 
-  if(m_config.instance_matrix_as_vertex_attribute | m_config.instance_matrix_as_storage_buffer)
+  if(m_config.instance_matrix_as_vertex_attribute)
   {
     LoadInstanceDataOnGPU();
   }

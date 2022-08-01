@@ -4,9 +4,9 @@
 #include <limits>
 
 #include <cassert>
+#include "vk_copy.h"
+#include "vk_context.h"
 
-
-#include "vulkan_basics.h"
 #include "raytracing_generated.h"
 
 #include "VulkanRTX.h"
@@ -51,7 +51,7 @@ void RayTracer_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     constexpr uint additionalSize = 1;
 
     std::array<VkDescriptorBufferInfo, 2 + additionalSize> descriptorBufferInfo;
-    //std::array<VkDescriptorImageInfo,  1 + additionalSize> descriptorImageInfo;
+    std::array<VkDescriptorImageInfo,  2 + additionalSize> descriptorImageInfo;
     std::array<VkAccelerationStructureKHR,  2 + additionalSize> accelStructs;
     std::array<VkWriteDescriptorSetAccelerationStructureKHR,  2 + additionalSize> descriptorAccelInfo;
     std::array<VkWriteDescriptorSet,   2 + additionalSize> writeDescriptorSet;
@@ -101,21 +101,6 @@ void RayTracer_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     writeDescriptorSet[2].pBufferInfo      = &descriptorBufferInfo[2];
     writeDescriptorSet[2].pImageInfo       = nullptr;
     writeDescriptorSet[2].pTexelBufferView = nullptr;
-
-    // descriptorImageInfo[0] = VkDescriptorImageInfo{};
-    // descriptorImageInfo[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    // descriptorImageInfo[0].imageView = textureImageView;
-    // descriptorImageInfo[0].sampler = m_NoiseTexSampler;
-
-    // writeDescriptorSet[2]                  = VkWriteDescriptorSet{};
-    // writeDescriptorSet[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    // writeDescriptorSet[2].dstSet           = m_allGeneratedDS[0];
-    // writeDescriptorSet[2].dstBinding       = 3;
-    // writeDescriptorSet[2].descriptorCount  = 1;
-    // writeDescriptorSet[2].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    // writeDescriptorSet[2].pBufferInfo      = nullptr;
-    // writeDescriptorSet[2].pImageInfo       = &descriptorImageInfo[0];
-    
 
     vkUpdateDescriptorSets(device, uint32_t(writeDescriptorSet.size()), writeDescriptorSet.data(), 0, NULL);
   }

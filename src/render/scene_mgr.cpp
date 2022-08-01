@@ -60,9 +60,9 @@ VkFormat formatFromImageInfo(const ImageFileInfo &info)
 }
 
 SceneManager::SceneManager(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId,
-  std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config, PFN_vkSetDebugUtilsObjectNameEXT ptr) :
+  std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config) :
                 m_device(a_device), m_physDevice(a_physDevice), m_graphicsQId(a_graphicsQId),
-                m_pCopyHelper(a_pCopyHelper), m_config(a_config), SetDebugUtilsObjectNameEXT(ptr)
+                m_pCopyHelper(a_pCopyHelper), m_config(a_config)
 {
   vkGetDeviceQueue(m_device, m_graphicsQId, 0, &m_graphicsQ);
 
@@ -240,22 +240,18 @@ void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum
 
   const VkBufferUsageFlags vertFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | flags;
   m_geoVertBuf = vk_utils::createBuffer(m_device, vertexBufSize, vertFlags);
-  setObjectName(m_geoVertBuf, VK_OBJECT_TYPE_BUFFER, "m_geoVertBuf");
   all_buffers.push_back(m_geoVertBuf);
 
   const VkBufferUsageFlags idxFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | flags;
   m_geoIdxBuf = vk_utils::createBuffer(m_device, indexBufSize, idxFlags);
-  setObjectName(m_geoIdxBuf, VK_OBJECT_TYPE_BUFFER, "m_geoIdxBuf");
   all_buffers.push_back(m_geoIdxBuf);
 
   VkDeviceSize infoBufSize = a_meshNum * sizeof(uint32_t) * 2;
   m_meshInfoBuf = vk_utils::createBuffer(m_device, infoBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-  setObjectName(m_meshInfoBuf, VK_OBJECT_TYPE_BUFFER, "m_meshInfoBuf");
   all_buffers.push_back(m_meshInfoBuf);
 
   VkDeviceSize matIdsBufSize = (a_totalIndicesNum / 3) * sizeof(uint32_t);
   m_matIdsBuf = vk_utils::createBuffer(m_device, matIdsBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-  setObjectName(m_matIdsBuf, VK_OBJECT_TYPE_BUFFER, "m_matIdsBuf");
   all_buffers.push_back(m_matIdsBuf);
 
   VkMemoryAllocateFlags allocFlags {};
@@ -320,7 +316,7 @@ void SceneManager::LoadCommonGeoDataOnGPU()
 void SceneManager::LoadInstanceDataOnGPU()
 {
   VkDeviceSize instMatBufSize = m_instanceMatrices.size() * sizeof(m_instanceMatrices[0]);
-  VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+  VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
   m_instMatricesBuf = vk_utils::createBuffer(m_device, instMatBufSize, flags);
   m_instMemAlloc    = vk_utils::allocateAndBindWithPadding(m_device, m_physDevice, {m_instMatricesBuf});
@@ -534,6 +530,7 @@ void SceneManager::DestroyScene()
 
   m_materials.clear();
 
+  m_textures.clear();
   m_textureInfos.clear();
   m_textureViews.clear();
   m_samplers.clear();
@@ -561,7 +558,7 @@ void SceneManager::BuildAllBLAS()
 
 void SceneManager::BuildTLAS()
 {
-  //BuildAllBLAS();
+  BuildAllBLAS(); //Do  this really need?
 
   std::vector<VkAccelerationStructureInstanceKHR> geometryInstances;
   geometryInstances.reserve(m_instanceInfos.size());

@@ -52,7 +52,6 @@ struct LoaderConfig
   bool build_acc_structs = false;
   bool build_acc_structs_while_loading_scene = false;
   bool instance_matrix_as_vertex_attribute = false;
-  bool instance_matrix_as_storage_buffer = false;
   bool debug_output = false;
   BVH_BUILDER_TYPE builder_type = BVH_BUILDER_TYPE::RTX;
   MATERIAL_FORMAT material_format = MATERIAL_FORMAT::METALLIC_ROUGHNESS;
@@ -61,8 +60,7 @@ struct LoaderConfig
 struct SceneManager
 {
   SceneManager(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId,
-    std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config = {}, 
-      PFN_vkSetDebugUtilsObjectNameEXT debugPtr = nullptr);
+    std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config = {});
   ~SceneManager();
 
   bool LoadSceneXML(const std::string &scenePath, bool transpose = true);
@@ -71,6 +69,7 @@ struct SceneManager
 //  void LoadSingleTriangle(); // TODO: rework
 
   bool InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh);
+
   uint32_t AddMeshFromFile(const std::string& meshPath);
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData);
 
@@ -111,22 +110,7 @@ struct SceneManager
   VkAccelerationStructureKHR GetTLAS() const { return m_pBuilderV2->GetTLAS(); }
   void BuildAllBLAS();
   void BuildTLAS();
-  
-  template<class T>
-  void setObjectName(T handle, VkObjectType type, const char* name)
-  {
-    if (SetDebugUtilsObjectNameEXT != nullptr)
-    {
-		  VkDebugUtilsObjectNameInfoEXT nameInfo{
-		    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-        .pNext = NULL,
-		    .objectType = type,
-		    .objectHandle = reinterpret_cast<uint64_t>(handle),
-		    .pObjectName = name,
-		  };
-		  SetDebugUtilsObjectNameEXT(m_device, &nameInfo);
-    }
-  }
+
 private:
   const std::string missingTextureImgPath = "../resources/data/missing_texture.png";
 
@@ -180,8 +164,6 @@ private:
   VkDevice m_device = VK_NULL_HANDLE;
   VkPhysicalDevice m_physDevice = VK_NULL_HANDLE;
   VkCommandPool m_pool = VK_NULL_HANDLE;
-
-  PFN_vkSetDebugUtilsObjectNameEXT SetDebugUtilsObjectNameEXT = nullptr;
 
   uint32_t m_graphicsQId = UINT32_MAX;
   VkQueue  m_graphicsQ   = VK_NULL_HANDLE;

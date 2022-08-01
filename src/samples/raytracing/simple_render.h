@@ -156,9 +156,9 @@ protected:
   {
     LiteMath::float4x4 projView;
     LiteMath::float4x4 model;
+    LiteMath::float4x4 lightView;
     LiteMath::float4 color;
     LiteMath::float2 screenSize;
-    LiteMath::float4x4 lightView;
   } pushConst2M;
 
   struct FrameBufferAttachment {
