@@ -77,6 +77,6 @@ void main()
     float intensity = 1.f;
     float attn = clamp(1.0 - lightDist*lightDist/(lightRadius*lightRadius), 0.0, 1.0); 
     attn *= attn;
-    outFragcolor = color1 * albedo * attn * shadow;    
+    outFragcolor = color1 * albedo * shadow;    
     //outFragcolor= vec4(1.0, 0.0f, 0.0f, 1.0f);
 }

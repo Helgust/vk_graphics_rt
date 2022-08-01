@@ -59,7 +59,7 @@ public:
 
   const std::string NOISE_TEX = "../resources/textures/STBN.png";
   
-  const bool        ENABLE_HARDWARE_RT   = true;
+  const bool        ENABLE_HARDWARE_RT   = false;
 
   static constexpr uint64_t STAGING_MEM_SIZE = 16 * 16 * 1024u;
 
@@ -186,7 +186,7 @@ protected:
   VkBuffer m_ubo = VK_NULL_HANDLE;
   VkDeviceMemory m_uboAlloc = VK_NULL_HANDLE;
   void* m_uboMappedMem = nullptr;
-
+  int faceIndex = 0;
   std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
 
   pipeline_data_t m_basicForwardPipeline {};

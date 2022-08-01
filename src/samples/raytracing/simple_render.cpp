@@ -91,8 +91,8 @@ void SimpleRender::SetupGbuffer() {
     attachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     if (i == 3)
     {
-      attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-      attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+      attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+      attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
     else
     {
@@ -204,7 +204,8 @@ void SimpleRender::SetupOmniShadow() {
   //   &m_omniShadowBuffer.albedo, m_omniShadowBuffer.width, m_omniShadowBuffer.height);
 
     VkFormat fbColorFormat = VK_FORMAT_R32_SFLOAT;
-
+    m_omniShadowBuffer.albedo.format = fbColorFormat;
+    m_omniShadowBuffer.depth.format = VK_FORMAT_D32_SFLOAT;
     // Color attachment
     VkImageCreateInfo imageCreateInfo {};
 		imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -275,11 +276,12 @@ void SimpleRender::SetupOmniShadow() {
 	imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
   VkImageViewCreateInfo depthStencilView {};
+  depthStencilView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	depthStencilView.viewType = VK_IMAGE_VIEW_TYPE_2D;
   depthStencilView.format = VK_FORMAT_D32_SFLOAT;
   depthStencilView.flags = 0;
   depthStencilView.subresourceRange = {};
-  depthStencilView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+  depthStencilView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
   depthStencilView.subresourceRange.baseMipLevel = 0;
   depthStencilView.subresourceRange.levelCount = 1;
   depthStencilView.subresourceRange.baseArrayLayer = 0;
@@ -295,7 +297,7 @@ void SimpleRender::SetupOmniShadow() {
   vk_utils::setImageLayout(
     layoutCmd,
     m_omniShadowBuffer.depth.image,
-    VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+    VK_IMAGE_ASPECT_DEPTH_BIT,
     VK_IMAGE_LAYOUT_UNDEFINED,
     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
@@ -872,7 +874,7 @@ void SimpleRender::CreateUniformBuffer()
 
   m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 10.0f, 0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
-  m_uniforms.lights[0].radius  = 30.0f;
+  m_uniforms.lights[0].radius  = 40.0f;
   m_uniforms.lights[1].pos  = LiteMath::float4(0.0f, 2.0f,  1.0f, 1.0f);
   m_uniforms.lights[1].color  = LiteMath::float4(1.0f, 0.0f,  0.0f, 1.0f);
   m_uniforms.lights[1].radius  = 20.0f;
@@ -912,6 +914,7 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
   for (uint32_t face = 0; face < 6; face++) {
     UpdateCubeFace(face, a_cmdBuff);
   }
+  //UpdateCubeFace(faceIndex, a_cmdBuff);
   //UpdateCubeFace(0,a_cmdBuff);
   ///// draw final scene to screen
   {
@@ -1044,40 +1047,49 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
   renderPassInfo.pClearValues = clearValues;
 
   // Update view matrix via push constant
-  float4x4 viewMatrix =  float4x4();
+  float4x4 viewMatrix =  float4x4(); 
   viewMatrix.set_col(3, m_uniforms.lights[0].pos);
+  float light_radius = m_uniforms.lights[0].radius;
+  vec3 m_light_direction = {1., 0., 0.};
+  //float4x4 mProj = ortoMatrix(-light_radius, +light_radius, -light_radius, +light_radius, 0.0f, light_radius);
+  float4x4 mProj = perspectiveMatrix(60, 1.0f, 1.0f, light_radius * 2.0f);
+  float4x4 mProjFix = float4x4();
+  float3 light_pos = float3(m_uniforms.lights[0].pos.x, m_uniforms.lights[0].pos.y, m_uniforms.lights[0].pos.z);
 		switch (faceIndex)
 		{
 		case 0: // POSITIVE_X
-			viewMatrix = rotate4x4Y(90 * DEG_TO_RAD) * viewMatrix;
-      viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix;
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.1f, 0.0f, 0.0f), float3(0, -1, 0));
+      // viewMatrix = rotate4x4Y(90 * DEG_TO_RAD) * viewMatrix;
+      // viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 1:	// NEGATIVE_X
-			viewMatrix = rotate4x4Y(-90 * DEG_TO_RAD) * viewMatrix;
-      viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix;
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos - float3(0.1f, 0.0f, 0.0f), float3(0, -1, 0));
+			// viewMatrix = rotate4x4Y(-90 * DEG_TO_RAD) * viewMatrix;
+      // viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 2:	// POSITIVE_Y
-			viewMatrix = rotate4x4X(-90 * DEG_TO_RAD) * viewMatrix;
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 0.1f, 0.0f), float3(+1, 0, 0));
+      //viewMatrix = rotate4x4X(-90 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 3:	// NEGATIVE_Y
-			viewMatrix = rotate4x4X(90 * DEG_TO_RAD) * viewMatrix;
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos - float3(0.0f, 0.1f, 0.0f), float3(-1, 0, 0));
+			//viewMatrix = rotate4x4X(90 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 4:	// POSITIVE_Z
-			viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix ;
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 0.0f, 0.1f), float3(0, -1, 0));
+			//viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix ;
 			break;
 		case 5:	// NEGATIVE_Z
-			viewMatrix = rotate4x4Z(180 * DEG_TO_RAD) * viewMatrix;
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos - float3(0.0f, 0.0f, 1.0f), float3(0, -1, 0));
+			//viewMatrix = rotate4x4Z(180 * DEG_TO_RAD) * viewMatrix;
 			break;
 		}
 
-    const float aspect   = float(m_omniShadowBuffer.width) / float(m_omniShadowBuffer.height);
-    auto mProjFix        = OpenglToVulkanProjectionMatrixFix();
-    auto mProj           = projectionMatrix(m_cam.fov, aspect, 0.1f, 1000.0f);
-    pushConst2M.lightView = mProjFix * mProj * viewMatrix;
+    float4x4 m_lightMatrix = mProjFix*mProj*viewMatrix;
+    pushConst2M.lightView = m_lightMatrix;
   
     vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     {
-      vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
       vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_omniShadowPipeline.pipeline);
 
       vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_omniShadowPipeline.layout, 0, 1,
@@ -1126,7 +1138,7 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
 		vk_utils::setImageLayout(
 			a_cmdBuff,
 			m_omniShadowImage.image,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			cubeFaceSubresourceRange);
 
@@ -1172,7 +1184,7 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
 			a_cmdBuff,
 			m_omniShadowImage.image,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			cubeFaceSubresourceRange);
 }
 
@@ -1803,6 +1815,7 @@ void SimpleRender::SetupGUIElements()
     ImGui::ColorEdit3("Meshes base color 1", m_uniforms.baseColor.M, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoInputs);
     ImGui::SliderFloat3("Light source 1 position", m_uniforms.lights[0].pos.M, -100.f, 100.f);
     ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius, 0.0f, 100.0f);
+    ImGui::SliderInt("FaceIndex", &faceIndex, 0, 5);
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
