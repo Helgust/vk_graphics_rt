@@ -18,6 +18,7 @@
 #include <vk_swapchain.h>
 #include <string>
 #include <iostream>
+#include <random>
 #include <render/CrossRT.h>
 #include "raytracing.h"
 #include "raytracing_generated.h"
@@ -279,6 +280,17 @@ protected:
 
   uint32_t m_framesInFlight  = 2u;
   bool m_vsync = false;
+  const int HALTON_COUNT = 8;
+  const vec2 HALTON_SEQUENCE[8] = {
+    vec2(1.0 / 2.0, 1.0 / 3.0),
+    vec2(1.0 / 4.0, 2.0 / 3.0),
+    vec2(3.0 / 4.0, 1.0 / 9.0),
+    vec2(1.0 / 8.0, 4.0 / 9.0),
+    vec2(5.0 / 8.0, 7.0 / 9.0),
+    vec2(3.0 / 8.0, 2.0 / 9.0),
+    vec2(7.0 / 8.0, 5.0 / 9.0),
+    vec2(1.0 / 16.0, 8.0 / 9.0)
+  };
 
   VkPhysicalDeviceFeatures m_enabledDeviceFeatures = {};
   std::vector<const char*> m_deviceExtensions      = {};

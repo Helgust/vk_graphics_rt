@@ -5,6 +5,13 @@
 #include <vk_pipeline.h>
 #include <vk_buffers.h>
 
+uint pcg(uint v)
+{
+  uint state = v * 747796405u + 2891336453u;
+  uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+  return (word >> 22u) ^ word;
+}
+
 void fillWriteDescriptorSetEntry2(VkDescriptorSet set, VkWriteDescriptorSet& writeDS,
   VkDescriptorImageInfo* imageInfo, VkImageView imageView, VkSampler sampler,int binding) {
 
@@ -704,7 +711,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindEnd(&m_dOmniShadowSet, &m_dOmniShadowSetLayout);
 
-  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
+  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindEnd(&m_dSet, &m_dSetLayout);
 
@@ -874,12 +881,12 @@ void SimpleRender::CreateUniformBuffer()
 
   m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 10.0f, 0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
-  m_uniforms.lights[0].radius  = 40.0f;
+  m_uniforms.lights[0].radius_dummies  = LiteMath::float4(40.0f, 0.0f,  0.0f, 1.0f);
   m_uniforms.lights[1].pos  = LiteMath::float4(0.0f, 2.0f,  1.0f, 1.0f);
   m_uniforms.lights[1].color  = LiteMath::float4(1.0f, 0.0f,  0.0f, 1.0f);
-  m_uniforms.lights[1].radius  = 20.0f;
+  m_uniforms.lights[1].radius_dummies  = LiteMath::float4(20.0f, 0.0f,  0.0f, 1.0f);
   m_uniforms.baseColor = LiteMath::float4(0.9f, 0.92f, 1.0f, 1.0f);
-  m_uniforms.animateLightColor = true;
+  // m_uniforms.animateLightColor = true;
   //m_uniforms.m_camPos = to_float4(m_cam.pos, 1.0f);
   //m_uniforms.m_invProjView = m_inverseProjViewMatrix;
 
@@ -889,9 +896,11 @@ void SimpleRender::CreateUniformBuffer()
 void SimpleRender::UpdateUniformBuffer(float a_time)
 {
 // most uniforms are updated in GUI -> SetupGUIElements()
-  m_uniforms.time = a_time;
-  // m_uniforms.m_camPos = to_float4(m_cam.pos, 1.0f);
-  // m_uniforms.m_invProjView = m_inverseProjViewMatrix;
+  std::random_device dev;
+  std::mt19937 rng(dev());
+  std::uniform_int_distribution<std::mt19937::result_type> dist6(1,8);
+  vec2 jitter = (HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT] - 0.5f) * JITTER_SCALE;
+  m_uniforms.m_jitter_time_dummy = vec4(jitter.x, jitter.y, a_time, 1.0f);
 
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
@@ -1049,7 +1058,7 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
   // Update view matrix via push constant
   float4x4 viewMatrix =  float4x4(); 
   viewMatrix.set_col(3, m_uniforms.lights[0].pos);
-  float light_radius = m_uniforms.lights[0].radius;
+  float light_radius = m_uniforms.lights[0].radius_dummies.x;
   vec3 m_light_direction = {1., 0., 0.};
   //float4x4 mProj = ortoMatrix(-light_radius, +light_radius, -light_radius, +light_radius, 0.0f, 100.0f);
   float4x4 mProj = perspectiveMatrix(90, 1.0f, 1.0f, light_radius);
@@ -1815,7 +1824,7 @@ void SimpleRender::SetupGUIElements()
 
     ImGui::ColorEdit3("Meshes base color 1", m_uniforms.baseColor.M, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoInputs);
     ImGui::SliderFloat3("Light source 1 position", m_uniforms.lights[0].pos.M, -100.f, 100.f);
-    ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius, 0.0f, 100.0f);
+    ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius_dummies.x, 0.0f, 100.0f);
     ImGui::SliderInt("FaceIndex", &faceIndex, 0, 5);
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

@@ -49,10 +49,9 @@ void main()
     vec3 lightDir1 = normalize(UboParams.lights[0].pos.xyz -fragPos);
     vec3 lightVec = fragPos - UboParams.lights[0].pos.xyz;
     float lightDist = length(lightVec);
-    float lightRadius = UboParams.lights[0].radius;
+    float lightRadius = UboParams.lights[0].radius_dummies.x;
     float sampledDist = texture(shadowCubeMap, lightVec).r;
     float shadow = (lightDist <= sampledDist + EPSILON) ? 1.0 : SHADOW_OPACITY;
-    // debugPrintfEXT("shadow = %1.2f\n", shadow);
 
     if (lightDist > lightRadius) {
         outFragcolor = vec4(0.0f);

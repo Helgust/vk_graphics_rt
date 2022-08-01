@@ -22,17 +22,14 @@ typedef float4x4     mat4;
 struct Light {
 		vec4  pos;
 		vec4  color;
-		float radius;
+		vec4 radius_dummies; // x-radius, yzw - dumy things
 	};
 
 struct UniformParams
 {
   Light lights[2];
   vec4  baseColor;
-  float time;
-  mat4 m_invProjView; 
-  vec4 m_camPos; 
-  bool animateLightColor;
+  vec4 m_jitter_time_dummy; // xy jitter, z time w dummy
 };
 
 struct MaterialData_pbrMR
@@ -52,5 +49,6 @@ struct MaterialData_pbrMR
   float alphaCutoff;
   int alphaMode;
 };
+const float JITTER_SCALE = 1.0;
 
 #endif //VK_GRAPHICS_BASIC_COMMON_H
