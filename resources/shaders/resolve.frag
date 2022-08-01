@@ -28,7 +28,7 @@ layout (location = 0) in vec2 inUV;
 
 layout (location = 0) out vec4 outFragcolor;
 
-#define EPSILON 0.15
+#define EPSILON 0.01
 #define SHADOW_OPACITY 0.5
 
 void main() 
@@ -77,6 +77,6 @@ void main()
     float intensity = 1.f;
     float attn = clamp(1.0 - lightDist*lightDist/(lightRadius*lightRadius), 0.0, 1.0); 
     attn *= attn;
-    outFragcolor = color1 * albedo * shadow;    
+    outFragcolor = color1 * albedo * attn * shadow;    
     //outFragcolor= vec4(1.0, 0.0f, 0.0f, 1.0f);
 }

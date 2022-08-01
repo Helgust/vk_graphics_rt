@@ -1051,9 +1051,10 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
   viewMatrix.set_col(3, m_uniforms.lights[0].pos);
   float light_radius = m_uniforms.lights[0].radius;
   vec3 m_light_direction = {1., 0., 0.};
-  //float4x4 mProj = ortoMatrix(-light_radius, +light_radius, -light_radius, +light_radius, 0.0f, light_radius);
-  float4x4 mProj = perspectiveMatrix(60, 1.0f, 1.0f, light_radius * 2.0f);
+  //float4x4 mProj = ortoMatrix(-light_radius, +light_radius, -light_radius, +light_radius, 0.0f, 100.0f);
+  float4x4 mProj = perspectiveMatrix(90, 1.0f, 1.0f, light_radius);
   float4x4 mProjFix = float4x4();
+  //float4x4 mProjFix = OpenglToVulkanProjectionMatrixFix();
   float3 light_pos = float3(m_uniforms.lights[0].pos.x, m_uniforms.lights[0].pos.y, m_uniforms.lights[0].pos.z);
 		switch (faceIndex)
 		{
@@ -1068,11 +1069,11 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
       // viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 2:	// POSITIVE_Y
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 0.1f, 0.0f), float3(+1, 0, 0));
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 0.1f, 0.0f), float3(0, 0, 1));
       //viewMatrix = rotate4x4X(-90 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 3:	// NEGATIVE_Y
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos - float3(0.0f, 0.1f, 0.0f), float3(-1, 0, 0));
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos - float3(0.0f, 0.1f, 0.0f), float3(0, 0, 1));
 			//viewMatrix = rotate4x4X(90 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 4:	// POSITIVE_Z
