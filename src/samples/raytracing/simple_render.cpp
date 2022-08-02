@@ -1059,7 +1059,6 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
   float4x4 viewMatrix =  float4x4(); 
   viewMatrix.set_col(3, m_uniforms.lights[0].pos);
   float light_radius = m_uniforms.lights[0].radius_dummies.x;
-  vec3 m_light_direction = {1., 0., 0.};
   //float4x4 mProj = ortoMatrix(-light_radius, +light_radius, -light_radius, +light_radius, 0.0f, 100.0f);
   float4x4 mProj = perspectiveMatrix(90, 1.0f, 1.0f, light_radius);
   float4x4 mProjFix = float4x4();
@@ -1068,29 +1067,29 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
 		switch (faceIndex)
 		{
 		case 0: // POSITIVE_X
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.1f, 0.0f, 0.0f), float3(0, -1, 0));
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(1.0f, 0.0f, 0.0f), float3(0, -1, 0));
       // viewMatrix = rotate4x4Y(90 * DEG_TO_RAD) * viewMatrix;
       // viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 1:	// NEGATIVE_X
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos - float3(0.1f, 0.0f, 0.0f), float3(0, -1, 0));
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(-1.0f, 0.0f, 0.0f), float3(0, -1, 0));
 			// viewMatrix = rotate4x4Y(-90 * DEG_TO_RAD) * viewMatrix;
       // viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 2:	// POSITIVE_Y
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 0.1f, 0.0f), float3(0, 0, 1));
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 1.0f, 0.0f), float3(0, 0, 1));
       //viewMatrix = rotate4x4X(-90 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 3:	// NEGATIVE_Y
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos - float3(0.0f, 0.1f, 0.0f), float3(0, 0, 1));
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, -1.0f, 0.0f), float3(0, 0, -1));
 			//viewMatrix = rotate4x4X(90 * DEG_TO_RAD) * viewMatrix;
 			break;
 		case 4:	// POSITIVE_Z
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 0.0f, 0.1f), float3(0, -1, 0));
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 0.0f, 1.0f), float3(0, -1, 0));
 			//viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix ;
 			break;
 		case 5:	// NEGATIVE_Z
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos - float3(0.0f, 0.0f, 1.0f), float3(0, -1, 0));
+      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 0.0f, -1.0f), float3(0, -1, 0));
 			//viewMatrix = rotate4x4Z(180 * DEG_TO_RAD) * viewMatrix;
 			break;
 		}

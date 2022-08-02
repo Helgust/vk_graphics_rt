@@ -29,7 +29,7 @@ layout (location = 0) in vec2 inUV;
 layout (location = 0) out vec4 outFragcolor;
 
 #define EPSILON 0.01
-#define SHADOW_OPACITY 0.5
+#define SHADOW_OPACITY 0.0
 
 void main() 
 {
@@ -37,14 +37,6 @@ void main()
     vec3 fragPos = texture(samplerPosition, uv).rgb;
 	vec3 normal = texture(samplerNormal, uv).rgb;
 	vec4 albedo = texture(samplerAlbedo, uv);
-    
-
-    
-    // gl_FragDepth = gl_FragCoord.z * params.isOutsideLight;
-
-    // vec4 coord = params.mProjView * vec4(fragPos, 1.0f);
-
-    // vec4 albedo = vec4(0.9f, 0.92f, 1.0f, 1.0f);
 
     vec3 lightDir1 = normalize(UboParams.lights[0].pos.xyz -fragPos);
     vec3 lightVec = fragPos - UboParams.lights[0].pos.xyz;
@@ -57,17 +49,8 @@ void main()
         outFragcolor = vec4(0.0f);
         return;
     }
-    // vec3 lightDir2 = vec3(0.0f, 0.0f, 1.0f);
-
-    const vec4 dark_violet = vec4(0.59f, 0.0f, 0.82f, 1.0f);
-    const vec4 chartreuse  = vec4(0.5f, 1.0f, 0.0f, 1.0f);
 
     vec4 lightColor1 = UboParams.lights[0].color;
-    // if(Params.animateLightColor)
-    //     lightColor1 = mix(dark_violet, chartreuse, abs(sin(Params.time)));
-
-    // vec4 lightColor2 = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-
     vec3 N = normal; 
 
     vec4 color1 = max(dot(N, lightDir1), 0.0f) * lightColor1;
