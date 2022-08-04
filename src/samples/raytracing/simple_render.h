@@ -280,16 +280,39 @@ protected:
 
   uint32_t m_framesInFlight  = 2u;
   bool m_vsync = false;
-  const int HALTON_COUNT = 8;
-  const vec2 HALTON_SEQUENCE[8] = {
-    vec2(1.0 / 2.0, 1.0 / 3.0),
-    vec2(1.0 / 4.0, 2.0 / 3.0),
-    vec2(3.0 / 4.0, 1.0 / 9.0),
-    vec2(1.0 / 8.0, 4.0 / 9.0),
-    vec2(5.0 / 8.0, 7.0 / 9.0),
-    vec2(3.0 / 8.0, 2.0 / 9.0),
-    vec2(7.0 / 8.0, 5.0 / 9.0),
-    vec2(1.0 / 16.0, 8.0 / 9.0)
+  // const int HALTON_COUNT = 8;
+  // const vec2 HALTON_SEQUENCE[8] = {
+  //   vec2(1.0 / 2.0, 1.0 / 3.0),
+  //   vec2(1.0 / 4.0, 2.0 / 3.0),
+  //   vec2(3.0 / 4.0, 1.0 / 9.0),
+  //   vec2(1.0 / 8.0, 4.0 / 9.0),
+  //   vec2(5.0 / 8.0, 7.0 / 9.0),
+  //   vec2(3.0 / 8.0, 2.0 / 9.0),
+  //   vec2(7.0 / 8.0, 5.0 / 9.0),
+  //   vec2(1.0 / 16.0, 8.0 / 9.0),
+    
+  // };
+
+  const int HALTON_COUNT = 18;
+  const vec2 HALTON_SEQUENCE[18] = {
+       vec2(0.5f, 0.33333333f),
+       vec2(0.25f, 0.66666667f),
+       vec2(0.75f, 0.11111111f),
+       vec2(0.125f, 0.44444444f),
+       vec2(0.625f, 0.77777778f),
+       vec2(0.375f, 0.22222222f),
+       vec2(0.875f, 0.55555556f),
+       vec2(0.0625f, 0.88888889f),
+       vec2(0.5625f, 0.03703704f),
+       vec2(0.3125f, 0.37037037f),
+       vec2(0.8125f, 0.7037037f),
+       vec2(0.1875f, 0.14814815f),
+       vec2(0.6875f, 0.48148148f),
+       vec2(0.4375f, 0.81481481f),
+       vec2(0.9375f, 0.25925926f),
+       vec2(0.03125f, 0.59259259f),
+       vec2(0.53125f, 0.92592593f),
+       vec2(0.28125f, 0.07407407f),
   };
 
   VkPhysicalDeviceFeatures m_enabledDeviceFeatures = {};

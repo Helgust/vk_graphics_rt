@@ -898,9 +898,9 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
 // most uniforms are updated in GUI -> SetupGUIElements()
   std::random_device dev;
   std::mt19937 rng(dev());
-  std::uniform_int_distribution<std::mt19937::result_type> dist6(1,8);
-  vec2 jitter = (HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT] - 0.5f) * JITTER_SCALE;
-  m_uniforms.m_jitter_time_dummy = vec4(jitter.x, jitter.y, a_time, 1.0f);
+  std::uniform_int_distribution<std::mt19937::result_type> dist6(1,18);
+  vec2 jitter = (HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT]) * JITTER_SCALE;
+  m_uniforms.m_jitter_time_dummy = vec4(jitter.x/m_width, jitter.y/m_height, a_time, 1.0f);
 
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
