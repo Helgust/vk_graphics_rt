@@ -55,6 +55,8 @@ public:
   const std::string OMNI_SHADOW_FRAGMENT_SHADER_PATH = "../resources/shaders/omnishadow.frag";
   const std::string OMNI_SHADOW_VERTEX_SHADER_PATH = "../resources/shaders/omnishadow.vert";
   const std::string MRT_FRAGMENT_SHADER_PATH = "../resources/shaders/mrt.frag";
+  const std::string RESULT_FRAGMENT_SHADER_PATH = "../resources/shaders/result.frag";
+  const std::string RESULT_VERTEX_SHADER_PATH = "../resources/shaders/result.vert";
 
   
 
@@ -145,7 +147,6 @@ protected:
     VkSemaphore imageAvailable    = VK_NULL_HANDLE;
     VkSemaphore renderingFinished = VK_NULL_HANDLE;
     VkSemaphore gbufferFinished = VK_NULL_HANDLE;
-    VkSemaphore shadowFinished = VK_NULL_HANDLE;
   } m_presentationResources;
 
   std::vector<VkFence> m_frameFences;
@@ -172,6 +173,7 @@ protected:
 		int32_t width, height;
 		VkFramebuffer frameBuffer;
 		FrameBufferAttachment position, normal, albedo;
+    FrameBufferAttachment velocity;
 		FrameBufferAttachment depth;
 		VkRenderPass renderPass;
 	} m_gBuffer, m_omniShadowBuffer;
@@ -188,12 +190,14 @@ protected:
   VkDeviceMemory m_uboAlloc = VK_NULL_HANDLE;
   void* m_uboMappedMem = nullptr;
   int faceIndex = 0;
+  int gbuffer_index = 0;
   std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
 
   pipeline_data_t m_basicForwardPipeline {};
   pipeline_data_t m_resolvePipeline {};
   pipeline_data_t m_gBufferPipeline {};
   pipeline_data_t m_omniShadowPipeline {};
+  pipeline_data_t m_taaPipeline {};
 
   VkDescriptorSet m_dSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dSetLayout = VK_NULL_HANDLE;
@@ -201,6 +205,10 @@ protected:
   VkDescriptorSetLayout m_dOmniShadowSetLayout = VK_NULL_HANDLE;
   VkDescriptorSet m_dResolveSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dResolveSetLayout = VK_NULL_HANDLE;
+  VkDescriptorSet m_dTAASet = VK_NULL_HANDLE;
+  VkDescriptorSetLayout m_dTAASetLayout = VK_NULL_HANDLE;
+  VkDescriptorSet m_dResultSet = VK_NULL_HANDLE;
+  VkDescriptorSetLayout m_dResultSetLayout = VK_NULL_HANDLE;
   VkRenderPass m_screenRenderPass = VK_NULL_HANDLE; // rasterization renderpass
 
   LiteMath::float4x4 m_projectionMatrix;
@@ -225,6 +233,15 @@ protected:
   vk_utils::VulkanImageMem m_omniShadowImage;
   VkSampler                m_omniShadowImageSampler = VK_NULL_HANDLE;
 
+  vk_utils::VulkanImageMem m_resolveImage;
+  VkSampler                m_resolveImageSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_prevDepthImage;
+  VkSampler                m_prevDepthImageSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_prevFrameImage;
+  VkSampler                m_prevFrameImageSampler = VK_NULL_HANDLE;
+
   vk_utils::VulkanImageMem m_taaImage;
   VkSampler                m_taaImageSampler = VK_NULL_HANDLE;
 
@@ -232,6 +249,7 @@ protected:
   VkSampler                m_resImageSampler = VK_NULL_HANDLE;
   pipeline_data_t m_quadPipeline;
   VkRenderPass m_quadRenderPass = VK_NULL_HANDLE; 
+  VkRenderPass m_resolveRenderPass = VK_NULL_HANDLE; 
 
   VkFramebuffer    m_quadFrameBuffer = VK_NULL_HANDLE;
   VkImageView      m_quadTargetView;
@@ -240,13 +258,19 @@ protected:
   VkDescriptorSetLayout m_finalQuadDSLayout = VK_NULL_HANDLE;
 
   int filterRadius = 0;
-
-  void SetupTAAPipeline();
-  
+ 
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
   std::unique_ptr<RayTracer> m_pRayTracerCPU;
   std::unique_ptr<RayTracer_GPU> m_pRayTracerGPU;
+  std::shared_ptr<vk_utils::RenderTarget>        m_pResolveImage;
+  VkDeviceMemory        m_memResolveImage = VK_NULL_HANDLE;
+  uint32_t m_resolveImageId = 0;
+
+  std::shared_ptr<vk_utils::RenderTarget>        m_pTaaImage;
+  VkDeviceMemory        m_memTaaImage = VK_NULL_HANDLE;
+  uint32_t m_taaImageId = 0;          
+
   void RayTraceCPU();
   void RayTraceGPU(float a_time);
 
@@ -354,7 +378,7 @@ protected:
   void SetupQuadRenderer();
   void SetupQuadDescriptors();
   void SetupRTImage();
-  void SetupTaaImage();
+  void SetupHistoryImages();
   void SetupOmniShadowImage();
   void SetupRTScene();
 
@@ -369,6 +393,7 @@ protected:
   void UpdateUniformBuffer(float a_time);
 
   void Cleanup();
+  void ClearBuffer(FrameBuffer);
 
   void SetupDeviceFeatures();
   void SetupDeviceExtensions();

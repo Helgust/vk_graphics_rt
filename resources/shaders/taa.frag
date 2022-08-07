@@ -7,8 +7,16 @@
 
 layout(location = 0) out vec4 outColor;
 
-layout (binding = 0, set = 0) uniform sampler2D colorTex;
-layout (binding = 1, set = 0) uniform sampler2D oldColorTex;
+layout(binding = 0, set = 0) uniform AppData
+{
+    UniformParams UboParams;
+};
+
+layout (binding = 1, set = 0) uniform sampler2D colorTex;
+layout (binding = 2, set = 0) uniform sampler2D oldColorTex;
+layout (binding = 3, set = 0) uniform sampler2D depthTex;
+layout (binding = 4, set = 0) uniform sampler2D oldDepthTex;
+layout (binding = 5, set = 0) uniform sampler2D velocityTex;
 
 layout (location = 0 ) in VS_OUT
 {

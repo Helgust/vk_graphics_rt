@@ -76,6 +76,13 @@ void SimpleRender::SetupGbuffer() {
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     &m_gBuffer.albedo, m_gBuffer.width, m_gBuffer.height);
 
+  // Velocity (color)
+  CreateAttachment(
+    VK_FORMAT_R8G8B8A8_UNORM,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    &m_gBuffer.velocity, m_gBuffer.width, m_gBuffer.height);
+
   // Depth attachment
 
   VkImageUsageFlags flags =  VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -86,10 +93,10 @@ void SimpleRender::SetupGbuffer() {
     &m_gBuffer.depth, m_gBuffer.width, m_gBuffer.height);
 
   // Set up separate renderpass with references to the color and depth attachments
-  std::array<VkAttachmentDescription, 4> attachmentDescs = {};
+  std::array<VkAttachmentDescription, 5> attachmentDescs = {};
 
   // Init attachment properties
-  for (uint32_t i = 0; i < 4; ++i)
+  for (uint32_t i = 0; i < 5; ++i)
   {
     attachmentDescs[i].samples = VK_SAMPLE_COUNT_1_BIT;
     attachmentDescs[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -113,11 +120,13 @@ void SimpleRender::SetupGbuffer() {
   attachmentDescs[1].format = m_gBuffer.normal.format;
   attachmentDescs[2].format = m_gBuffer.albedo.format;
   attachmentDescs[3].format = m_gBuffer.depth.format;
+  attachmentDescs[4].format = m_gBuffer.velocity.format;
 
   std::vector<VkAttachmentReference> colorReferences;
   colorReferences.push_back({ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
   colorReferences.push_back({ 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
   colorReferences.push_back({ 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
+  colorReferences.push_back({ 4, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
 
   VkAttachmentReference depthReference = {};
   depthReference.attachment = 3;
@@ -159,11 +168,12 @@ void SimpleRender::SetupGbuffer() {
 
   VK_CHECK_RESULT(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_gBuffer.renderPass));
   setObjectName(m_gBuffer.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "gbuffer_renderpass");
-  std::array<VkImageView,4> attachments;
+  std::array<VkImageView,5> attachments;
   attachments[0] = m_gBuffer.position.view;
   attachments[1] = m_gBuffer.normal.view;
   attachments[2] = m_gBuffer.albedo.view;
   attachments[3] = m_gBuffer.depth.view;
+  attachments[4] = m_gBuffer.velocity.view;
 
   VkFramebufferCreateInfo fbufCreateInfo = {};
   fbufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -413,6 +423,10 @@ void SimpleRender::SetupOmniShadow() {
   sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
   VK_CHECK_RESULT(vkCreateSampler(m_device, &sampler, nullptr, &m_colorSampler));
   setObjectName(m_colorSampler, VK_OBJECT_TYPE_SAMPLER, "omnishadow_colorsampler");
+
+
+  setObjectName(m_omniShadowBuffer.albedo.image, VK_OBJECT_TYPE_IMAGE, "omnishadow_color");
+  setObjectName(m_omniShadowBuffer.depth.image, VK_OBJECT_TYPE_IMAGE, "omnishadow_depth");
 }
 
 void SimpleRender::CreateAttachment(
@@ -637,7 +651,6 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.imageAvailable));
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.gbufferFinished));
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.renderingFinished));
-  VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.shadowFinished));
   m_screenRenderPass = vk_utils::createDefaultRenderPass(m_device, m_swapchain.GetFormat());
   setObjectName(m_screenRenderPass,VK_OBJECT_TYPE_RENDER_PASS,"screen_renderpass");
   m_quadRenderPass = vk_utils::createDefaultRenderPass(m_device, m_swapchain.GetFormat(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -654,9 +667,64 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
 
   SetupOmniShadow();
   SetupGbuffer();
+  SetupHistoryImages();
 
   m_frameBuffers = vk_utils::createFrameBuffers(m_device, m_swapchain, m_screenRenderPass, m_depthBuffer.view);
   m_pGUIRender = std::make_shared<ImGuiRender>(m_instance, m_device, m_physicalDevice, m_queueFamilyIDXs.graphics, m_graphicsQueue, m_swapchain);
+
+  // create resolveImage
+  //
+  m_pResolveImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{1024, 1024});
+
+  vk_utils::AttachmentInfo infoDepth;
+  infoDepth.format           = VK_FORMAT_R8G8B8A8_UNORM;
+  infoDepth.usage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL | VK_IMAGE_USAGE_SAMPLED_BIT;
+  infoDepth.imageSampleCount = VK_SAMPLE_COUNT_1_BIT;
+  m_resolveImageId              = m_pResolveImage->CreateAttachment(infoDepth);
+  auto memReq                = m_pResolveImage->GetMemoryRequirements()[0]; // we know that we have only one texture
+  
+  // memory for all shadowmaps (well, if you have them more than 1 ...)
+  {
+    VkMemoryAllocateInfo allocateInfo = {};
+    allocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.pNext           = nullptr;
+    allocateInfo.allocationSize  = memReq.size;
+    allocateInfo.memoryTypeIndex = vk_utils::findMemoryType(memReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physicalDevice);
+
+    VK_CHECK_RESULT(vkAllocateMemory(m_device, &allocateInfo, NULL, &m_memResolveImage));
+  }
+
+  m_pResolveImage->CreateViewAndBindMemory(m_memResolveImage, {0});
+  m_pResolveImage->CreateDefaultSampler();
+  m_pResolveImage->CreateDefaultRenderPass();
+  setObjectName(m_pResolveImage->m_attachments[0].image, VK_OBJECT_TYPE_IMAGE, "resolve_Image");
+
+  // create TaaImage
+  //
+  m_pTaaImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{1024, 1024});
+
+  vk_utils::AttachmentInfo infoRes;
+  infoRes.format           = VK_FORMAT_R8G8B8A8_UNORM;
+  infoRes.usage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL | VK_IMAGE_USAGE_SAMPLED_BIT;
+  infoRes.imageSampleCount = VK_SAMPLE_COUNT_1_BIT;
+  m_resolveImageId              = m_pTaaImage->CreateAttachment(infoRes);
+  auto memReqTaa                = m_pTaaImage->GetMemoryRequirements()[0]; // we know that we have only one texture
+  
+  // memory for all shadowmaps (well, if you have them more than 1 ...)
+  {
+    VkMemoryAllocateInfo allocateInfo = {};
+    allocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.pNext           = nullptr;
+    allocateInfo.allocationSize  = memReqTaa.size;
+    allocateInfo.memoryTypeIndex = vk_utils::findMemoryType(memReqTaa.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physicalDevice);
+
+    VK_CHECK_RESULT(vkAllocateMemory(m_device, &allocateInfo, NULL, &m_memTaaImage));
+  }
+
+  m_pTaaImage->CreateViewAndBindMemory(m_memTaaImage, {0});
+  m_pTaaImage->CreateDefaultSampler();
+  m_pTaaImage->CreateDefaultRenderPass();
+  setObjectName(m_pTaaImage->m_attachments[0].image, VK_OBJECT_TYPE_IMAGE, "taa_Image");
 }
 
 void SimpleRender::CreateInstance()
@@ -707,7 +775,7 @@ inline VkPipelineColorBlendAttachmentState pipelineColorBlendAttachmentState(
 void SimpleRender::SetupSimplePipeline()
 {
 
-  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
+  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindEnd(&m_dOmniShadowSet, &m_dOmniShadowSetLayout);
 
@@ -715,14 +783,32 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindEnd(&m_dSet, &m_dSetLayout);
 
-  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
+  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindImage(1, m_gBuffer.position.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(2, m_gBuffer.normal.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(3, m_gBuffer.albedo.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(4, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
   m_pBindings->BindImage(5, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(6, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dResolveSet, &m_dResolveSetLayout);
+
+  auto curentFrame = m_pResolveImage->m_attachments[m_resolveImageId];
+
+  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
+  m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+  m_pBindings->BindImage(1, curentFrame.view, m_pResolveImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(2, m_prevFrameImage.view, m_prevFrameImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(3, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
+  m_pBindings->BindImage(4, m_prevDepthImage.view, m_prevDepthImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
+  m_pBindings->BindImage(5, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindEnd(&m_dTAASet, &m_dTAASetLayout);
+
+  auto taaFrame = m_pTaaImage->m_attachments[0];
+  
+  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
+  m_pBindings->BindImage(0, taaFrame.view, m_pTaaImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindEnd(&m_dResultSet, &m_dResultSetLayout);
 
   // if we are recreating pipeline (for example, to reload shaders)
   // we need to cleanup old pipeline
@@ -747,6 +833,17 @@ void SimpleRender::SetupSimplePipeline()
     vkDestroyPipeline(m_device, m_omniShadowPipeline.pipeline, nullptr);
     m_omniShadowPipeline.pipeline = VK_NULL_HANDLE;
   }
+  
+  if(m_taaPipeline.layout != VK_NULL_HANDLE)
+  {
+    vkDestroyPipelineLayout(m_device, m_taaPipeline.layout, nullptr);
+    m_taaPipeline.layout = VK_NULL_HANDLE;
+  }
+  if(m_taaPipeline.pipeline != VK_NULL_HANDLE)
+  {
+    vkDestroyPipeline(m_device, m_taaPipeline.pipeline, nullptr);
+    m_taaPipeline.pipeline = VK_NULL_HANDLE;
+  }
 
   vk_utils::GraphicsPipelineMaker maker;
 
@@ -761,10 +858,11 @@ void SimpleRender::SetupSimplePipeline()
   setObjectName(m_gBufferPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "gbuffer_pipeline_layout");
   maker.SetDefaultState(m_width, m_height);
 
-  std::array<VkPipelineColorBlendAttachmentState, 3> blendAttachmentStates = {
+  std::array<VkPipelineColorBlendAttachmentState, 4> blendAttachmentStates = {
     pipelineColorBlendAttachmentState(0xf, VK_FALSE),
     pipelineColorBlendAttachmentState(0xf, VK_FALSE),
-    pipelineColorBlendAttachmentState(0xf, VK_FALSE)
+    pipelineColorBlendAttachmentState(0xf, VK_FALSE),
+    pipelineColorBlendAttachmentState(0xf, VK_FALSE),
 };
 
   maker.colorBlending.attachmentCount = static_cast<uint32_t>(blendAttachmentStates.size());
@@ -801,62 +899,55 @@ void SimpleRender::SetupSimplePipeline()
   setObjectName(m_resolvePipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "resolve_pipeline_layout");
   maker.SetDefaultState(m_width, m_height);
 
-  VkPipelineColorBlendAttachmentState blend = pipelineColorBlendAttachmentState(0xf, VK_TRUE);
-  blend.colorBlendOp = VK_BLEND_OP_ADD;
-  blend.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-  blend.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
-  blend.alphaBlendOp = VK_BLEND_OP_ADD;
-  blend.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-  blend.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
-  maker.colorBlending.attachmentCount = 1;
-  maker.colorBlending.pAttachments = &blend;
-  maker.rasterizer.cullMode = VK_CULL_MODE_NONE;
-  maker.depthStencilTest.depthTestEnable = true;
-  maker.depthStencilTest.depthWriteEnable = false;
+  // VkPipelineColorBlendAttachmentState blend = pipelineColorBlendAttachmentState(0xf, VK_TRUE);
+  // blend.colorBlendOp = VK_BLEND_OP_ADD;
+  // blend.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+  // blend.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+  // blend.alphaBlendOp = VK_BLEND_OP_ADD;
+  // blend.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+  // blend.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+  // maker.colorBlending.attachmentCount = 1;
+  // maker.colorBlending.pAttachments = &blend;
+  // maker.rasterizer.cullMode = VK_CULL_MODE_NONE;
+  // maker.depthStencilTest.depthTestEnable = true;
+  // maker.depthStencilTest.depthWriteEnable = false;
 
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
   vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   vertexInputInfo.vertexBindingDescriptionCount = 0;
   vertexInputInfo.vertexAttributeDescriptionCount = 0;
   m_resolvePipeline.pipeline = maker.MakePipeline(m_device,  vertexInputInfo,
-                                                       m_screenRenderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
+                                                       m_pResolveImage->m_renderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
   setObjectName(m_resolvePipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "resolve_pipeline");
-}
 
-void SimpleRender::SetupTAAPipeline()
-{
-  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
-  m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-  m_pBindings->BindImage(1, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-  m_pBindings->BindImage(2, m_taaImage.view, m_taaImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-  m_pBindings->BindEnd(&m_quadDS, &m_quadDSLayout);
-
-  // if we are recreating pipeline (for example, to reload shaders)
-  // we need to cleanup old pipeline
-  // if(m_quadPipeline.layout != VK_NULL_HANDLE)
-  // {
-  //   vkDestroyPipelineLayout(m_device, m_quadPipeline.layout, nullptr);
-  //   m_quadPipeline.layout = VK_NULL_HANDLE;
-  // }
-  // if(m_quadPipeline.pipeline != VK_NULL_HANDLE)
-  // {
-  //   vkDestroyPipeline(m_device, m_quadPipeline.pipeline, nullptr);
-  //   m_quadPipeline.pipeline = VK_NULL_HANDLE;
-  // }
-
-  vk_utils::GraphicsPipelineMaker maker;
-
-  std::unordered_map<VkShaderStageFlagBits, std::string> shader_paths;
-  shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = TAA_FRAGMENT_SHADER_PATH + ".spv";
   shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = TAA_VERTEX_SHADER_PATH + ".spv";
-
+  shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = TAA_FRAGMENT_SHADER_PATH + ".spv";
   maker.LoadShaders(m_device, shader_paths);
-
-  m_quadPipeline.layout = maker.MakeLayout(m_device, {m_quadDSLayout}, sizeof(pushConst2M));
+  maker.viewport.width  = float(m_width);
+  maker.viewport.height = float(m_height);
+  maker.scissor.extent  = VkExtent2D{ uint32_t(m_width), uint32_t(m_height) };
+  m_taaPipeline.layout = maker.MakeLayout(m_device, {m_dTAASetLayout}, sizeof(pushConst2M));
+  setObjectName(m_taaPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "taa_pipeline_layout");
   maker.SetDefaultState(m_width, m_height);
 
-  m_quadPipeline.pipeline = maker.MakePipeline(m_device, m_pScnMgr->GetPipelineVertexInputStateCreateInfo(),
-                                                       m_quadRenderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
+
+  m_taaPipeline.pipeline = maker.MakePipeline(m_device, vertexInputInfo,
+                                            m_pTaaImage->m_renderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
+  setObjectName(m_taaPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "taa_pipeline");    
+
+  shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = RESULT_VERTEX_SHADER_PATH + ".spv";
+  shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = RESULT_FRAGMENT_SHADER_PATH + ".spv";
+  maker.LoadShaders(m_device, shader_paths);
+  maker.viewport.width  = float(m_width);
+  maker.viewport.height = float(m_height);
+  maker.scissor.extent  = VkExtent2D{ uint32_t(m_width), uint32_t(m_height) };
+  m_basicForwardPipeline.layout = maker.MakeLayout(m_device, {m_dResultSetLayout}, sizeof(pushConst2M));
+  setObjectName(m_basicForwardPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "result_layout");
+  maker.SetDefaultState(m_width, m_height);
+
+  m_basicForwardPipeline.pipeline = maker.MakePipeline(m_device,  vertexInputInfo,
+                                                       m_screenRenderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
+  setObjectName(m_basicForwardPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "result_pipeline");                                    
 }
 
 void SimpleRender::CreateUniformBuffer()
@@ -900,7 +991,7 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   std::mt19937 rng(dev());
   std::uniform_int_distribution<std::mt19937::result_type> dist6(1,18);
   vec2 jitter = (HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT]) * JITTER_SCALE;
-  m_uniforms.m_jitter_time_dummy = vec4(jitter.x/m_width, jitter.y/m_height, a_time, 1.0f);
+  m_uniforms.m_jitter_time_gbuffer_index = vec4(jitter.x/m_width, jitter.y/m_height, a_time, gbuffer_index);
 
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
@@ -937,12 +1028,13 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     renderPassInfo.renderArea.extent.width = m_gBuffer.width;
 		renderPassInfo.renderArea.extent.height = m_gBuffer.height;
 
-    VkClearValue clearValues[4] = {};
+    VkClearValue clearValues[5] = {};
 		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clearValues[1].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clearValues[2].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clearValues[3].depthStencil = { 1.0f, 0 };
-    renderPassInfo.clearValueCount = 4;
+    clearValues[4].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+    renderPassInfo.clearValueCount = 5;
     renderPassInfo.pClearValues = &clearValues[0];
 
     vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -1002,34 +1094,236 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
   vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
   vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
 
-  ///// draw final scene to screen
+  ///// draw final scene to scpecial image
   {
-    VkRenderPassBeginInfo renderPassInfo = {};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = m_screenRenderPass;
-    renderPassInfo.framebuffer = a_frameBuff;
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent.width = m_gBuffer.width;
-		renderPassInfo.renderArea.extent.height = m_gBuffer.height;
+    VkRenderPassBeginInfo renderResolveToImage = {};
+    renderResolveToImage.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderResolveToImage.renderPass = m_pResolveImage->m_renderPass;
+    renderResolveToImage.framebuffer = m_pResolveImage->m_framebuffers[0];
+    renderResolveToImage.renderArea.offset = {0, 0};
+    renderResolveToImage.renderArea.extent.width = m_gBuffer.width;
+		renderResolveToImage.renderArea.extent.height = m_gBuffer.height;
 
     VkClearValue clearValues[2] = {};
     clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
     clearValues[1].depthStencil = {1.0f, 0};
-    renderPassInfo.clearValueCount = 2;
-    renderPassInfo.pClearValues = &clearValues[0];
+    renderResolveToImage.clearValueCount = 2;
+    renderResolveToImage.pClearValues = &clearValues[0];
+  
 
-    vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_resolvePipeline.pipeline);
+    std::vector<VkClearValue> clear =  {clearValues[0], clearValues[1]};
+    //VkRenderPassBeginInfo renderResolveToImage = m_pResolveImage->GetRenderPassBeginInfo(0, clear);
+  
+    vkCmdBeginRenderPass(a_cmdBuff, &renderResolveToImage, VK_SUBPASS_CONTENTS_INLINE);
+    {
+      vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_resolvePipeline.pipeline);
 
-    vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_resolvePipeline.layout, 0, 1,
-                            &m_dResolveSet, 0, VK_NULL_HANDLE);
+      vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_resolvePipeline.layout, 0, 1,
+                              &m_dResolveSet, 0, VK_NULL_HANDLE);
 
-    VkShaderStageFlags stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
-    vkCmdPushConstants(a_cmdBuff, m_resolvePipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
-    vkCmdDraw(a_cmdBuff, 4, 1, 0, 0);
+      VkShaderStageFlags stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+      vkCmdPushConstants(a_cmdBuff, m_resolvePipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
+      vkCmdDraw(a_cmdBuff, 4, 1, 0, 0);
+    }
+    vkCmdEndRenderPass(a_cmdBuff);
 
+    // render  TAA to screen
+    VkRenderPassBeginInfo taaRenderPassInfo = {};
+    taaRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    taaRenderPassInfo.renderPass = m_pTaaImage->m_renderPass;
+    taaRenderPassInfo.framebuffer = m_pTaaImage->m_framebuffers[0];
+    taaRenderPassInfo.renderArea.offset = {0, 0};
+    taaRenderPassInfo.renderArea.extent.width = m_width;
+		taaRenderPassInfo.renderArea.extent.height = m_height;
+
+    VkClearValue taaClearValues[3] = {};
+		taaClearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		taaClearValues[1].depthStencil = { 1.0f, 0 };
+    taaRenderPassInfo.clearValueCount = 2;
+    taaRenderPassInfo.pClearValues = &taaClearValues[0];
+
+    vkCmdBeginRenderPass(a_cmdBuff, &taaRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    {
+      vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_taaPipeline.pipeline);
+
+      vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_taaPipeline.layout, 0, 1,
+                              &m_dTAASet, 0, VK_NULL_HANDLE);
+
+      VkShaderStageFlags stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+      vkCmdPushConstants(a_cmdBuff, m_taaPipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
+      vkCmdDraw(a_cmdBuff, 4, 1, 0, 0);
+    }
     vkCmdEndRenderPass(a_cmdBuff);
   }
+
+  //copy to depth to prev
+  {
+    // Make sure color writes to the framebuffer are finished before using it as transfer source
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_gBuffer.depth.image,
+			VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		VkImageSubresourceRange cubeFaceSubresourceRange = {};
+		cubeFaceSubresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		cubeFaceSubresourceRange.baseMipLevel = 0;
+		cubeFaceSubresourceRange.levelCount = 1;
+		cubeFaceSubresourceRange.baseArrayLayer = 0;
+		cubeFaceSubresourceRange.layerCount = 1;
+
+		// Change image layout of one cubemap face to transfer destination
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_prevDepthImage.image,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			cubeFaceSubresourceRange);
+
+		// Copy region for transfer from framebuffer to cube face
+		VkImageCopy copyRegion = {};
+
+		copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		copyRegion.srcSubresource.baseArrayLayer = 0;
+		copyRegion.srcSubresource.mipLevel = 0;
+		copyRegion.srcSubresource.layerCount = 1;
+		copyRegion.srcOffset = { 0, 0, 0 };
+
+		copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		copyRegion.dstSubresource.baseArrayLayer = 0;
+		copyRegion.dstSubresource.mipLevel = 0;
+		copyRegion.dstSubresource.layerCount = 1;
+		copyRegion.dstOffset = { 0, 0, 0 };
+
+		copyRegion.extent.width = m_width;
+		copyRegion.extent.height = m_height;
+		copyRegion.extent.depth = 1;
+
+		// Put image copy into command buffer
+		vkCmdCopyImage(
+			a_cmdBuff,
+			m_gBuffer.depth.image,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			m_prevDepthImage.image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&copyRegion);
+
+		// Transform framebuffer color attachment back
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_gBuffer.depth.image,
+			VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
+
+		// Change image layout of copied face to shader read
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_prevDepthImage.image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			cubeFaceSubresourceRange);
+  }
+  
+  // copy frame to prev 
+  {
+    // Make sure color writes to the framebuffer are finished before using it as transfer source
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_pTaaImage->m_attachments[0].image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		VkImageSubresourceRange cubeFaceSubresourceRange = {};
+		cubeFaceSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		cubeFaceSubresourceRange.baseMipLevel = 0;
+		cubeFaceSubresourceRange.levelCount = 1;
+		cubeFaceSubresourceRange.baseArrayLayer = 0;
+		cubeFaceSubresourceRange.layerCount = 1;
+
+		// Change image layout of one cubemap face to transfer destination
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_prevFrameImage.image,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			cubeFaceSubresourceRange);
+
+		// Copy region for transfer from framebuffer to cube face
+		VkImageCopy copyRegion = {};
+
+		copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.srcSubresource.baseArrayLayer = 0;
+		copyRegion.srcSubresource.mipLevel = 0;
+		copyRegion.srcSubresource.layerCount = 1;
+		copyRegion.srcOffset = { 0, 0, 0 };
+
+		copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.dstSubresource.baseArrayLayer = 0;
+		copyRegion.dstSubresource.mipLevel = 0;
+		copyRegion.dstSubresource.layerCount = 1;
+		copyRegion.dstOffset = { 0, 0, 0 };
+
+		copyRegion.extent.width = m_width;
+		copyRegion.extent.height = m_height;
+		copyRegion.extent.depth = 1;
+
+		// Put image copy into command buffer
+		vkCmdCopyImage(
+			a_cmdBuff,
+			m_pTaaImage->m_attachments[0].image,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			m_prevFrameImage.image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&copyRegion);
+
+		// Transform framebuffer color attachment back
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_pTaaImage->m_attachments[0].image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		// Change image layout of copied face to shader read
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_prevFrameImage.image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			cubeFaceSubresourceRange);
+  }
+
+  // render to screen
+    VkRenderPassBeginInfo screenRenderInfo = {};
+    screenRenderInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    screenRenderInfo.renderPass = m_screenRenderPass;
+    screenRenderInfo.framebuffer = a_frameBuff;
+    screenRenderInfo.renderArea.offset = {0, 0};
+    screenRenderInfo.renderArea.extent.width = m_width;
+    screenRenderInfo.renderArea.extent.height = m_height;
+
+    VkClearValue clearValues[2] = {};
+    clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+    clearValues[1].depthStencil = {1.0f, 0};
+    screenRenderInfo.clearValueCount = 2;
+    screenRenderInfo.pClearValues = &clearValues[0];
+
+    vkCmdBeginRenderPass(a_cmdBuff, &screenRenderInfo, VK_SUBPASS_CONTENTS_INLINE);
+    {
+      vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_basicForwardPipeline.pipeline);
+
+      vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_basicForwardPipeline.layout, 0, 1,
+                              &m_dResultSet, 0, VK_NULL_HANDLE);
+
+      VkShaderStageFlags stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+      vkCmdDraw(a_cmdBuff, 4, 1, 0, 0);
+    }
+    vkCmdEndRenderPass(a_cmdBuff);
 
   VK_CHECK_RESULT(vkEndCommandBuffer(a_cmdBuff));
 }
@@ -1337,6 +1631,12 @@ void SimpleRender::CleanupPipelineAndSwapchain()
     m_omniShadowBuffer.renderPass = VK_NULL_HANDLE;
   }
 
+  // if(m_resolvePipeline.pipeline != VK_NULL_HANDLE)
+  // {
+  //   vkDestroyRenderPass(m_device, m_resolvePipeline.pipeline, nullptr);
+  //   m_resolvePipeline.pipeline = VK_NULL_HANDLE;
+  // }
+
   if(m_colorSampler != VK_NULL_HANDLE)
   {
     vkDestroySampler(m_device, m_colorSampler, nullptr);
@@ -1396,7 +1696,7 @@ void SimpleRender::RecreateSwapChain()
   m_pRayTracerCPU = nullptr;
   m_pRayTracerGPU = nullptr;
   SetupRTImage();
-  //SetupTaaImage();
+  SetupHistoryImages();
   //SetupQuadRenderer();
   //SetupQuadDescriptors();
 
@@ -1420,7 +1720,6 @@ void SimpleRender::ProcessInput(const AppInput &input)
 #endif
 
     SetupSimplePipeline();
-    //SetupTAAPipeline();
     //SetupQuadRenderer();
 
 
@@ -1459,6 +1758,7 @@ void SimpleRender::UpdateCamera(const Camera* cams, uint32_t a_camsCount)
 
 void SimpleRender::UpdateView()
 {
+  m_uniforms.prevProjView = pushConst2M.projView; // set here a prevProjView matrix
   const float aspect   = float(m_width) / float(m_height);
   auto mProjFix        = OpenglToVulkanProjectionMatrixFix();
   auto mProj           = projectionMatrix(m_cam.fov, aspect, 0.1f, 1000.0f);
@@ -1485,8 +1785,8 @@ void SimpleRender::LoadScene(const char* path)
   }
 
   std::vector<std::pair<VkDescriptorType, uint32_t> > dtypes = {
-    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,             2},
-    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     4}
+    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,             100},
+    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     100}
   };
 
   // set large a_maxSets, because every window resize will cause the descriptor set for quad being to be recreated
@@ -1495,10 +1795,8 @@ void SimpleRender::LoadScene(const char* path)
   SetupNoiseImage();
   SetupRTImage();
   SetupOmniShadowImage();
-  //SetupTaaImage();
-  
-  
-  
+  SetupHistoryImages();
+
   CreateUniformBuffer();
 
   SetupSimplePipeline();
@@ -1619,6 +1917,8 @@ void SimpleRender::DrawFrame(float a_time, DrawMode a_mode)
 void SimpleRender::Cleanup()
 {
   m_pGUIRender = nullptr;
+  m_pResolveImage = nullptr;
+  m_pTaaImage = nullptr;
   ImGui::DestroyContext();
   CleanupPipelineAndSwapchain();
   if(m_surface != VK_NULL_HANDLE)
@@ -1647,6 +1947,13 @@ void SimpleRender::Cleanup()
     m_resImageSampler = VK_NULL_HANDLE;
   }
   vk_utils::deleteImg(m_device, &m_resImage);
+
+  if(m_resolveImageSampler != VK_NULL_HANDLE)
+  {
+    vkDestroySampler(m_device, m_resolveImageSampler, nullptr);
+    m_resolveImageSampler = VK_NULL_HANDLE;
+  }
+  vk_utils::deleteImg(m_device, &m_resolveImage);
 
   if(m_omniShadowImageSampler != VK_NULL_HANDLE)
   {
@@ -1706,38 +2013,8 @@ void SimpleRender::Cleanup()
     vkDestroySemaphore(m_device, m_presentationResources.gbufferFinished, nullptr);
     m_presentationResources.gbufferFinished = VK_NULL_HANDLE;
   }
-
-  if (m_presentationResources.shadowFinished != VK_NULL_HANDLE)
-  {
-    vkDestroySemaphore(m_device, m_presentationResources.shadowFinished, nullptr);
-    m_presentationResources.shadowFinished = VK_NULL_HANDLE;
-  }
-
-  vkDestroyImage(m_device, m_gBuffer.albedo.image, nullptr);
-  vkDestroyImage(m_device, m_gBuffer.position.image, nullptr);
-  vkDestroyImage(m_device, m_gBuffer.normal.image, nullptr);
-  vkDestroyImage(m_device, m_gBuffer.depth.image, nullptr);
-  vkDestroyImageView(m_device, m_gBuffer.albedo.view, nullptr);
-  vkDestroyImageView(m_device, m_gBuffer.position.view, nullptr);
-  vkDestroyImageView(m_device, m_gBuffer.normal.view, nullptr);
-  vkDestroyImageView(m_device, m_gBuffer.depth.view, nullptr);
-  vkFreeMemory(m_device, m_gBuffer.albedo.mem, nullptr);
-  vkFreeMemory(m_device, m_gBuffer.position.mem, nullptr);
-  vkFreeMemory(m_device, m_gBuffer.normal.mem, nullptr);
-  vkFreeMemory(m_device, m_gBuffer.depth.mem, nullptr);
-
-  vkDestroyImage(m_device, m_omniShadowBuffer.albedo.image, nullptr);
-  vkDestroyImage(m_device, m_omniShadowBuffer.position.image, nullptr);
-  vkDestroyImage(m_device, m_omniShadowBuffer.normal.image, nullptr);
-  vkDestroyImage(m_device, m_omniShadowBuffer.depth.image, nullptr);
-  vkDestroyImageView(m_device, m_omniShadowBuffer.albedo.view, nullptr);
-  vkDestroyImageView(m_device, m_omniShadowBuffer.position.view, nullptr);
-  vkDestroyImageView(m_device, m_omniShadowBuffer.normal.view, nullptr);
-  vkDestroyImageView(m_device, m_omniShadowBuffer.depth.view, nullptr);
-  vkFreeMemory(m_device, m_omniShadowBuffer.albedo.mem, nullptr);
-  vkFreeMemory(m_device, m_omniShadowBuffer.position.mem, nullptr);
-  vkFreeMemory(m_device, m_omniShadowBuffer.normal.mem, nullptr);
-  vkFreeMemory(m_device, m_omniShadowBuffer.depth.mem, nullptr);
+  ClearBuffer(m_gBuffer);
+  ClearBuffer(m_omniShadowBuffer);
 
   if (m_commandPool != VK_NULL_HANDLE)
   {
@@ -1824,7 +2101,7 @@ void SimpleRender::SetupGUIElements()
     ImGui::ColorEdit3("Meshes base color 1", m_uniforms.baseColor.M, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoInputs);
     ImGui::SliderFloat3("Light source 1 position", m_uniforms.lights[0].pos.M, -100.f, 100.f);
     ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius_dummies.x, 0.0f, 100.0f);
-    ImGui::SliderInt("FaceIndex", &faceIndex, 0, 5);
+    ImGui::SliderInt("FaceIndex", &gbuffer_index, 0, 5); //0 no debug, 1 pos, 2 normal, 3 albedo, 4 shadow, 5 velocity
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
@@ -1935,4 +2212,23 @@ void SimpleRender::DrawFrameWithGUI(float a_time)
   m_presentationResources.currentFrame = (m_presentationResources.currentFrame + 1) % m_framesInFlight;
 
   vkQueueWaitIdle(m_presentationResources.queue);
+}
+
+void SimpleRender::ClearBuffer(FrameBuffer buffer)
+{
+  vkDestroyImage(m_device, buffer.albedo.image, nullptr);
+  vkDestroyImage(m_device, buffer.position.image, nullptr);
+  vkDestroyImage(m_device, buffer.normal.image, nullptr);
+  vkDestroyImage(m_device, buffer.depth.image, nullptr);
+  vkDestroyImage(m_device, buffer.velocity.image, nullptr);
+  vkDestroyImageView(m_device, buffer.albedo.view, nullptr);
+  vkDestroyImageView(m_device, buffer.position.view, nullptr);
+  vkDestroyImageView(m_device, buffer.normal.view, nullptr);
+  vkDestroyImageView(m_device, buffer.depth.view, nullptr);
+  vkDestroyImageView(m_device, buffer.velocity.view, nullptr);
+  vkFreeMemory(m_device, buffer.albedo.mem, nullptr);
+  vkFreeMemory(m_device, buffer.position.mem, nullptr);
+  vkFreeMemory(m_device, buffer.normal.mem, nullptr);
+  vkFreeMemory(m_device, buffer.depth.mem, nullptr);
+  vkFreeMemory(m_device, buffer.velocity.mem, nullptr);
 }

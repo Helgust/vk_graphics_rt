@@ -14,6 +14,7 @@ layout (binding = 2) uniform sampler2D samplerNormal;
 layout (binding = 3) uniform sampler2D samplerAlbedo;
 layout (binding = 4) uniform sampler2D samplerDepth;
 layout (binding = 5) uniform samplerCube shadowCubeMap;
+layout (binding = 6) uniform sampler2D samplerVelocity;
 
 layout(push_constant) uniform params_t
 {
@@ -59,6 +60,24 @@ void main()
     float intensity = 1.f;
     float attn = clamp(1.0 - lightDist*lightDist/(lightRadius*lightRadius), 0.0, 1.0); 
     attn *= attn;
-    outFragcolor = color1 * albedo * attn * shadow;    
-    //outFragcolor= vec4(1.0, 0.0f, 0.0f, 1.0f);
+    switch (int(UboParams.m_jitter_time_gbuffer_index.w)) {
+    case 0:
+        outFragcolor = color1 * albedo * attn * shadow;
+        break;
+    case 1:
+        outFragcolor = vec4(fragPos.xyz,1.0f);
+        break;
+    case 2:
+        outFragcolor = vec4(normal.xyz,1.0f);
+        break;
+    case 3:
+        outFragcolor = albedo;
+        break;
+    case 4:
+        outFragcolor = vec4(shadow);
+        break;
+    case 5:
+        outFragcolor = texture(samplerVelocity, uv);
+        break;
+    }
 }

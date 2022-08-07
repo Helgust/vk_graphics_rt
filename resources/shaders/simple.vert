@@ -31,6 +31,8 @@ layout (location = 0 ) out VS_OUT
     vec3 wNorm;
     vec3 wTangent;
     vec2 texCoord;
+    vec4 currClipSpacePos;
+    vec4 prevClipSpacePos;
 
 } vOut;
 
@@ -46,7 +48,11 @@ void main(void)
     vOut.texCoord = vTexCoordAndTang.xy;
 
     vec4 clipSpacePos = params.mProjView * vec4(vOut.wPos, 1.0);
-    clipSpacePos += vec4(UboParams.m_jitter_time_dummy.xy * clipSpacePos.w, 0, 0);
+    vOut.currClipSpacePos = clipSpacePos;
+    clipSpacePos += vec4(UboParams.m_jitter_time_gbuffer_index.xy * clipSpacePos.w, 0, 0);
     gl_Position = clipSpacePos;
+
+    
+    vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
     
 }

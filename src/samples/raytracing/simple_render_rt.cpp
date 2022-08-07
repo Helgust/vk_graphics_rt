@@ -220,19 +220,32 @@ void SimpleRender::SetupOmniShadowImage() // it is prepareCubeMap at Sasha Wille
   setObjectName(m_omniShadowImage.view, VK_OBJECT_TYPE_IMAGE_VIEW, "omnishadow_image_view");
 }
 
-void SimpleRender::SetupTaaImage()
+void SimpleRender::SetupHistoryImages()
 {
-  vk_utils::deleteImg(m_device, &m_taaImage);
+  vk_utils::deleteImg(m_device, &m_prevFrameImage);  
 
-  // change format and usage according to your implementation of RT
-  m_taaImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  m_prevFrameImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_taaImage);
-  setObjectName(m_taaImage.image,VK_OBJECT_TYPE_IMAGE,"taa_image");
-  if(m_taaImageSampler == VK_NULL_HANDLE)
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_prevFrameImage);
+
+  if(m_prevFrameImageSampler == VK_NULL_HANDLE)
   {
-    m_taaImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+    m_prevFrameImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
+
+  vk_utils::deleteImg(m_device, &m_prevDepthImage);  
+
+  m_prevDepthImage.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_D32_SFLOAT,
+    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_prevDepthImage);
+
+  if(m_prevDepthImageSampler == VK_NULL_HANDLE)
+  {
+    m_prevDepthImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+  }
+  setObjectName(m_prevFrameImage.image, VK_OBJECT_TYPE_IMAGE, "prev_frame");
+  setObjectName(m_prevDepthImage.image, VK_OBJECT_TYPE_IMAGE, "prev_depth");
+  
 }
 // ***************************************************************************************************************************
 

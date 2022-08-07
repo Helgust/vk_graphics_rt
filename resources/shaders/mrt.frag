@@ -16,6 +16,7 @@ layout(push_constant) uniform params_t
 layout (location = 0) out vec4 outPosition;
 layout (location = 1) out vec4 outNormal;
 layout (location = 2) out vec4 outAlbedo;
+layout (location = 3) out vec4 outVelocity;
 
 layout (location = 0 ) in VS_OUT
 {
@@ -23,6 +24,8 @@ layout (location = 0 ) in VS_OUT
     vec3 wNorm;
     vec3 wTangent;
     vec2 texCoord;
+    vec4 currPos;
+    vec4 prevPos;
 } surf;
 
 layout(binding = 0, set = 0) uniform AppData
@@ -30,10 +33,23 @@ layout(binding = 0, set = 0) uniform AppData
     UniformParams Params;
 };
 
+vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
+{
+    oldPos /= oldPos.w;
+    oldPos.xy = (oldPos.xy+1)/2.0f;
+    oldPos.y = 1 - oldPos.y;
+    
+    newPos /= newPos.w;
+    newPos.xy = (newPos.xy+1)/2.0f;
+    newPos.y = 1 - newPos.y;
+    
+    return (newPos - oldPos).xy;
+}
 
 void main()
 {
     outAlbedo = params.color;
     outNormal = vec4(surf.wNorm, 1.0f);
     outPosition = vec4(surf.wPos, 1.0f);
+    outVelocity = vec4(CalcVelocity(surf.currPos, surf.prevPos), 0.0f, 1.0f);
 }

@@ -1,22 +1,8 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : require
+
 #include "unpack_attributes.h"
-#include "common.h"
-
-layout(binding = 0, set = 0) uniform AppData
-{
-    UniformParams UboParams;
-};
-
-layout(push_constant) uniform params_t
-{
-    mat4 mProjView;
-    mat4 mModel;
-    mat4 lightMatrix;
-    vec4 color;
-    vec2 screenSize;
-} params;
 
 layout (location = 0 ) out VS_OUT
 {

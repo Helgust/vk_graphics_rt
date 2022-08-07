@@ -29,7 +29,8 @@ struct UniformParams
 {
   Light lights[2];
   vec4  baseColor;
-  vec4 m_jitter_time_dummy; // xy jitter, z time w dummy
+  vec4 m_jitter_time_gbuffer_index; // xy jitter, z time w gbuffer_index
+  mat4 prevProjView;
 };
 
 struct MaterialData_pbrMR
