@@ -106,7 +106,7 @@ void SimpleRender::SetupGbuffer() {
     if (i == 3)
     {
       attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-      attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+      attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
     }
     else
     {
