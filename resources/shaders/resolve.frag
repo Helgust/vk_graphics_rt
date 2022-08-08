@@ -15,6 +15,7 @@ layout (binding = 3) uniform sampler2D samplerAlbedo;
 layout (binding = 4) uniform sampler2D samplerDepth;
 layout (binding = 5) uniform samplerCube shadowCubeMap;
 layout (binding = 6) uniform sampler2D samplerVelocity;
+layout (binding = 7) uniform sampler2D samplerRtImage;
 
 layout(push_constant) uniform params_t
 {
