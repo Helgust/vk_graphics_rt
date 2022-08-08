@@ -31,6 +31,7 @@ struct UniformParams
   vec4  baseColor;
   vec4 m_jitter_time_gbuffer_index; // xy jitter, z time w gbuffer_index
   mat4 prevProjView;
+  uint taaFlag;
 };
 
 struct MaterialData_pbrMR

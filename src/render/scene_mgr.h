@@ -131,6 +131,7 @@ private:
 
   std::vector<InstanceInfo> m_instanceInfos = {};
   std::vector<LiteMath::float4x4> m_instanceMatrices = {};
+  std::vector<LiteMath::float4x4> m_prevInstanceMatrices = {};
 
   std::vector<hydra_xml::Camera> m_sceneCameras = {};
 

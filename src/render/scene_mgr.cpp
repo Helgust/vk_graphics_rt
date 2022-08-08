@@ -320,7 +320,6 @@ void SceneManager::LoadInstanceDataOnGPU()
 
   m_instMatricesBuf = vk_utils::createBuffer(m_device, instMatBufSize, flags);
   m_instMemAlloc    = vk_utils::allocateAndBindWithPadding(m_device, m_physDevice, {m_instMatricesBuf});
-
   m_pCopyHelper->UpdateBuffer(m_instMatricesBuf, 0, m_instanceMatrices.data(), instMatBufSize);
 }
 

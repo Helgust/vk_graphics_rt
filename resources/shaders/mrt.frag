@@ -35,15 +35,20 @@ layout(binding = 0, set = 0) uniform AppData
 
 vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
 {
-    oldPos /= oldPos.w;
-    oldPos.xy = (oldPos.xy+1)/2.0f;
-    oldPos.y = 1 - oldPos.y;
+    // oldPos /= oldPos.w;
+    // oldPos.xy = (oldPos.xy+1)/2.0f;
+    // oldPos.y = 1 - oldPos.y;
     
-    newPos /= newPos.w;
-    newPos.xy = (newPos.xy+1)/2.0f;
-    newPos.y = 1 - newPos.y;
+    // newPos /= newPos.w;
+    // newPos.xy = (newPos.xy+1)/2.0f;
+    // newPos.y = 1 - newPos.y;
     
-    return (newPos - oldPos).xy;
+    // return (newPos - oldPos).xy;
+    vec3 newPosNDC = newPos.xyz / newPos.w;
+    vec3 oldPosNDC = oldPos.xyz / oldPos.w;
+    newPosNDC.xy = (newPosNDC.xy * 0.5f + 0.5f);
+    oldPosNDC.xy = (oldPosNDC.xy * 0.5f + 0.5f);
+    return newPosNDC.xy - oldPosNDC.xy;
 }
 
 void main()

@@ -44,6 +44,6 @@ void main(void)
     vOut.wTangent = normalize(mat3(transpose(inverse(params.mModel))) * wTang.xyz);
     vOut.texCoord = vTexCoordAndTang.xy;
     vec4 clipLightSpace = params.lightMatrix * vec4(vOut.wPos, 1.0);
-    clipLightSpace += vec4(UboParams.m_jitter_time_gbuffer_index.xy * clipLightSpace.w, 0, 0);
+    //clipLightSpace += vec4(UboParams.m_jitter_time_gbuffer_index.xy * clipLightSpace.w, 0, 0);
     gl_Position = clipLightSpace;
 }
