@@ -46,11 +46,6 @@ void main()
     float sampledDist = texture(shadowCubeMap, lightVec).r;
     float shadow = (lightDist <= sampledDist + EPSILON) ? 1.0 : SHADOW_OPACITY;
 
-    if (lightDist > lightRadius) {
-        outFragcolor = vec4(0.0f);
-        return;
-    }
-
     vec4 lightColor1 = UboParams.lights[0].color;
     vec3 N = normal; 
 
@@ -74,7 +69,7 @@ void main()
         outFragcolor = albedo;
         break;
     case 4:
-        outFragcolor = vec4(shadow);
+        outFragcolor = vec4(sampledDist/255.0f, 0.0f, 0.0f, 1.0f);
         break;
     case 5:
         outFragcolor = texture(samplerVelocity, uv);

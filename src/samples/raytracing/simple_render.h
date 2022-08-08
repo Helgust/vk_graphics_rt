@@ -191,7 +191,8 @@ protected:
   void* m_uboMappedMem = nullptr;
   int faceIndex = 0;
   int gbuffer_index = 0;
-  bool taaFlag = true;
+  bool taaFlag;
+  vec4 currentLightPos, prevLightPos;
   std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
 
   pipeline_data_t m_basicForwardPipeline {};

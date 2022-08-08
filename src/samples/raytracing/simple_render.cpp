@@ -640,6 +640,7 @@ void SimpleRender::InitVulkan(const char** a_instanceExtensions, uint32_t a_inst
 
 void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
 {
+  prevLightPos = vec4(0.0f);
   m_surface = a_surface;
 
   m_presentationResources.queue = m_swapchain.CreateSwapChain(m_physicalDevice, m_device, m_surface,
@@ -791,6 +792,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindImage(4, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
   m_pBindings->BindImage(5, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(6, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(7, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dResolveSet, &m_dResolveSetLayout);
 
   auto curentFrame = m_pResolveImage->m_attachments[m_resolveImageId];
@@ -977,6 +979,7 @@ void SimpleRender::CreateUniformBuffer()
   m_uniforms.lights[1].color  = LiteMath::float4(1.0f, 0.0f,  0.0f, 1.0f);
   m_uniforms.lights[1].radius_dummies  = LiteMath::float4(20.0f, 0.0f,  0.0f, 1.0f);
   m_uniforms.baseColor = LiteMath::float4(0.9f, 0.92f, 1.0f, 1.0f);
+  currentLightPos = m_uniforms.lights[0].pos;
   // m_uniforms.animateLightColor = true;
   //m_uniforms.m_camPos = to_float4(m_cam.pos, 1.0f);
   //m_uniforms.m_invProjView = m_inverseProjViewMatrix;
@@ -2102,6 +2105,7 @@ void SimpleRender::Cleanup()
 
 void SimpleRender::SetupGUIElements()
 {
+  prevLightPos = m_uniforms.lights[0].pos;
   ImGui_ImplVulkan_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
@@ -2132,7 +2136,7 @@ void SimpleRender::SetupGUIElements()
     ImGui::Text("Fragment shader path: %s", MRT_FRAGMENT_SHADER_PATH.c_str());
     ImGui::End();
   }
-
+  currentLightPos = m_uniforms.lights[0].pos;
   // Rendering
   ImGui::Render();
 }
