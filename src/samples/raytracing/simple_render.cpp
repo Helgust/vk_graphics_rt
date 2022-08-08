@@ -1127,6 +1127,20 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     }
     vkCmdEndRenderPass(a_cmdBuff);
 
+    vk_utils::setImageLayout(
+    a_cmdBuff,
+    m_prevDepthImage.image,
+    VK_IMAGE_ASPECT_DEPTH_BIT,
+    VK_IMAGE_LAYOUT_UNDEFINED,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    vk_utils::setImageLayout(
+    a_cmdBuff,
+    m_prevFrameImage.image,
+    VK_IMAGE_ASPECT_COLOR_BIT,
+    VK_IMAGE_LAYOUT_UNDEFINED,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
     // render  TAA to screen
     VkRenderPassBeginInfo taaRenderPassInfo = {};
     taaRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;

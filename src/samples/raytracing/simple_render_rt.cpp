@@ -226,7 +226,8 @@ void SimpleRender::SetupHistoryImages()
 
   m_prevFrameImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_prevFrameImage);
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT 
+    | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_prevFrameImage);
 
   if(m_prevFrameImageSampler == VK_NULL_HANDLE)
   {
@@ -237,7 +238,8 @@ void SimpleRender::SetupHistoryImages()
 
   m_prevDepthImage.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_D32_SFLOAT,
-    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_prevDepthImage);
+    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT 
+    | VK_IMAGE_USAGE_TRANSFER_DST_BIT , &m_prevDepthImage);
 
   if(m_prevDepthImageSampler == VK_NULL_HANDLE)
   {
