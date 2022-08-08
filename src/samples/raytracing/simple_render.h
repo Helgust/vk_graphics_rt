@@ -62,7 +62,7 @@ public:
 
   const std::string NOISE_TEX = "../resources/textures/STBN.png";
   
-  const bool        ENABLE_HARDWARE_RT   = false;
+  const bool        ENABLE_HARDWARE_RT   = true;
 
   static constexpr uint64_t STAGING_MEM_SIZE = 16 * 16 * 1024u;
 

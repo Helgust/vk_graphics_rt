@@ -75,5 +75,8 @@ void main()
     case 5:
         outFragcolor = texture(samplerVelocity, uv);
         break;
+    case 6:
+        outFragcolor = texture(samplerRtImage, uv);
+        break;
     }
 }

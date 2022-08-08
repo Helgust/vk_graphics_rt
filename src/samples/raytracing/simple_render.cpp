@@ -1868,7 +1868,7 @@ void SimpleRender::DrawFrameSimple(float a_time)
     else
       RayTraceCPU();
 
-    BuildCommandBufferQuad(currentResolveCmdBuf, m_swapchain.GetAttachment(imageIdx).view);
+    //BuildCommandBufferQuad(currentResolveCmdBuf, m_swapchain.GetAttachment(imageIdx).view);
   }
 
   VkSubmitInfo submitInfo = {};
@@ -2120,7 +2120,7 @@ void SimpleRender::SetupGUIElements()
     ImGui::ColorEdit3("Meshes base color 1", m_uniforms.baseColor.M, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoInputs);
     ImGui::SliderFloat3("Light source 1 position", m_uniforms.lights[0].pos.M, -100.f, 100.f);
     ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius_dummies.x, 0.0f, 100.0f);
-    ImGui::SliderInt("FaceIndex", &gbuffer_index, 0, 5); //0 no debug, 1 pos, 2 normal, 3 albedo, 4 shadow, 5 velocity
+    ImGui::SliderInt("FaceIndex", &gbuffer_index, 0, 6); //0 no debug, 1 pos, 2 normal, 3 albedo, 4 shadow, 5 velocity
     ImGui::Checkbox("TaaIsOn", &taaFlag);
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
@@ -2166,6 +2166,8 @@ void SimpleRender::DrawFrameWithGUI(float a_time)
 
   if(m_currentRenderMode == RenderMode::RASTERIZATION)
   {
+    if (ENABLE_HARDWARE_RT)
+      RayTraceGPU(a_time);
     setObjectName(currentGbufferCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer DrawFrameWithGUI");
     BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,
     m_gBufferPipeline.pipeline);
