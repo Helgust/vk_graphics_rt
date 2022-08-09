@@ -29,7 +29,6 @@ VkBufferUsageFlags RayTracer_Generated::GetAdditionalFlagsForUBO() const
 RayTracer_Generated::~RayTracer_Generated()
 {
   m_pMaker = nullptr;
-
   vkDestroyDescriptorSetLayout(device, CastSingleRayMegaDSLayout, nullptr);
   CastSingleRayMegaDSLayout = VK_NULL_HANDLE;
 

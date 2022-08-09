@@ -80,6 +80,7 @@ public:
   void UpdateCamera(const Camera* cams, uint32_t a_camsCount) override;
   Camera GetCurrentCamera() override {return m_cam;}
   void UpdateView();
+
   void LoadScene(const char *path) override;
   void DrawFrame(float a_time, DrawMode a_mode) override;
 

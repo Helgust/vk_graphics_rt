@@ -5,13 +5,6 @@
 #include <vk_pipeline.h>
 #include <vk_buffers.h>
 
-uint pcg(uint v)
-{
-  uint state = v * 747796405u + 2891336453u;
-  uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-  return (word >> 22u) ^ word;
-}
-
 void fillWriteDescriptorSetEntry2(VkDescriptorSet set, VkWriteDescriptorSet& writeDS,
   VkDescriptorImageInfo* imageInfo, VkImageView imageView, VkSampler sampler,int binding) {
 
@@ -265,6 +258,7 @@ void SimpleRender::SetupOmniShadow() {
 		VK_CHECK_RESULT(vkBindImageMemory(m_device, m_omniShadowBuffer.albedo.image, m_omniShadowBuffer.albedo.mem, 0));
 
 		VkCommandBuffer layoutCmd = vk_utils::createCommandBuffer(m_device, m_commandPool);
+    setObjectName(layoutCmd, VK_OBJECT_TYPE_COMMAND_BUFFER, "omnishadow_layout_buffer");
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     VK_CHECK_RESULT(vkBeginCommandBuffer(layoutCmd, &beginInfo));
@@ -553,6 +547,7 @@ void SimpleRender::SetupDeviceExtensions()
   m_deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
   //Required for printf Debug
   m_deviceExtensions.push_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
+  m_deviceExtensions.push_back(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
   
   if(ENABLE_HARDWARE_RT)
   {
@@ -792,7 +787,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindImage(4, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
   m_pBindings->BindImage(5, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(6, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-  m_pBindings->BindImage(7, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  //m_pBindings->BindImage(7, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dResolveSet, &m_dResolveSetLayout);
 
   auto curentFrame = m_pResolveImage->m_attachments[m_resolveImageId];
@@ -1003,6 +998,7 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
 void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFramebuffer a_frameBuff,
                                             VkImageView, VkPipeline a_pipeline)
 {
+  setObjectName(a_cmdBuff, VK_OBJECT_TYPE_COMMAND_BUFFER, "gbuffer_inside_command_buffer");
   vkResetCommandBuffer(a_cmdBuff, 0);
   VkCommandBufferBeginInfo beginInfo = {};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1087,6 +1083,7 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFramebuffer a_frameBuff,
                                             VkImageView, VkPipeline a_pipeline)
 {
+  setObjectName(a_cmdBuff, VK_OBJECT_TYPE_COMMAND_BUFFER, "resolve_inside_command_buffer");
   vkResetCommandBuffer(a_cmdBuff, 0);
 
   VkCommandBufferBeginInfo beginInfo = {};
@@ -2166,8 +2163,8 @@ void SimpleRender::DrawFrameWithGUI(float a_time)
 
   if(m_currentRenderMode == RenderMode::RASTERIZATION)
   {
-    if (ENABLE_HARDWARE_RT)
-      RayTraceGPU(a_time);
+    // if (ENABLE_HARDWARE_RT)
+    //   RayTraceGPU(a_time);
     setObjectName(currentGbufferCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer DrawFrameWithGUI");
     BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,
     m_gBufferPipeline.pipeline);

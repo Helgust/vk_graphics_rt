@@ -63,7 +63,7 @@ void RayTracer_Generated::InitVulkanObjects(VkDevice a_device, VkPhysicalDevice 
 
 void RayTracer_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine, float a_time)
 {
- const size_t maxAllowedSize = std::numeric_limits<uint32_t>::max();
+  const size_t maxAllowedSize = std::numeric_limits<uint32_t>::max();
 
   m_uboData.m_invProjView = m_invProjView;
   m_uboData.m_camPos = m_camPos;

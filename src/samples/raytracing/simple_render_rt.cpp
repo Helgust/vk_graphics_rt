@@ -403,6 +403,7 @@ void SimpleRender::RayTraceGPU(float a_time)
   
       vkCmdCopyBufferToImage(commandBuffer, m_genColorBuffer, m_rtImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
     }
+    
     // get back normal image layout
     {
       VkImageMemoryBarrier transferImage;

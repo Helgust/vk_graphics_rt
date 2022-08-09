@@ -230,9 +230,9 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
 
       if (!isIntersect) // condition for to be in light
       {
-        //color+=vec3(0.0,1.0,0.0);
-        float shade = max(dot(normalize(shadowDir), n), 0.0f);
-        color += shade;
+        color+=vec3(0.0,1.0,0.0);
+        //float shade = max(dot(normalize(shadowDir), n), 0.0f);
+        //color += shade;
         //color += shade*m_lights[j].intensity/(4 * M_PI * m_lights[j].rad*m_lights[j].rad);
       }
 
