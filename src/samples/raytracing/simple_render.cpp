@@ -5,41 +5,31 @@
 #include <vk_pipeline.h>
 #include <vk_buffers.h>
 
-void fillWriteDescriptorSetEntry2(VkDescriptorSet set, VkWriteDescriptorSet& writeDS,
-  VkDescriptorImageInfo* imageInfo, VkImageView imageView, VkSampler sampler,int binding) {
+void fillWriteDescriptorSetEntry(VkDescriptorSet set, VkWriteDescriptorSet& writeDS, 
+  VkDescriptorBufferInfo* bufferInfo, VkDescriptorImageInfo* imageInfo, VkBuffer buffer, int binding, int descriptorCount = 1) {
+    if (bufferInfo) {
+      bufferInfo->buffer = buffer;
+      bufferInfo->offset = 0;
+      bufferInfo->range  = VK_WHOLE_SIZE;  
+    }
 
-  //imageInfo->imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-  imageInfo->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfo->imageView  = imageView;
-  imageInfo->sampler  = sampler;
 
-  writeDS = VkWriteDescriptorSet{};
-  writeDS.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  writeDS.dstSet = set;
-  writeDS.dstBinding = binding;
-  writeDS.descriptorCount = 1;
-  writeDS.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ;
-  writeDS.pBufferInfo = nullptr;
-  writeDS.pImageInfo = imageInfo;
-  writeDS.pTexelBufferView = nullptr;
-}
+    writeDS = VkWriteDescriptorSet{};
+    writeDS.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeDS.dstSet = set;
+    writeDS.dstBinding = binding;
+    writeDS.descriptorCount = descriptorCount;
 
-void fillWriteDescriptorSetEntry(VkDescriptorSet set, VkWriteDescriptorSet& writeDS,
-  VkDescriptorBufferInfo* bufferInfo, VkBuffer buffer, int binding) {
+    if (!imageInfo)
+      writeDS.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    else if (imageInfo->sampler)
+      writeDS.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    else
+      writeDS.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 
-  bufferInfo->buffer = buffer;
-  bufferInfo->offset = 0;
-  bufferInfo->range = VK_WHOLE_SIZE;
-
-  writeDS = VkWriteDescriptorSet{};
-  writeDS.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  writeDS.dstSet = set;
-  writeDS.dstBinding = binding;
-  writeDS.descriptorCount = 1;
-  writeDS.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  writeDS.pBufferInfo = bufferInfo;
-  writeDS.pImageInfo = nullptr;
-  writeDS.pTexelBufferView = nullptr;
+    writeDS.pBufferInfo = bufferInfo;
+    writeDS.pImageInfo = imageInfo;
+    writeDS.pTexelBufferView = nullptr; 
 }
 
 void SimpleRender::SetupGbuffer() {
@@ -492,16 +482,28 @@ void SimpleRender::CreateAttachment(
 void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler) 
 {
   std::array<VkDescriptorBufferInfo, 6> descriptorBufferInfo;
-  std::array<VkDescriptorImageInfo, 1> descriptorImageInfo;
-  std::array<VkWriteDescriptorSet, 7> writeDescriptorSet;
+  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(1);
+  std::vector<VkWriteDescriptorSet> writeDescriptorSet(8);
 
-  fillWriteDescriptorSetEntry2(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorImageInfo[0], noiseMapTex.view, noiseTexSampler, 3);
-  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[1], &descriptorBufferInfo[0], sceneManager->GetVertexBuffer(), 4);
-  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[2], &descriptorBufferInfo[1], sceneManager->GetIndexBuffer(), 5);
-  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[3], &descriptorBufferInfo[2], sceneManager->GetMaterialIDsBuffer(), 6);
-  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[4], &descriptorBufferInfo[3], sceneManager->GetMaterialsBuffer(), 7);
-  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[5], &descriptorBufferInfo[4], sceneManager->GetInstanceMatBuffer(), 8);
-  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[6], &descriptorBufferInfo[5], sceneManager->GetMeshInfoBuffer(), 9);
+
+  descriptorImageInfos[0].sampler = nullptr;
+  descriptorImageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  descriptorImageInfos[0].imageView = noiseMapTex.view;
+
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorBufferInfo[0], nullptr, sceneManager->GetVertexBuffer(), 3);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[1], &descriptorBufferInfo[1], nullptr, sceneManager->GetIndexBuffer(), 4);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[2], &descriptorBufferInfo[2], nullptr, sceneManager->GetMaterialIDsBuffer(), 5);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[3], &descriptorBufferInfo[3], nullptr, sceneManager->GetMaterialsBuffer(), 6);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[4], &descriptorBufferInfo[4], nullptr, sceneManager->GetInstanceMatBuffer(), 7);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[5], &descriptorBufferInfo[5], nullptr, sceneManager->GetMeshInfoBuffer(), 8);
+
+  
+  VkDescriptorImageInfo samplerInfo;
+  samplerInfo.sampler = noiseTexSampler;
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[6], nullptr, descriptorImageInfos.data(), VK_NULL_HANDLE, 9);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[7], nullptr, &samplerInfo ,VK_NULL_HANDLE, 10);
+  //fillWriteDescriptorSetEntry2(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorImageInfo[0], noiseMapTex.view, noiseTexSampler, 3);
+
 
   vkUpdateDescriptorSets(device, uint32_t(writeDescriptorSet.size()), writeDescriptorSet.data(), 0, NULL);
 }
@@ -620,6 +622,7 @@ void SimpleRender::InitVulkan(const char** a_instanceExtensions, uint32_t a_inst
   LoaderConfig conf = {};
   conf.load_geometry = true;
   conf.load_materials = MATERIAL_LOAD_MODE::NONE;
+  conf.instance_matrix_as_storage_buffer = true;
   if(ENABLE_HARDWARE_RT)
   {
     conf.build_acc_structs = true;
@@ -787,7 +790,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindImage(4, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
   m_pBindings->BindImage(5, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(6, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-  //m_pBindings->BindImage(7, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(7, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dResolveSet, &m_dResolveSetLayout);
 
   auto curentFrame = m_pResolveImage->m_attachments[m_resolveImageId];
@@ -1827,15 +1830,15 @@ void SimpleRender::LoadScene(const char* path)
 
   UpdateView();
 
-  for (uint32_t i = 0; i < m_framesInFlight; ++i)
-  {
-    setObjectName(m_cmdBuffersGbuffer[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer LoadScene");
-    BuildGbufferCommandBuffer(m_cmdBuffersGbuffer[i], m_gBuffer.frameBuffer, m_swapchain.GetAttachment(i).view,
-                           m_gBufferPipeline.pipeline);
-    setObjectName(m_cmdBuffersDrawMain[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build resolve LoadScene");
-    BuildResolveCommandBuffer(m_cmdBuffersDrawMain[i], m_frameBuffers[i], m_swapchain.GetAttachment(i).view,
-                           m_resolvePipeline.pipeline);
-  }
+  // for (uint32_t i = 0; i < m_framesInFlight; ++i)
+  // {
+  //   setObjectName(m_cmdBuffersGbuffer[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer LoadScene");
+  //   BuildGbufferCommandBuffer(m_cmdBuffersGbuffer[i], m_gBuffer.frameBuffer, m_swapchain.GetAttachment(i).view,
+  //                          m_gBufferPipeline.pipeline);
+  //   setObjectName(m_cmdBuffersDrawMain[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build resolve LoadScene");
+  //   BuildResolveCommandBuffer(m_cmdBuffersDrawMain[i], m_frameBuffers[i], m_swapchain.GetAttachment(i).view,
+  //                          m_resolvePipeline.pipeline);
+  // }
 }
 
 void SimpleRender::DrawFrameSimple(float a_time)
@@ -1854,6 +1857,8 @@ void SimpleRender::DrawFrameSimple(float a_time)
 
   if(m_currentRenderMode == RenderMode::RASTERIZATION)
   {
+    if (ENABLE_HARDWARE_RT)
+      RayTraceGPU(a_time);
     setObjectName(currentGbufferCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer DrawFrameSimple");
     BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,
     m_gBufferPipeline.pipeline);
@@ -2163,8 +2168,8 @@ void SimpleRender::DrawFrameWithGUI(float a_time)
 
   if(m_currentRenderMode == RenderMode::RASTERIZATION)
   {
-    // if (ENABLE_HARDWARE_RT)
-    //   RayTraceGPU(a_time);
+    if (ENABLE_HARDWARE_RT)
+      RayTraceGPU(a_time);
     setObjectName(currentGbufferCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer DrawFrameWithGUI");
     BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,
     m_gBufferPipeline.pipeline);

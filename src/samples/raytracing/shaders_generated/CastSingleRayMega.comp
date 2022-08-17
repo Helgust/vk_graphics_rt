@@ -9,13 +9,14 @@
 layout(binding = 0, set = 0) buffer data0 { uint out_color[]; };
 layout(binding = 1, set = 0) uniform accelerationStructureEXT m_pAccelStruct;
 layout(binding = 2, set = 0) buffer dataUBO { RayTracer_UBO_Data ubo; };
-layout(binding = 3, set = 0) uniform sampler2D NoiseTexture;
-layout(binding = 4, set = 0) buffer Vertices { Vertex vertices[]; };
-layout(binding = 5, set = 0) buffer Indices { uint indices[]; };
-layout(binding = 6, set = 0) buffer MatIds { uint mat_ids[]; };
-layout(binding = 7, set = 0) buffer Materials { MaterialData_pbrMR materials[]; };
-layout(binding = 8, set = 0) buffer InstanceMats { mat4 instance_mats[]; };
-layout(binding = 9, set = 0) buffer MeshInfos { MeshInfo mesh_infos[]; };
+layout(binding = 3, set = 0) buffer Vertices { Vertex vertices[]; };
+layout(binding = 4, set = 0) buffer Indices { uint indices[]; };
+layout(binding = 5, set = 0) buffer MatIds { uint mat_ids[]; };
+layout(binding = 6, set = 0) buffer Materials { MaterialData_pbrMR materials[]; };
+layout(binding = 7, set = 0) buffer InstanceMats { mat4 instance_mats[]; };
+layout(binding = 8, set = 0) buffer MeshInfos { MeshInfo mesh_infos[]; };
+layout(binding = 9, set = 0) uniform texture2D NoiseTexture;
+layout(binding = 10, set = 0) uniform sampler NoiseSamp;
 
 
 uint ColorToInt(vec4 color) 
@@ -148,8 +149,8 @@ vec4 GetPos(CRT_Hit hit)
 }
 
 vec2 random2(vec2 p) {
-    float r1 = texture(NoiseTexture, p/64.).x;
-    float r2 = texture(NoiseTexture, (p + vec2(32))/64.).x;
+    float r1 = texture(sampler2D(NoiseTexture, NoiseSamp), p/64.).x;
+    float r2 = texture(sampler2D(NoiseTexture, NoiseSamp), (p + vec2(32))/64.).x;
     return vec2(r1, r2);
 }
 
@@ -187,7 +188,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
         //vec2 random = Nth_weyl(vec2(0.0f), second)/64;
         //debugPrintfEXT("random = %1.2v3f\n", random);
         //vec2 random = random_pcg2d(coordInit);
-        vec4 rngState = texture(NoiseTexture,random.xy);
+        vec4 rngState = texture(sampler2D(NoiseTexture, NoiseSamp),random.xy);
         float criteria = (random.z*2) - 1;
         float rngOffset;
         if(criteria > 0)

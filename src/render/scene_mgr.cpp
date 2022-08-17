@@ -370,11 +370,11 @@ void SceneManager::LoadMaterialDataOnGPU()
     }
 
     // load special texture to indicate missing/corrupt textures in the scene
-    {
-      m_textures.push_back(LoadSpecialTexture());
-      m_texturesById.insert({m_textureInfos.size(), m_textures.back()});
-      m_textureInfos.push_back(getImageInfo(missingTextureImgPath));
-    }
+    // {
+    //   m_textures.push_back(LoadSpecialTexture());
+    //   m_texturesById.insert({m_textureInfos.size(), m_textures.back()});
+    //   m_textureInfos.push_back(getImageInfo(missingTextureImgPath));
+    // }
 
     vk_utils::allocateImgsBindCreateView(m_device, m_physDevice, m_textures);
     if(!m_textures.empty())

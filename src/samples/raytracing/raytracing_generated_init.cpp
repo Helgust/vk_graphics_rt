@@ -57,7 +57,7 @@ void RayTracer_Generated::InitHelpers()
 
 VkDescriptorSetLayout RayTracer_Generated::CreateCastSingleRayMegaDSLayout()
 {
-  std::array<VkDescriptorSetLayoutBinding, 2+1+7> dsBindings;
+  std::array<VkDescriptorSetLayoutBinding, 2+1+8> dsBindings;
 
   // binding for out_color
   dsBindings[0].binding            = 0;
@@ -80,21 +80,28 @@ VkDescriptorSetLayout RayTracer_Generated::CreateCastSingleRayMegaDSLayout()
   dsBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[2].pImmutableSamplers = nullptr;
 
-  // binding for noise_color
-  dsBindings[3].binding            = 3;
-  dsBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  dsBindings[3].descriptorCount    = 1;
-  dsBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[3].pImmutableSamplers = nullptr;
-
-   for (int i = 0; i < 6; i++) 
-   {
-    dsBindings[i + 4].binding = i + 4;
-    dsBindings[i + 4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    dsBindings[i + 4].descriptorCount = 1;
-    dsBindings[i + 4].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    dsBindings[i + 4].pImmutableSamplers = nullptr;
+  for (int i = 0; i < 6; i++) 
+  {
+    dsBindings[i + 3].binding = i + 3;
+    dsBindings[i + 3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    dsBindings[i + 3].descriptorCount = 1;
+    dsBindings[i + 3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    dsBindings[i + 3].pImmutableSamplers = nullptr;
   }
+
+  // binding for noise_color
+  dsBindings[9].binding            = 9;
+  dsBindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+  dsBindings[9].descriptorCount    = 1;
+  dsBindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[9].pImmutableSamplers = nullptr;
+
+  // binding for noise_color
+  dsBindings[10].binding            = 10;
+  dsBindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLER;
+  dsBindings[10].descriptorCount    = 1;
+  dsBindings[10].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[10].pImmutableSamplers = nullptr;
   
   VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
   descriptorSetLayoutCreateInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
