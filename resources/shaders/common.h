@@ -23,10 +23,10 @@ typedef int4        ivec4;
 #endif
 
 struct Light {
-		vec4  pos;
-		vec4  color;
-		vec4 radius_dummies; // x-radius, yzw - dumy things
-	};
+  vec4  pos;
+  vec4  color;
+  vec4 radius_lightDist_dummies; // x-radius, yzw - dumy things
+};
 
 struct UniformParams
 {

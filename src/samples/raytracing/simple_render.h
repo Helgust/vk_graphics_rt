@@ -194,6 +194,7 @@ protected:
   int gbuffer_index = 0;
   bool taaFlag;
   bool softShadow;
+  bool onlyOneLoadOfShadows = true;
   vec4 currentLightPos, prevLightPos;
   std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
 

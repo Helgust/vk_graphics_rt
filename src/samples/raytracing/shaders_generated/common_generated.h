@@ -39,14 +39,13 @@ struct Light
 {
   vec4 pos;
   uint color;
-  float intensity;
   float rad;
   float light_dist;
 };
 
 //For buggy
-const Light l1 = { {0.0f,10.0f,0.0f,1.0f}, 0xffffffff, 50.0f,5.0f,10.0f};
-const Light l2 = { {0.0f,110.0f,-20.0f,1.0f},0xff000000, 5.0f,5.0f,10.0f};
+const Light l1 = { {0.0f,10.0f,0.0f,1.0f}, 0xffffffff, 5.0f, 40.0f};
+const Light l2 = { {0.0f,110.0f,-20.0f,1.0f},0xff000000, 5.0f, 10.0f};
 
 //buster_drone
 //const Light l1 = { {40.0f,10.0f,150.0f,1.0f}, 0xff000000, 100000.0f };

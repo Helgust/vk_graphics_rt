@@ -42,7 +42,7 @@ int main()
   initVulkanGLFW(app, window, VULKAN_DEVICE_ID);
 
   //app->LoadScene("../resources/scenes/01_simple_scenes/instanced_objects.xml");
-  app->LoadScene("../resources/scenes/02_cry_sponza/statex_00001.xml");
+  //app->LoadScene("../resources/scenes/02_cry_sponza/statex_00001.xml");
   //app->LoadScene("../resources/scenes/pillars/pillars.gltf");
   //app->LoadScene("../resources/scenes/03_san_miguel/statex_00001.xml");
   //app->LoadScene("../resources/scenes/043_cornell_normals/statex_00001.xml");
@@ -51,7 +51,7 @@ int main()
   //app->LoadScene("../resources/scenes/RoadScenelib/statex_00001.xml");
   //app->LoadScene("../resources/scenes/rungholt/statex_00001.xml");
   //app->LoadScene("../resources/scenes/sibenik/statex_00001.xml");
-  //app->LoadScene("../resources/scenes/sun_temple/scenelib/statex_00001.xml");
+  app->LoadScene("../resources/scenes/sun_temple/scenelib/statex_00001.xml");
 
   //app->LoadScene("../resources/scenes/box/Box.gltf");
 

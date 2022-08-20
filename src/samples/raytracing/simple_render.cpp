@@ -972,10 +972,10 @@ void SimpleRender::CreateUniformBuffer()
 
   m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 10.0f, 0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
-  m_uniforms.lights[0].radius_dummies  = LiteMath::float4(40.0f, 0.0f,  0.0f, 1.0f);
+  m_uniforms.lights[0].radius_lightDist_dummies  = LiteMath::float4(5.0f, 40.0f,  0.0f, 1.0f);
   m_uniforms.lights[1].pos  = LiteMath::float4(0.0f, 2.0f,  1.0f, 1.0f);
   m_uniforms.lights[1].color  = LiteMath::float4(1.0f, 0.0f,  0.0f, 1.0f);
-  m_uniforms.lights[1].radius_dummies  = LiteMath::float4(20.0f, 0.0f,  0.0f, 1.0f);
+  m_uniforms.lights[1].radius_lightDist_dummies  = LiteMath::float4(5.0f, 20.0f,  0.0f, 1.0f);
   m_uniforms.baseColor = LiteMath::float4(0.9f, 0.92f, 1.0f, 1.0f);
   currentLightPos = m_uniforms.lights[0].pos;
   // m_uniforms.animateLightColor = true;
@@ -1014,8 +1014,10 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 
   //AddCmdsShadowmapPass(a_cmdBuff, m_omniShadowBuffer.frameBuffer);
   //omnishadow pass
-  for (uint32_t face = 0; face < 6; face++) {
-    UpdateCubeFace(face, a_cmdBuff);
+  if (onlyOneLoadOfShadows)
+    for (uint32_t face = 0; face < 6; face++) {
+      UpdateCubeFace(face, a_cmdBuff);
+    onlyOneLoadOfShadows = false;
   }
   //UpdateCubeFace(faceIndex, a_cmdBuff);
   //UpdateCubeFace(0,a_cmdBuff);
@@ -1370,7 +1372,7 @@ void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
   // Update view matrix via push constant
   float4x4 viewMatrix =  float4x4(); 
   viewMatrix.set_col(3, m_uniforms.lights[0].pos);
-  float light_radius = m_uniforms.lights[0].radius_dummies.x;
+  float light_radius = m_uniforms.lights[0].radius_lightDist_dummies.y;
   //float4x4 mProj = ortoMatrix(-light_radius, +light_radius, -light_radius, +light_radius, 0.0f, 100.0f);
   float4x4 mProj = perspectiveMatrix(90, 1.0f, 1.0f, light_radius);
   float4x4 mProjFix = float4x4();
@@ -2122,7 +2124,7 @@ void SimpleRender::SetupGUIElements()
 
     ImGui::ColorEdit3("Meshes base color 1", m_uniforms.baseColor.M, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoInputs);
     ImGui::SliderFloat3("Light source 1 position", m_uniforms.lights[0].pos.M, -100.f, 100.f);
-    ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius_dummies.x, 0.0f, 100.0f);
+    ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius_lightDist_dummies.y, 0.0f, 100.0f);
     ImGui::SliderInt("FaceIndex", &gbuffer_index, 0, 6); //0 no debug, 1 pos, 2 normal, 3 albedo, 4 shadow, 5 velocity
     ImGui::Checkbox("Taa", &taaFlag);
     ImGui::Checkbox("SoftShadow", &softShadow);
