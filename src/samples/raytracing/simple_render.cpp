@@ -993,7 +993,7 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   std::uniform_int_distribution<std::mt19937::result_type> dist6(1,18);
   vec2 jitter = (HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT]) * JITTER_SCALE;
   m_uniforms.m_jitter_time_gbuffer_index = vec4(jitter.x/m_width, jitter.y/m_height, a_time, gbuffer_index);
-  m_uniforms.taaFlag = taaFlag ? 1 : 0;
+  m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
 
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
@@ -1785,7 +1785,8 @@ void SimpleRender::UpdateView()
   pushConst2M.projView = mWorldViewProj;
   pushConst2M.lightView = LiteMath::float4x4();
 
-  m_inverseProjViewMatrix = LiteMath::inverse4x4(m_projectionMatrix * transpose(inverse4x4(mLookAt)));
+  m_inverseProjViewMatrix = LiteMath::inverse4x4(mProjFix * mProj * transpose(inverse4x4(mLookAt)));
+  //m_inverseProjViewMatrix = mWorldViewProj;
 }
 
 void SimpleRender::LoadScene(const char* path)
@@ -2123,7 +2124,8 @@ void SimpleRender::SetupGUIElements()
     ImGui::SliderFloat3("Light source 1 position", m_uniforms.lights[0].pos.M, -100.f, 100.f);
     ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius_dummies.x, 0.0f, 100.0f);
     ImGui::SliderInt("FaceIndex", &gbuffer_index, 0, 6); //0 no debug, 1 pos, 2 normal, 3 albedo, 4 shadow, 5 velocity
-    ImGui::Checkbox("TaaIsOn", &taaFlag);
+    ImGui::Checkbox("Taa", &taaFlag);
+    ImGui::Checkbox("SoftShadow", &softShadow);
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 

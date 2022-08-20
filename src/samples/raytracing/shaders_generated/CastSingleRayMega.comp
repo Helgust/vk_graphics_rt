@@ -213,8 +213,8 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
           //float q = sqrt(1.0f - (m_lights[j].rad / distanceToLight) * (m_lights[j].rad / distanceToLight));
           // float pdf_xp = 1.0f / (2*M_PI * (1.0f - q));
           // color += shade * (1.0f / pdf_xp) * m_lights[j].intensity;
-          color += shade*m_lights[j].intensity/(4 * M_PI * m_lights[j].rad*m_lights[j].rad);
-          //color += shade;
+          //color += shade*m_lights[j].intensity/(4 * M_PI * m_lights[j].rad*m_lights[j].rad);
+          color += shade;
         }
       }
       color*=(total / (samples_cnt));
@@ -271,7 +271,7 @@ void kernel_InitEyeRay(uint tidX, uint tidY, inout vec4 rayPosAndNear, inout vec
   hash += uint(gl_LocalInvocationIndex);
   rayPosAndNear = ubo.m_camPos; // to_float4(m_camPos, 1.0f);
   
-  const vec3 rayDir = EyeRayDir(float(tidX), float(tidY), float(ubo.m_width), float(ubo.m_height), ubo.m_invProjView, uint(hash));
+  const vec3 rayDir = EyeRayDir(float(tidX), float(tidY), float(ubo.m_width), float(ubo.m_height), ubo.m_invProjView);
   rayDirAndFar  = vec4(rayDir, MAXFLOAT);
 
 }

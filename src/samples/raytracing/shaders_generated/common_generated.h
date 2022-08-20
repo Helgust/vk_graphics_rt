@@ -100,21 +100,6 @@ struct Vertex {
 // const vec2 Q24 = vec2(3./pow(P2,9.), 5./pow(P2,10.));
 // const vec2 Q25 = vec2(3./pow(P2,11.), 5./pow(P2,12.));
 
-const int HALTON_COUNT = 8;
-
-const float JITTER_SCALE = 1.0;
-
-const vec2 HALTON_SEQUENCE[HALTON_COUNT] = vec2[HALTON_COUNT](
-    vec2(1.0 / 2.0, 1.0 / 3.0),
-    vec2(1.0 / 4.0, 2.0 / 3.0),
-    vec2(3.0 / 4.0, 1.0 / 9.0),
-    vec2(1.0 / 8.0, 4.0 / 9.0),
-    vec2(5.0 / 8.0, 7.0 / 9.0),
-    vec2(3.0 / 8.0, 2.0 / 9.0),
-    vec2(7.0 / 8.0, 5.0 / 9.0),
-    vec2(1.0 / 16.0, 8.0 / 9.0)
-);
-
 vec2 Nth_weyl(vec2 p0, int n) {
     
     //return fract(p0 + float(n)*vec2(0.754877669, 0.569840296));
@@ -123,9 +108,8 @@ vec2 Nth_weyl(vec2 p0, int n) {
 
 
 
-vec3 EyeRayDir(float x, float y, float w, float h, mat4 a_mViewProjInv, uint index) {
-  vec2 jitter = (HALTON_SEQUENCE[index % HALTON_COUNT]- 0.5) * JITTER_SCALE;
-  vec4 pos = vec4(2.0f * (x + jitter.x + 0.5f) / w - 1.0f, 2.0f * (y + jitter.y + 0.5f) / h - 1.0f, 0.0f, 1.0f);
+vec3 EyeRayDir(float x, float y, float w, float h, mat4 a_mViewProjInv) {
+  vec4 pos = vec4(2.0f * (x + 0.5f) / w - 1.0f, 2.0f * (y + 0.5f) / h - 1.0f, 0.0f, 1.0f);
 
   pos = a_mViewProjInv * pos;
   pos /= abs(pos.w);

@@ -9,9 +9,9 @@ LiteMath::float3 EyeRayDir(float x, float y, float w, float h, LiteMath::float4x
     1.0f );
 
   pos = a_mViewProjInv * pos;
-  pos /= pos.w;
+  pos /= abs(pos.w);
 
-  //  pos.y *= (-1.0f);
+  //pos.y *= (-1.0f);
 
   return normalize(to_float3(pos));
 }

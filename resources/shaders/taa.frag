@@ -25,7 +25,7 @@ layout (location = 0 ) in VS_OUT
 
 void main()
 {
-  if (UboParams.taaFlag == 1)
+  if (UboParams.settings.x == 1)
   {
     vec3 minColor = vec3(9999.0), maxColor = vec3(-9999.0);
     vec2 velocityUV = -textureLod(velocityTex,surf.texCoord,0).xy;

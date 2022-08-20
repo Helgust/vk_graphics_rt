@@ -46,6 +46,7 @@ void main()
     float lightRadius = UboParams.lights[0].radius_dummies.x;
     float sampledDist = texture(shadowCubeMap, lightVec).r;
     float shadow = (lightDist <= sampledDist + EPSILON) ? 1.0 : SHADOW_OPACITY;
+    float softShadow = texture(samplerRtImage, uv).x;
 
     vec4 lightColor1 = UboParams.lights[0].color;
     vec3 N = normal; 
@@ -56,9 +57,13 @@ void main()
     float intensity = 1.f;
     float attn = clamp(1.0 - lightDist*lightDist/(lightRadius*lightRadius), 0.0, 1.0); 
     attn *= attn;
+    outFragcolor = color1 * albedo * attn;
     switch (int(UboParams.m_jitter_time_gbuffer_index.w)) {
     case 0:
-        outFragcolor = color1 * albedo * attn * shadow;
+        if(UboParams.settings.y == 1)
+            outFragcolor *= softShadow;
+        else
+            outFragcolor *= shadow;
         break;
     case 1:
         outFragcolor = vec4(fragPos.xyz,1.0f);

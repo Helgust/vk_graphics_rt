@@ -193,6 +193,7 @@ protected:
   int faceIndex = 0;
   int gbuffer_index = 0;
   bool taaFlag;
+  bool softShadow;
   vec4 currentLightPos, prevLightPos;
   std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
 

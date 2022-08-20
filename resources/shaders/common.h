@@ -10,6 +10,8 @@ using LiteMath::float4;
 using LiteMath::float4x4;
 using LiteMath::make_float2;
 using LiteMath::make_float4;
+using LiteMath::make_int4;
+using LiteMath::int4;
 
 typedef unsigned int uint;
 typedef uint2        uvec2;
@@ -17,6 +19,7 @@ typedef float4       vec4;
 typedef float3       vec3;
 typedef float2       vec2;
 typedef float4x4     mat4;
+typedef int4        ivec4;
 #endif
 
 struct Light {
@@ -31,7 +34,7 @@ struct UniformParams
   vec4  baseColor;
   vec4 m_jitter_time_gbuffer_index; // xy jitter, z time w gbuffer_index
   mat4 prevProjView;
-  uint taaFlag;
+  ivec4 settings;// x taa y softShadow zw dummy
 };
 
 struct MaterialData_pbrMR
