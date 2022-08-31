@@ -25,7 +25,7 @@ typedef int4        ivec4;
 struct Light {
   vec4  pos;
   vec4  color;
-  vec4 radius_lightDist_dummies; // x-radius, yzw - dumy things
+  vec4 radius_lightDist_dummies; // x-radius, y-lightDist zw - dumy things
 };
 
 struct UniformParams
@@ -33,7 +33,9 @@ struct UniformParams
   Light lights[2];
   vec4  baseColor;
   vec4 m_jitter_time_gbuffer_index; // xy jitter, z time w gbuffer_index
+  mat4 invProjView;
   mat4 prevProjView;
+  mat4 invPrevProjView;
   ivec4 settings;// x taa y softShadow zw dummy
 };
 
@@ -54,6 +56,6 @@ struct MaterialData_pbrMR
   float alphaCutoff;
   int alphaMode;
 };
-const float JITTER_SCALE = 1.0;
+const float JITTER_SCALE = 2.0;
 
 #endif //VK_GRAPHICS_BASIC_COMMON_H

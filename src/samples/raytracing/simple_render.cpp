@@ -972,7 +972,7 @@ void SimpleRender::CreateUniformBuffer()
 
   m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 10.0f, 0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
-  m_uniforms.lights[0].radius_lightDist_dummies  = LiteMath::float4(5.0f, 40.0f,  0.0f, 1.0f);
+  m_uniforms.lights[0].radius_lightDist_dummies  = LiteMath::float4(5.0f, 60.0f,  0.0f, 1.0f);
   m_uniforms.lights[1].pos  = LiteMath::float4(0.0f, 2.0f,  1.0f, 1.0f);
   m_uniforms.lights[1].color  = LiteMath::float4(1.0f, 0.0f,  0.0f, 1.0f);
   m_uniforms.lights[1].radius_lightDist_dummies  = LiteMath::float4(5.0f, 20.0f,  0.0f, 1.0f);
@@ -988,11 +988,7 @@ void SimpleRender::CreateUniformBuffer()
 void SimpleRender::UpdateUniformBuffer(float a_time)
 {
 // most uniforms are updated in GUI -> SetupGUIElements()
-  std::random_device dev;
-  std::mt19937 rng(dev());
-  std::uniform_int_distribution<std::mt19937::result_type> dist6(1,18);
-  vec2 jitter = (HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT]) * JITTER_SCALE;
-  m_uniforms.m_jitter_time_gbuffer_index = vec4(jitter.x/m_width, jitter.y/m_height, a_time, gbuffer_index);
+  m_uniforms.m_jitter_time_gbuffer_index = vec4(0, 0, a_time, gbuffer_index);
   m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
 
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
@@ -1783,11 +1779,28 @@ void SimpleRender::UpdateView()
   auto mProjFix        = OpenglToVulkanProjectionMatrixFix();
   auto mProj           = projectionMatrix(m_cam.fov, aspect, 0.1f, 1000.0f);
   auto mLookAt         = LiteMath::lookAt(m_cam.pos, m_cam.lookAt, m_cam.up);
-  auto mWorldViewProj  = mProjFix * mProj * mLookAt;
+  auto mWorldViewProj = LiteMath::float4x4();
+  if (m_uniforms.settings.x)
+  {
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<std::mt19937::result_type> dist6(1,18);
+    vec2 jitter = (HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT]) * JITTER_SCALE;
+    
+    float4x4 JitterMat = LiteMath::float4x4();
+    JitterMat(0,3) = jitter.x/m_width;
+    JitterMat(1,3) = jitter.y/m_height;
+    mWorldViewProj = mProjFix * JitterMat * mProj * mLookAt;
+    m_inverseProjViewMatrix = LiteMath::inverse4x4(mProjFix * JitterMat * mProj * transpose(inverse4x4(mLookAt)));
+  }
+  else
+  {
+    mWorldViewProj = mProjFix * mProj * mLookAt;
+    m_inverseProjViewMatrix = LiteMath::inverse4x4(mProjFix * mProj * transpose(inverse4x4(mLookAt)));
+  }   
   pushConst2M.projView = mWorldViewProj;
   pushConst2M.lightView = LiteMath::float4x4();
-
-  m_inverseProjViewMatrix = LiteMath::inverse4x4(mProjFix * mProj * transpose(inverse4x4(mLookAt)));
+  m_uniforms.invProjView = m_inverseProjViewMatrix;
   //m_inverseProjViewMatrix = mWorldViewProj;
 }
 
@@ -1860,7 +1873,7 @@ void SimpleRender::DrawFrameSimple(float a_time)
 
   if(m_currentRenderMode == RenderMode::RASTERIZATION)
   {
-    if (ENABLE_HARDWARE_RT)
+    if (ENABLE_HARDWARE_RT && softShadow)
       RayTraceGPU(a_time);
     setObjectName(currentGbufferCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer DrawFrameSimple");
     BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,
@@ -2172,7 +2185,7 @@ void SimpleRender::DrawFrameWithGUI(float a_time)
 
   if(m_currentRenderMode == RenderMode::RASTERIZATION)
   {
-    if (ENABLE_HARDWARE_RT)
+    if (ENABLE_HARDWARE_RT && softShadow)
       RayTraceGPU(a_time);
     setObjectName(currentGbufferCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer DrawFrameWithGUI");
     BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,

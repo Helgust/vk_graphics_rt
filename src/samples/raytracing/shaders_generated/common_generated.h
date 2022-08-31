@@ -44,7 +44,7 @@ struct Light
 };
 
 //For buggy
-const Light l1 = { {0.0f,10.0f,0.0f,1.0f}, 0xffffffff, 5.0f, 40.0f};
+const Light l1 = { {0.0f,10.0f,0.0f,1.0f}, 0xffffffff, 1.0f, 60.0f};
 const Light l2 = { {0.0f,110.0f,-20.0f,1.0f},0xff000000, 5.0f, 10.0f};
 
 //buster_drone

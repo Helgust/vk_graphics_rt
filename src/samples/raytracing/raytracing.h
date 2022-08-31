@@ -12,7 +12,7 @@ class RayTracer
 public:
   RayTracer(uint32_t a_width, uint32_t a_height) : m_width(a_width), m_height(a_height) {}
 
-  void UpdateView(const LiteMath::float3& a_camPos, const LiteMath::float4x4& a_invProjView ) { m_camPos = to_float4(a_camPos, 1.0f); m_invProjView = a_invProjView; }
+  void UpdateView(const LiteMath::float3& a_camPos, const LiteMath::float4x4& a_invProjView ) { m_camPos = to_float4(a_camPos, 0.09f); m_invProjView = a_invProjView; }
   void SetScene(std::shared_ptr<ISceneObject> a_pAccelStruct) { m_pAccelStruct = a_pAccelStruct; };
 
   void CastSingleRay(uint32_t tidX, uint32_t tidY, uint32_t* out_color);

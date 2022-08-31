@@ -48,8 +48,8 @@ void main(void)
     vOut.texCoord = vTexCoordAndTang.xy;
 
     vec4 clipSpacePos = params.mProjView * vec4(vOut.wPos, 1.0);
+    //clipSpacePos += vec4(UboParams.m_jitter_time_gbuffer_index.xy * clipSpacePos.w, 0, 0);
     vOut.currClipSpacePos = clipSpacePos;
-    clipSpacePos += vec4(UboParams.m_jitter_time_gbuffer_index.xy * clipSpacePos.w, 0, 0);
     gl_Position = clipSpacePos;
 
     
