@@ -724,6 +724,33 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
   m_pTaaImage->CreateDefaultSampler();
   m_pTaaImage->CreateDefaultRenderPass();
   setObjectName(m_pTaaImage->m_attachments[0].image, VK_OBJECT_TYPE_IMAGE, "taa_Image");
+
+  // create filteredImage
+  //
+  m_pFilterImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{1024, 1024});
+
+  vk_utils::AttachmentInfo infoFilter;
+  infoFilter.format           = VK_FORMAT_R8G8B8A8_UNORM;
+  infoFilter.usage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL | VK_IMAGE_USAGE_SAMPLED_BIT;
+  infoFilter.imageSampleCount = VK_SAMPLE_COUNT_1_BIT;
+  m_resolveImageId              = m_pFilterImage->CreateAttachment(infoFilter);
+  auto memReqFilter               = m_pFilterImage->GetMemoryRequirements()[0]; // we know that we have only one texture
+  
+  // memory for all shadowmaps (well, if you have them more than 1 ...)
+  {
+    VkMemoryAllocateInfo allocateInfo = {};
+    allocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.pNext           = nullptr;
+    allocateInfo.allocationSize  = memReqFilter.size;
+    allocateInfo.memoryTypeIndex = vk_utils::findMemoryType(memReqFilter.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physicalDevice);
+
+    VK_CHECK_RESULT(vkAllocateMemory(m_device, &allocateInfo, NULL, &m_memFilterImage));
+  }
+
+  m_pFilterImage->CreateViewAndBindMemory(m_memFilterImage, {0});
+  m_pFilterImage->CreateDefaultSampler();
+  m_pFilterImage->CreateDefaultRenderPass();
+  setObjectName(m_pFilterImage->m_attachments[0].image, VK_OBJECT_TYPE_IMAGE, "filterRt_Image");
 }
 
 void SimpleRender::CreateInstance()
@@ -783,6 +810,12 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindEnd(&m_dSet, &m_dSetLayout);
 
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
+  m_pBindings->BindImage(0, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindEnd(&m_dFilterSet, &m_dFilterSetLayout);
+
+  auto rtFilteredFrame = m_pFilterImage->m_attachments[0];
+
+  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindImage(1, m_gBuffer.position.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(2, m_gBuffer.normal.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -790,7 +823,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindImage(4, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
   m_pBindings->BindImage(5, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(6, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-  m_pBindings->BindImage(7, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(7, rtFilteredFrame.view, m_pFilterImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dResolveSet, &m_dResolveSetLayout);
 
   auto curentFrame = m_pResolveImage->m_attachments[m_resolveImageId];
@@ -933,7 +966,22 @@ void SimpleRender::SetupSimplePipeline()
 
   m_taaPipeline.pipeline = maker.MakePipeline(m_device, vertexInputInfo,
                                             m_pTaaImage->m_renderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
-  setObjectName(m_taaPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "taa_pipeline");    
+  setObjectName(m_taaPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "taa_pipeline"); 
+
+  shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = MEDIAN_VERTEX_SHADER_PATH + ".spv";
+  shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = KUWAHARA_FRAGMENT_SHADER_PATH + ".spv";
+  maker.LoadShaders(m_device, shader_paths);
+  maker.viewport.width  = float(m_width);
+  maker.viewport.height = float(m_height);
+  maker.scissor.extent  = VkExtent2D{ uint32_t(m_width), uint32_t(m_height) };
+  m_filterPipeline.layout = maker.MakeLayout(m_device, {m_dFilterSetLayout}, sizeof(pushConst2M));
+  setObjectName(m_filterPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "filter_pipeline_layout");
+  maker.SetDefaultState(m_width, m_height);
+
+
+  m_filterPipeline.pipeline = maker.MakePipeline(m_device, vertexInputInfo,
+                                            m_pFilterImage->m_renderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
+  setObjectName(m_filterPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "filter_pipeline");   
 
   shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = RESULT_VERTEX_SHADER_PATH + ".spv";
   shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = RESULT_FRAGMENT_SHADER_PATH + ".spv";
@@ -1125,6 +1173,35 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 
       VkShaderStageFlags stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
       vkCmdPushConstants(a_cmdBuff, m_resolvePipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
+      vkCmdDraw(a_cmdBuff, 4, 1, 0, 0);
+    }
+    vkCmdEndRenderPass(a_cmdBuff);
+
+    //here put simple median filter
+
+    VkRenderPassBeginInfo filterRenderPassInfo = {};
+    filterRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    filterRenderPassInfo.renderPass = m_pFilterImage->m_renderPass;
+    filterRenderPassInfo.framebuffer = m_pFilterImage->m_framebuffers[0];
+    filterRenderPassInfo.renderArea.offset = {0, 0};
+    filterRenderPassInfo.renderArea.extent.width = m_width;
+		filterRenderPassInfo.renderArea.extent.height = m_height;
+
+    VkClearValue filterClearValues[3] = {};
+		filterClearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		filterClearValues[1].depthStencil = { 1.0f, 0 };
+    filterRenderPassInfo.clearValueCount = 2;
+    filterRenderPassInfo.pClearValues = &filterClearValues[0];
+
+    vkCmdBeginRenderPass(a_cmdBuff, &filterRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    {
+      vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_filterPipeline.pipeline);
+
+      vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_filterPipeline.layout, 0, 1,
+                              &m_dFilterSet, 0, VK_NULL_HANDLE);
+
+      VkShaderStageFlags stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+      vkCmdPushConstants(a_cmdBuff, m_filterPipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
       vkCmdDraw(a_cmdBuff, 4, 1, 0, 0);
     }
     vkCmdEndRenderPass(a_cmdBuff);

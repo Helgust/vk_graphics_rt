@@ -57,6 +57,10 @@ public:
   const std::string MRT_FRAGMENT_SHADER_PATH = "../resources/shaders/mrt.frag";
   const std::string RESULT_FRAGMENT_SHADER_PATH = "../resources/shaders/result.frag";
   const std::string RESULT_VERTEX_SHADER_PATH = "../resources/shaders/result.vert";
+  const std::string MEDIAN_VERTEX_SHADER_PATH = "../resources/shaders/quad3_vert.vert";
+  const std::string MEDIAN_FRAGMENT_SHADER_PATH = "../resources/shaders/median.frag";
+  const std::string BLUR_FRAGMENT_SHADER_PATH = "../resources/shaders/blur.frag";
+  const std::string KUWAHARA_FRAGMENT_SHADER_PATH = "../resources/shaders/kuwahara.frag";
 
   
 
@@ -203,6 +207,7 @@ protected:
   pipeline_data_t m_gBufferPipeline {};
   pipeline_data_t m_omniShadowPipeline {};
   pipeline_data_t m_taaPipeline {};
+  pipeline_data_t m_filterPipeline {};
 
   VkDescriptorSet m_dSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dSetLayout = VK_NULL_HANDLE;
@@ -212,6 +217,8 @@ protected:
   VkDescriptorSetLayout m_dResolveSetLayout = VK_NULL_HANDLE;
   VkDescriptorSet m_dTAASet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dTAASetLayout = VK_NULL_HANDLE;
+  VkDescriptorSet m_dFilterSet = VK_NULL_HANDLE;
+  VkDescriptorSetLayout m_dFilterSetLayout = VK_NULL_HANDLE;
   VkDescriptorSet m_dResultSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dResultSetLayout = VK_NULL_HANDLE;
   VkRenderPass m_screenRenderPass = VK_NULL_HANDLE; // rasterization renderpass
@@ -274,6 +281,9 @@ protected:
 
   std::shared_ptr<vk_utils::RenderTarget>        m_pTaaImage;
   VkDeviceMemory        m_memTaaImage = VK_NULL_HANDLE;
+
+  std::shared_ptr<vk_utils::RenderTarget>        m_pFilterImage;
+  VkDeviceMemory        m_memFilterImage = VK_NULL_HANDLE;
   uint32_t m_taaImageId = 0;          
 
   void RayTraceCPU();
