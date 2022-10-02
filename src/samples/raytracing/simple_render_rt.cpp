@@ -245,8 +245,21 @@ void SimpleRender::SetupHistoryImages()
   {
     m_prevDepthImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
+
+   vk_utils::deleteImg(m_device, &m_prevRTImage);  
+
+  m_prevRTImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT 
+    | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_prevRTImage);
+
+  if(m_prevRTImageSampler == VK_NULL_HANDLE)
+  {
+    m_prevRTImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+  }
   setObjectName(m_prevFrameImage.image, VK_OBJECT_TYPE_IMAGE, "prev_frame");
   setObjectName(m_prevDepthImage.image, VK_OBJECT_TYPE_IMAGE, "prev_depth");
+  setObjectName(m_prevRTImage.image, VK_OBJECT_TYPE_IMAGE, "prev_RTImage");
   
 }
 // ***************************************************************************************************************************

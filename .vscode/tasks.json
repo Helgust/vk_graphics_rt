@@ -166,6 +166,36 @@
                     ]
                 }
             ]
+        },
+        {
+            "label": "Shaders Compile All Copy Remove Leftovers",
+            "type": "shell",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Shaders Compile RT",
+                "Shaders Compile SimpleForward",
+                "Shaders Compile Quad",
+                "Shaders Copy to Bin",
+                "Shaders Remove leftovers"
+            ],
+            "problemMatcher": [
+                {
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}/shaders/"
+                    ],
+                    "pattern": [
+                        {
+                            "regexp": "^(ERROR|WARNING)",
+                            "severity": 1,
+                            "file": 1,
+                            "line": 1,
+                            "column": 1,
+                            "message": 1
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }

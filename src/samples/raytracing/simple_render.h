@@ -50,6 +50,8 @@ public:
   const std::string FRAGMENT_SHADER_PATH = "../resources/shaders/simple.frag";
   const std::string TAA_VERTEX_SHADER_PATH = "../resources/shaders/taa.vert";
   const std::string TAA_FRAGMENT_SHADER_PATH = "../resources/shaders/taa.frag";
+  const std::string SOFT_RT_SHADOWS_VERTEX_SHADER_PATH = "../resources/shaders/softRT.vert";
+  const std::string SOFT_RT_SHADOWS_FRAGMENT_SHADER_PATH = "../resources/shaders/softRT.frag";
   const std::string RESOLVE_FRAGMENT_SHADER_PATH = "../resources/shaders/resolve.frag";
   const std::string RESOLVE_VERTEX_SHADER_PATH = "../resources/shaders/resolve.vert";
   const std::string OMNI_SHADOW_FRAGMENT_SHADER_PATH = "../resources/shaders/omnishadow.frag";
@@ -208,6 +210,7 @@ protected:
   pipeline_data_t m_omniShadowPipeline {};
   pipeline_data_t m_taaPipeline {};
   pipeline_data_t m_filterPipeline {};
+  pipeline_data_t m_softShadowPipeline {};
 
   VkDescriptorSet m_dSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dSetLayout = VK_NULL_HANDLE;
@@ -217,6 +220,8 @@ protected:
   VkDescriptorSetLayout m_dResolveSetLayout = VK_NULL_HANDLE;
   VkDescriptorSet m_dTAASet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dTAASetLayout = VK_NULL_HANDLE;
+  VkDescriptorSet m_dSoftRTSet = VK_NULL_HANDLE;
+  VkDescriptorSetLayout m_dSoftRTSetLayout = VK_NULL_HANDLE;
   VkDescriptorSet m_dFilterSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dFilterSetLayout = VK_NULL_HANDLE;
   VkDescriptorSet m_dResultSet = VK_NULL_HANDLE;
@@ -254,6 +259,9 @@ protected:
   vk_utils::VulkanImageMem m_prevFrameImage;
   VkSampler                m_prevFrameImageSampler = VK_NULL_HANDLE;
 
+  vk_utils::VulkanImageMem m_prevRTImage;
+  VkSampler                m_prevRTImageSampler = VK_NULL_HANDLE;
+
   vk_utils::VulkanImageMem m_taaImage;
   VkSampler                m_taaImageSampler = VK_NULL_HANDLE;
 
@@ -284,6 +292,9 @@ protected:
 
   std::shared_ptr<vk_utils::RenderTarget>        m_pFilterImage;
   VkDeviceMemory        m_memFilterImage = VK_NULL_HANDLE;
+
+  std::shared_ptr<vk_utils::RenderTarget>        m_pSoftRTImage;
+  VkDeviceMemory        m_memSoftRTImage = VK_NULL_HANDLE;
   uint32_t m_taaImageId = 0;          
 
   void RayTraceCPU();

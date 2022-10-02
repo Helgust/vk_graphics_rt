@@ -71,7 +71,7 @@ void main()
 {
   out_color = texture(colorTex, texCoord);
 
-  int size = 5;
+  int size = 4;
   if (size <= 0) { return; }
 
   // Lower Left

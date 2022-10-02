@@ -14,9 +14,7 @@ layout(binding = 0, set = 0) uniform AppData
 
 layout (binding = 1, set = 0) uniform sampler2D colorTex;
 layout (binding = 2, set = 0) uniform sampler2D oldColorTex;
-layout (binding = 3, set = 0) uniform sampler2D depthTex;
-layout (binding = 4, set = 0) uniform sampler2D oldDepthTex;
-layout (binding = 5, set = 0) uniform sampler2D velocityTex;
+layout (binding = 3, set = 0) uniform sampler2D velocityTex;
 
 layout (location = 0 ) in VS_OUT
 {
@@ -44,7 +42,7 @@ void main()
     }
     // Clamp previous color to min/max bounding box
     vec3 previousColorClamped = clamp(prevFrame, minColor, maxColor);
-    vec3 c = mix(currentFrame,previousColorClamped,0.98f);
+    vec3 c = mix(currentFrame,previousColorClamped,0.80f);
     //vec3 c = mix(prevFrame,currentFrame,mix(0.05,0.6,0));
     outColor = vec4(c,1.0);
   }
