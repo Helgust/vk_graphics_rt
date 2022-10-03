@@ -22,7 +22,7 @@ struct CRT_Hit
   float    coords[4]; ///< custom intersection data; for triangles coords[0] and coords[1] stores baricentric coords (u,v)
 };
 const uint MAX_DEPTH = 2;
-const vec4 m_ambient_color = vec4(0.2f, 0.2f, 0.2f, 0.2f);
+const vec3 m_ambient_color = vec3(1.0f, 1.0f, 1.0f);
 const uint palette_size = 5;
 const uint m_palette[4] = {
     0xffe6194b, 0xff3cb44b, 0xffffe119, 0xff0082c8
@@ -44,7 +44,7 @@ struct Light
 };
 
 //For buggy
-const Light l1 = { {0.0f,10.0f,0.0f,1.0f}, 0xffffffff, 0.5f, 60.0f};
+const Light l1 = { {0.0f,12.0f,0.0f,1.0f}, 0xffffffff, 2.5f, 60.0f};
 const Light l2 = { {0.0f,110.0f,-20.0f,1.0f},0xff000000, 5.0f, 10.0f};
 
 //buster_drone
@@ -55,7 +55,7 @@ const int samples_cnt = 8;
 const int light_cnt = 1;
 //const float light_dist = 20.0f;
 bool soft_shadow = true;
-bool debug_light_pos = false;
+bool debug_light_pos = true;
 
 struct MaterialData_pbrMR
 {
