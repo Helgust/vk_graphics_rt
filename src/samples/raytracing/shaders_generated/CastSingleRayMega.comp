@@ -195,22 +195,19 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
           else
             rngOffset = rngState.z;
         vec3 lightPos = PointOnLight(m_lights[j], rngOffset);
-        float frontFacing = dot(vec3(rayDir), n);
+        float frontFacing = dot(-vec3(rayDir), n);
         vec3 shadow_orig  = hit_point + sign(frontFacing) * n * 0.001f;
         vec3 shadowDir = normalize(lightPos - hit_point);
         float rayMax = length(lightPos - hit_point);  
 
-        //bool isIntersect = m_pAccelStruct_RayQuery_AnyHit(vec4(hit_point, 0.0001f), vec4(shadowDir, rayMax));
-        //if (!isIntersect && distanceToLight <= m_lights[j].light_dist)
+        // bool isIntersect = m_pAccelStruct_RayQuery_AnyHit(vec4(shadow_orig, 0.0001f), vec4(shadowDir, rayMax));
+        // if (!isIntersect && distanceToLight <= m_lights[j].light_dist)
         CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(shadow_orig, 0.0001f), vec4(shadowDir, rayMax));
         if (hitShadow.primId == -1)// intersect
         {
           float shade = max(dot(shadowDir, n), 0.0f);
-          if(shade > 0.0f)
-          {
-            total +=1.0f;
-            color += shade;
-          }
+          total +=1.0f;
+          color += shade;
         }
       }
       color*=(total / (samples_cnt));
