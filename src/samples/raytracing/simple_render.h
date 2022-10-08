@@ -63,6 +63,7 @@ public:
   const std::string MEDIAN_FRAGMENT_SHADER_PATH = "../resources/shaders/median.frag";
   const std::string BLUR_FRAGMENT_SHADER_PATH = "../resources/shaders/blur.frag";
   const std::string KUWAHARA_FRAGMENT_SHADER_PATH = "../resources/shaders/kuwahara.frag";
+  const std::string SHARP_FRAGMENT_SHADER_PATH = "../resources/shaders/sharp.frag";
 
   
 

@@ -42,7 +42,7 @@ void main()
     }
     // Clamp previous color to min/max bounding box
     vec3 previousColorClamped = clamp(prevFrame, minColor, maxColor);
-    vec3 c = mix(currentFrame,previousColorClamped,0.98f);
+    vec3 c = mix(currentFrame,previousColorClamped,0.90f);
     //vec3 c = mix(prevFrame,currentFrame,mix(0.05,0.6,0));
     outColor = vec4(c,1.0);
   }
