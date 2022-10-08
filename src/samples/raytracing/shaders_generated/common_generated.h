@@ -55,7 +55,7 @@ const int samples_cnt = 8;
 const int light_cnt = 1;
 //const float light_dist = 20.0f;
 bool soft_shadow = true;
-bool debug_light_pos = true;
+bool debug_light_pos = false;
 
 struct MaterialData_pbrMR
 {

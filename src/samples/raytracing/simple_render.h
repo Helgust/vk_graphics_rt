@@ -230,6 +230,7 @@ protected:
 
   LiteMath::float4x4 m_projectionMatrix;
   LiteMath::float4x4 m_inverseProjViewMatrix;
+  float2 prevJitter = float2(0.0, 0.0f);
 
   // *** ray tracing
   // full screen quad resources to display ray traced image

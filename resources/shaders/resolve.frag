@@ -58,7 +58,7 @@ void main()
     float attn = clamp(1.0 - lightDist*lightDist/(lightRadius*lightRadius), 0.0, 1.0); 
     attn *= attn;
     outFragcolor = color1 * albedo * attn;
-    switch (int(UboParams.m_jitter_time_gbuffer_index.w)) {
+    switch (int(UboParams.m_time_gbuffer_index.w)) {
     case 0:
         if(UboParams.settings.y == 1)
             outFragcolor *= softShadow;

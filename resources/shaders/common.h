@@ -32,7 +32,8 @@ struct UniformParams
 {
   Light lights[2];
   vec4  baseColor;
-  vec4 m_jitter_time_gbuffer_index; // xy jitter, z time w gbuffer_index
+  vec4 m_time_gbuffer_index; // xy dummy z time w gbuffer_index
+  vec4 m_cur_prev_jiiter; // xy curr jitter zw prev jitter
   mat4 invProjView;
   mat4 prevProjView;
   mat4 invPrevProjView;

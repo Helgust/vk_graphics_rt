@@ -69,9 +69,9 @@ void findMean(int i0, int i1, int j0, int j1) {
 
 void main()
 {
-  out_color = texture(colorTex, texCoord);
+  out_color = texture(colorTex, surf.texCoord);
 
-  int size = 4;
+  int size = 0;
   if (size <= 0) { return; }
 
   // Lower Left

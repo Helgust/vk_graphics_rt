@@ -26,7 +26,7 @@ void main()
   if (UboParams.settings.x == 1)
   {
     vec3 minColor = vec3(9999.0), maxColor = vec3(-9999.0);
-    vec2 velocityUV = -textureLod(velocityTex,surf.texCoord,0).xy;
+    vec2 velocityUV = textureLod(velocityTex,surf.texCoord,0).xy;
     vec2 reprojectedUV = surf.texCoord + velocityUV;
     vec3 currentFrame = textureLod(colorTex,surf.texCoord,0).xyz;
     vec3 prevFrame = textureLod(oldColorTex,reprojectedUV,0).xyz;
@@ -42,7 +42,7 @@ void main()
     }
     // Clamp previous color to min/max bounding box
     vec3 previousColorClamped = clamp(prevFrame, minColor, maxColor);
-    vec3 c = mix(currentFrame,previousColorClamped,0.80f);
+    vec3 c = mix(currentFrame,previousColorClamped,0.98f);
     //vec3 c = mix(prevFrame,currentFrame,mix(0.05,0.6,0));
     outColor = vec4(c,1.0);
   }
