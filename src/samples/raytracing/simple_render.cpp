@@ -2008,19 +2008,19 @@ void SimpleRender::UpdateView()
   auto mWorldViewProj = LiteMath::float4x4();
   if (m_uniforms.settings.x)
   { 
-    m_uniforms.m_cur_prev_jiiter.z = prevJitter.x/m_width;
-    m_uniforms.m_cur_prev_jiiter.w = prevJitter.y/m_height;
+    m_uniforms.m_cur_prev_jiiter.z = prevJitter.x;
+    m_uniforms.m_cur_prev_jiiter.w = prevJitter.y;
     std::random_device dev;
     std::mt19937 rng(dev());
     std::uniform_int_distribution<std::mt19937::result_type> dist6(1,18);
-    vec2 jitter = ((HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT]) - 0.5f) * JITTER_SCALE;
+    vec2 jitter = ((HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT]) - 0.5f) * JITTER_SCALE / vec2(m_width, m_height);
     float4x4 JitterMat = LiteMath::float4x4();
-    JitterMat(0,3) = jitter.x/m_width;
-    JitterMat(1,3) = jitter.y/m_height;
+    JitterMat(0,3) = jitter.x;
+    JitterMat(1,3) = jitter.y;
     mWorldViewProj = mProjFix * JitterMat * mProj * mLookAt;
     m_inverseProjViewMatrix = LiteMath::inverse4x4(mProjFix * JitterMat * mProj * transpose(inverse4x4(mLookAt)));
-    m_uniforms.m_cur_prev_jiiter.x = jitter.x/m_width;
-    m_uniforms.m_cur_prev_jiiter.y = jitter.y/m_height;
+    m_uniforms.m_cur_prev_jiiter.x = jitter.x;
+    m_uniforms.m_cur_prev_jiiter.y = jitter.y;
     prevJitter = jitter;
   }
   else

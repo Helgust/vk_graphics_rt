@@ -25,6 +25,7 @@ void main()
 {
   if (UboParams.settings.x == 1)
   {
+    float weight = 0.97;
     vec3 minColor = vec3(9999.0), maxColor = vec3(-9999.0);
     vec2 velocityUV = textureLod(velocityTex,surf.texCoord,0).xy;
     vec2 reprojectedUV = surf.texCoord + velocityUV;
@@ -42,7 +43,11 @@ void main()
     }
     // Clamp previous color to min/max bounding box
     vec3 previousColorClamped = clamp(prevFrame, minColor, maxColor);
-    vec3 c = mix(currentFrame,previousColorClamped,0.90f);
+    weight *= max(1.0 - length(velocityUV) / 10.0, 0.0) ;
+    if (reprojectedUV.x < 0.0 || reprojectedUV.y < 0.0 || reprojectedUV.x > 1 || reprojectedUV.y > 1) {
+        weight = 0.0;
+    }
+    vec3 c = mix(currentFrame, previousColorClamped, weight);
     //vec3 c = mix(prevFrame,currentFrame,mix(0.05,0.6,0));
     outColor = vec4(c,1.0);
   }
