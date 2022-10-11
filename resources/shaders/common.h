@@ -22,10 +22,11 @@ typedef float4x4     mat4;
 typedef int4        ivec4;
 #endif
 
-struct Light {
-  vec4  pos;
+struct Light { //deprecated pos and radius
+  vec4  dir;
   vec4  color;
-  vec4 radius_lightDist_dummies; // x-radius, y-lightDist zw - dumy things
+  vec4  pos; 
+  vec4 radius_lightDist_dummies; // x-radius, y-lightDist zw - dumy things //
 };
 
 struct UniformParams

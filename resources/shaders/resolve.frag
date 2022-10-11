@@ -40,30 +40,21 @@ void main()
 	vec3 normal = texture(samplerNormal, uv).rgb;
 	vec4 albedo = texture(samplerAlbedo, uv);
 
-    vec3 lightDir1 = normalize(UboParams.lights[0].pos.xyz -fragPos);
-    vec3 lightVec = fragPos - UboParams.lights[0].pos.xyz;
-    float lightDist = length(lightVec);
-    float lightRadius = UboParams.lights[0].radius_lightDist_dummies.y;
-    float sampledDist = texture(shadowCubeMap, lightVec).r;
-    float shadow = (lightDist <= sampledDist + EPSILON) ? 1.0 : SHADOW_OPACITY;
     float softShadow = texture(samplerRtImage, uv).x;
 
     vec4 lightColor1 = UboParams.lights[0].color;
     vec3 N = normal; 
 
-    vec4 color1 = max(dot(N, lightDir1), 0.0f) * lightColor1;
+    vec4 color1 = max(dot(N, normalize(UboParams.lights[0].dir.xyz)), 0.0f) * lightColor1;
     // vec4 color2 = max(dot(N, lightDir2), 0.0f) * lightColor2;
     // vec4 color_lights = mix(color1, color2, 0.2f);
     float intensity = 1.f;
-    float attn = clamp(1.0 - lightDist*lightDist/(lightRadius*lightRadius), 0.0, 1.0); 
-    attn *= attn;
-    outFragcolor = color1 * albedo * attn;
+    // float attn = clamp(1.0 - lightDist*lightDist/(lightRadius*lightRadius), 0.0, 1.0); 
+    // attn *= attn;
+    outFragcolor = color1 * albedo;
     switch (int(UboParams.m_time_gbuffer_index.w)) {
     case 0:
-        if(UboParams.settings.y == 1)
-            outFragcolor *= softShadow;
-        else
-            outFragcolor *= shadow;
+        outFragcolor *= softShadow;
         break;
     case 1:
         outFragcolor = vec4(fragPos.xyz,1.0f);
@@ -75,7 +66,7 @@ void main()
         outFragcolor = albedo;
         break;
     case 4:
-        outFragcolor = vec4(sampledDist/255.0f, 0.0f, 0.0f, 1.0f);
+        outFragcolor = vec4(100.0f/255.0f, 0.0f, 0.0f, 1.0f);
         break;
     case 5:
         outFragcolor = texture(samplerVelocity, uv);

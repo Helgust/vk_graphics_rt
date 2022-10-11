@@ -174,11 +174,12 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
     
     vec3 hit_point = vec3(rayPos) + vec3(rayDir)*hit.t;
     vec3 n = GetNormal(hit);
+    vec3 lightTangent = normalize(cross(m_lights[j].dir, vec3(0.0f, -1.0f, 0.0f)));
+    vec3 lightBitangent = normalize(cross(lightTangent, m_lights[j].dir));
 
     if(soft_shadow)
     {
       float total = 0.0f;
-      float distanceToLight = length(m_lights[j].pos.xyz - hit_point);
       for (int u = 0; u < samples_cnt; u++)
       {   
         hash += uint(u);
@@ -193,11 +194,13 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
             rngOffset = rngState.y;
           else
             rngOffset = rngState.z;
-        vec3 lightPos = PointOnLight(m_lights[j], rngOffset);
+        vec2 samplesPos = BlueNoiseInDisk[u];
+        vec2 diskPoint = PointOnDisk(m_lights[j], rngOffset, samplesPos);
+        //vec2 diskPoint = vec2(0.0f, 0.0f);
         float frontFacing = dot(-vec3(rayDir), n);
         vec3 shadow_orig  = hit_point + sign(frontFacing) * n * 0.001f;
-        vec3 shadowDir = normalize(lightPos - hit_point);
-        float rayMax = length(lightPos - hit_point);  
+        vec3 shadowDir = normalize(m_lights[j].dir + diskPoint.x * lightTangent + diskPoint.y * lightBitangent);
+        //float rayMax = hit.t;  
 
         // bool isIntersect = m_pAccelStruct_RayQuery_AnyHit(vec4(shadow_orig, 0.0001f), vec4(shadowDir, rayMax));
         // if (!isIntersect && distanceToLight <= m_lights[j].light_dist)
@@ -213,10 +216,9 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
     }
     else
     {
-      vec3 lightPos = m_lights[j].pos.xyz;
       vec3 shadow_orig  = (dot(vec3(rayDir), n) < 0) ? hit_point + n * 1e-4 : hit_point - n * 1e-4;
-      vec3 shadowDir = normalize(lightPos - shadow_orig);
-      float rayMax = length(lightPos - shadow_orig);
+      vec3 shadowDir = m_lights[j].dir;
+      float rayMax = hit.t;
       
       //CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.1f), vec4(shadowDir, MAXFLOAT));
       bool isIntersect = m_pAccelStruct_RayQuery_AnyHit(vec4(hit_point, 0.1f), vec4(shadowDir, rayMax));
@@ -231,25 +233,25 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
     }
   }
 
-  if(debug_light_pos)
-  {
-    vec3 k = vec3(rayPos) - vec3(m_lights[0].pos);
-    float b = dot(k,vec3(rayDir));
-    float c =dot(k,k) - m_lights[0].rad * m_lights[0].rad;
-    float d = b*b -c;
-    if(d >=0)
-    {
-      float sqrtd = sqrt(d);
-      // t, a == 1
-      float t1 = -b + sqrtd;
-      float t2 = -b - sqrtd; 
-      float min_t  = min(t1,t2);
-      float max_t = max(t1,t2);
-      float t = (min_t >= 0) ? min_t : max_t;
-      if (t > 0)
-        color=vec3(1.0f,1.0f,0.0f) ;
-    }
-  }
+  // if(debug_light_pos)
+  // {
+  //   vec3 k = vec3(rayPos) - vec3(m_lights[0].pos);
+  //   float b = dot(k,vec3(rayDir));
+  //   float c =dot(k,k) - m_lights[0].rad * m_lights[0].rad;
+  //   float d = b*b -c;
+  //   if(d >=0)
+  //   {
+  //     float sqrtd = sqrt(d);
+  //     // t, a == 1
+  //     float t1 = -b + sqrtd;
+  //     float t2 = -b - sqrtd; 
+  //     float min_t  = min(t1,t2);
+  //     float max_t = max(t1,t2);
+  //     float t = (min_t >= 0) ? min_t : max_t;
+  //     if (t > 0)
+  //       color=vec3(1.0f,1.0f,0.0f) ;
+  //   }
+  // }
   out_color[tidY * ubo.m_width + tidX + out_colorOffset] = ColorToInt(vec4(clamp(color, 0.0, 1.0), 1.0));
 }
 
