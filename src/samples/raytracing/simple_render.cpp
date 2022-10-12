@@ -621,7 +621,7 @@ void SimpleRender::InitVulkan(const char** a_instanceExtensions, uint32_t a_inst
 
   LoaderConfig conf = {};
   conf.load_geometry = true;
-  conf.load_materials = MATERIAL_LOAD_MODE::MATERIALS_AND_TEXTURES;
+  conf.load_materials = MATERIAL_LOAD_MODE::NONE;
   conf.instance_matrix_as_storage_buffer = true;
   if(ENABLE_HARDWARE_RT)
   {
@@ -1067,7 +1067,7 @@ void SimpleRender::CreateUniformBuffer()
 
   vkMapMemory(m_device, m_uboAlloc, 0, sizeof(m_uniforms), 0, &m_uboMappedMem);
 
-  m_uniforms.lights[0].dir  = LiteMath::float4(0.0f, 1.0f, 0.0f, 1.0f);
+  m_uniforms.lights[0].dir  = LiteMath::float4(0.0f, 0.4f, -1.0f, 1.0f);
   m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 10.0f, 0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
   m_uniforms.lights[0].radius_lightDist_dummies  = LiteMath::float4(5.0f, 60.0f,  0.0f, 1.0f);

@@ -43,7 +43,8 @@ struct Light
 };
 
 //For buggy
-const Light l1 = { {1.0f,-1.0f,0.0f}, 0xffffffff, 20.5f};
+//const Light l1 = { {0.3f, 1.0f, -0.5f}, 0xffffffff, 5.5f};
+const Light l1 = { {0.0f, 0.4f, -1.0f}, 0xffffffff, 0.8f};
 
 //buster_drone
 //const Light l1 = { {40.0f,10.0f,150.0f,1.0f}, 0xff000000, 100000.0f };
@@ -51,7 +52,7 @@ const Light l1 = { {1.0f,-1.0f,0.0f}, 0xffffffff, 20.5f};
 const Light m_lights[1] = {l1};
 const int samples_cnt = 16;
 const int light_cnt = 1;
-const float rayMax = 10000.0f;
+const float rayMax = 1000.0f;
 //const float light_dist = 20.0f;
 bool soft_shadow = true;
 bool debug_light_pos = false;
