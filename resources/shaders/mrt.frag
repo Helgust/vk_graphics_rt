@@ -30,7 +30,7 @@ layout (location = 0 ) in VS_OUT
 
 layout(binding = 0, set = 0) uniform AppData
 {
-    UniformParams Params;
+    UniformParams UboParams;
 };
 
 vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
@@ -49,6 +49,8 @@ vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
     newPosNDC.xy = (newPosNDC.xy * 0.5f + 0.5f);
     oldPosNDC.xy = (oldPosNDC.xy * 0.5f + 0.5f);
     vec2 velocity =  oldPosNDC.xy - newPosNDC.xy;
+    velocity -= (UboParams.m_cur_prev_jiiter.xy / params.screenSize.x);
+    velocity -= (UboParams.m_cur_prev_jiiter.zw / params.screenSize.x);
     return velocity;
 }
 
@@ -59,6 +61,4 @@ void main()
     outPosition = vec4(surf.wPos, 1.0f);
     //outVelocity = vec4(CalcVelocity(surf.currPos, surf.prevPos), 0.0f, 1.0f);
     outVelocity = CalcVelocity(surf.currPos, surf.prevPos);
-    outVelocity -= (Params.m_cur_prev_jiiter.xy / 1024.0f);
-    outVelocity -= (Params.m_cur_prev_jiiter.zw / 1024.0f);
 }

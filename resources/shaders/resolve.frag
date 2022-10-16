@@ -54,7 +54,8 @@ void main()
     outFragcolor = color1 * albedo;
     switch (int(UboParams.m_time_gbuffer_index.w)) {
     case 0:
-        outFragcolor *= softShadow;
+        if(UboParams.settings.y == 1)
+            outFragcolor *= softShadow;
         break;
     case 1:
         outFragcolor = vec4(fragPos.xyz,1.0f);
@@ -69,7 +70,7 @@ void main()
         outFragcolor = vec4(100.0f/255.0f, 0.0f, 0.0f, 1.0f);
         break;
     case 5:
-        outFragcolor = texture(samplerVelocity, uv);
+        outFragcolor = vec4(texture(samplerVelocity, uv).xy + 0.5f, 0.0f, 1.0f);
         break;
     case 6:
         outFragcolor = texture(samplerRtImage, uv);

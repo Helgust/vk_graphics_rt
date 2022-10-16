@@ -2014,7 +2014,7 @@ void SimpleRender::UpdateView()
     m_uniforms.m_cur_prev_jiiter.w = prevJitter.y;
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist6(1,18);
+    std::uniform_int_distribution<std::mt19937::result_type> dist6(0,7);
     vec2 jitter = ((HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT]) - 0.5f) * JITTER_SCALE / vec2(m_width, m_height);
     float4x4 JitterMat = LiteMath::float4x4();
     JitterMat(0,3) = jitter.x;
@@ -2373,7 +2373,7 @@ void SimpleRender::SetupGUIElements()
     ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius_lightDist_dummies.x, 0.0f, 2.0f);
     ImGui::SliderInt("FaceIndex", &gbuffer_index, 0, 6); //0 no debug, 1 pos, 2 normal, 3 albedo, 4 shadow, 5 velocity
     ImGui::Checkbox("Taa", &taaFlag);
-    ImGui::Checkbox("SoftShadow", &softShadow);
+    ImGui::Checkbox("TurnOff", &softShadow);
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 

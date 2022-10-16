@@ -52,6 +52,6 @@ struct MaterialData_pbrMR
   float alphaCutoff;
   int alphaMode;
 };
-const float JITTER_SCALE = 1.1;
+const float JITTER_SCALE = 1.2f;
 
 #endif //VK_GRAPHICS_BASIC_COMMON_H
