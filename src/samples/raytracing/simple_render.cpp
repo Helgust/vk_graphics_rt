@@ -1070,7 +1070,7 @@ void SimpleRender::CreateUniformBuffer()
   m_uniforms.lights[0].dir  = LiteMath::float4(0.0f, 0.4f, -1.0f, 1.0f);
   m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 10.0f, 0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
-  m_uniforms.lights[0].radius_lightDist_dummies  = LiteMath::float4(5.0f, 60.0f,  0.0f, 1.0f);
+  m_uniforms.lights[0].radius_lightDist_dummies  = LiteMath::float4(0.5f, 60.0f,  0.0f, 1.0f);
   // m_uniforms.lights[1].dir  = LiteMath::float4(0.0f, 1.0f, 0.0f, 1.0f);
   // m_uniforms.lights[1].pos  = LiteMath::float4(0.0f, 2.0f,  1.0f, 1.0f);
   // m_uniforms.lights[1].color  = LiteMath::float4(1.0f, 0.0f,  0.0f, 1.0f);
@@ -2370,7 +2370,7 @@ void SimpleRender::SetupGUIElements()
     ImGui::ColorEdit3("Meshes base color 1", m_uniforms.baseColor.M, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoInputs);
     //ImGui::SliderFloat3("Light source 1 position", m_uniforms.lights[0].pos.M, -100.f, 100.f);
     ImGui::SliderFloat3("Light source 1 dir", m_uniforms.lights[0].dir.M, -1.0f, 1.0f);
-    ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius_lightDist_dummies.x, 0.0f, 50.0f);
+    ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius_lightDist_dummies.x, 0.0f, 2.0f);
     ImGui::SliderInt("FaceIndex", &gbuffer_index, 0, 6); //0 no debug, 1 pos, 2 normal, 3 albedo, 4 shadow, 5 velocity
     ImGui::Checkbox("Taa", &taaFlag);
     ImGui::Checkbox("SoftShadow", &softShadow);

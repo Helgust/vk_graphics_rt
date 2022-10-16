@@ -59,6 +59,6 @@ void main()
     outPosition = vec4(surf.wPos, 1.0f);
     //outVelocity = vec4(CalcVelocity(surf.currPos, surf.prevPos), 0.0f, 1.0f);
     outVelocity = CalcVelocity(surf.currPos, surf.prevPos);
-    //outVelocity -= (Params.m_cur_prev_jiiter.xy / 1024.0f);
-    //outVelocity -= (Params.m_cur_prev_jiiter.zw / 1024.0f);
+    outVelocity -= (Params.m_cur_prev_jiiter.xy / 1024.0f);
+    outVelocity -= (Params.m_cur_prev_jiiter.zw / 1024.0f);
 }
