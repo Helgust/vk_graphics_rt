@@ -344,11 +344,11 @@ void SimpleRender::RayTraceGPU(float a_time)
     m_pRayTracerGPU->InitDescriptors(m_pScnMgr, m_NoiseMapTex, m_NoiseTexSampler);
     //m_pRayTracerGPU->InitDescriptors(m_pScnMgr);
     
-    m_pRayTracerGPU->UpdateAll(m_pCopyHelper, a_time);
+    m_pRayTracerGPU->UpdateAll(m_pCopyHelper, a_time, m_uniforms.lights[0]);
   }
 
   m_pRayTracerGPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix);
-  m_pRayTracerGPU->UpdatePlainMembers(m_pCopyHelper, a_time);
+  m_pRayTracerGPU->UpdatePlainMembers(m_pCopyHelper, a_time, m_uniforms.lights[0]);
   
   // do ray tracing
   //

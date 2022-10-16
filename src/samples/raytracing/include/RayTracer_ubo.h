@@ -16,7 +16,7 @@ typedef unsigned uint;
 #define INV_PI        0.31830988618379067154f
 #define INV_TWOPI     0.15915494309189533577f
 #endif
-
+#include "../../../../resources/shaders/lights_common.h"
 struct RayTracer_UBO_Data
 {
   mat4 m_invProjView; 
@@ -25,8 +25,9 @@ struct RayTracer_UBO_Data
   uint m_width; 
   uint m_pAccelStruct_capacity; 
   uint m_pAccelStruct_size;
+  Light lights[1];
   float time; 
-  uint dummy_last;
+  uint dummy;
 };
 
 #endif

@@ -35,21 +35,21 @@ const uint m_palette[4] = {
 
 const float m_reflection[5] = { 0.1f, 0.75f, 0.0f, 0.0f, 0.0f };
 
-struct Light 
-{
-  vec3 dir;
-  uint color;
-  float rad;
-};
+// struct Light 
+// {
+//   vec3 dir;
+//   uint color;
+//   float rad;
+// };
 
 //For buggy
 //const Light l1 = { {0.3f, 1.0f, -0.5f}, 0xffffffff, 5.5f};
-const Light l1 = { {0.0f, 0.4f, -1.0f}, 0xffffffff, 0.8f};
+// const Light l1 = { {0.0f, 0.4f, -1.0f}, 0xffffffff, 0.8f};
 
 //buster_drone
 //const Light l1 = { {40.0f,10.0f,150.0f,1.0f}, 0xff000000, 100000.0f };
 //const Light l2 = { {40.0f,-40.0f,120.0f,1.0f}, 0x0000ff00, 100000.0f };
-const Light m_lights[1] = {l1};
+// const Light m_lights[1] = {l1};
 const int samples_cnt = 16;
 const int light_cnt = 1;
 const float rayMax = 1000.0f;
@@ -133,7 +133,7 @@ vec2 PointOnDisk(Light m_light, float st, vec2 samplePos)
   vec2 result = vec2(0.0f, 0.0f);
   result.x = samplePos.x * cosTheta - samplePos.y * sinTheta;
   result.y = samplePos.x * sinTheta + samplePos.y * cosTheta;
-  result *= m_light.rad;
+  result *= m_light.radius_lightDist_dummies.x;
   return result;
 }
 

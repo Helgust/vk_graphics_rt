@@ -22,16 +22,10 @@ typedef float4x4     mat4;
 typedef int4        ivec4;
 #endif
 
-struct Light { //deprecated pos and radius
-  vec4  dir;
-  vec4  color;
-  vec4  pos; 
-  vec4 radius_lightDist_dummies; // x-radius, y-lightDist zw - dumy things //
-};
-
+#include "lights_common.h"
 struct UniformParams
 {
-  Light lights[2];
+  Light lights[1];
   vec4  baseColor;
   vec4 m_time_gbuffer_index; // xy dummy z time w gbuffer_index
   vec4 m_cur_prev_jiiter; // xy curr jitter zw prev jitter

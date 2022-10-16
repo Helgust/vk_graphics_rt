@@ -39,15 +39,15 @@ public:
 
   virtual void InitMemberBuffers();
 
-  virtual void UpdateAll(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine, float a_time)
+  virtual void UpdateAll(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine, float a_time, Light ligth)
   {
-    UpdatePlainMembers(a_pCopyEngine, a_time);
+    UpdatePlainMembers(a_pCopyEngine, a_time, ligth);
     UpdateVectorMembers(a_pCopyEngine);
     UpdateTextureMembers(a_pCopyEngine);
   }
   
   
-  virtual void UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine,float a_time);
+  virtual void UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine,float a_time, Light ligth);
   virtual void UpdateVectorMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);
   virtual void UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);
   
