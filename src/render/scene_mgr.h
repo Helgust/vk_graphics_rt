@@ -71,10 +71,14 @@ struct SceneManager
 
   bool InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh);
 
+  void AddVechicleGenericMesh(float size_x = 1.0f, float size_y= 1.0f, float size_z = 1.0f); // for nor it's just cube :D
+  void MadeCubeMesh(cmesh::SimpleMesh& cube, float size_x = 10.0f, float size_y= 10.0f, float size_z = 10.0f);
   uint32_t AddMeshFromFile(const std::string& meshPath);
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData);
 
+
   uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender = true);
+  uint32_t InstanceVehicle(float3 pos, float scale);
 
   void MarkInstance(uint32_t instId);
   void UnmarkInstance(uint32_t instId);
@@ -101,11 +105,16 @@ struct SceneManager
   uint32_t MeshesNum()    const {return m_meshInfos.size();}
   uint32_t InstancesNum() const {return m_instanceInfos.size();}
 
+  
+  uint32_t GetVehicleMeshId() { return m_vehicleMesh;};
+
   hydra_xml::Camera GetCamera(uint32_t camId) const;
   MeshInfo GetMeshInfo(uint32_t meshId) const {assert(meshId < m_meshInfos.size()); return m_meshInfos[meshId];}
   InstanceInfo GetInstanceInfo(uint32_t instId) const {assert(instId < m_instanceInfos.size()); return m_instanceInfos[instId];}
   LiteMath::float4x4 GetInstanceMatrix(uint32_t instId) const {assert(instId < m_instanceMatrices.size()); return m_instanceMatrices[instId];}
-
+  LiteMath::float4x4 GetVehicleInstanceMatrix(uint32_t instId) const {assert(instId < m_currVehicleInstanceMatrices.size()); return m_currVehicleInstanceMatrices[instId];}
+  LiteMath::float4 GetVehicleInstancePos(uint32_t instId) const {
+    assert(instId < m_currVehicleInstanceMatrices.size()); return GetVehicleInstanceMatrix(instId).get_col(3);}
 //  void DestroyAS();
 
   VkAccelerationStructureKHR GetTLAS() const { return m_pBuilderV2->GetTLAS(); }
@@ -133,8 +142,12 @@ private:
   std::vector<InstanceInfo> m_instanceInfos = {};
   std::vector<LiteMath::float4x4> m_instanceMatrices = {};
   std::vector<LiteMath::float4x4> m_prevInstanceMatrices = {};
+  std::vector<LiteMath::float4x4> m_currVehicleInstanceMatrices = {};
+  std::vector<LiteMath::float4x4> m_prevVehicleInstanceMatrices = {};
 
   std::vector<hydra_xml::Camera> m_sceneCameras = {};
+
+  uint32_t m_vehicleMesh;
 
   uint32_t m_totalVertices = 0u;
   uint32_t m_totalIndices  = 0u;
@@ -177,6 +190,62 @@ private:
 
   LoaderConfig m_config;
   bool m_useRTX = false;
+  std::vector<float> cubePos4f
+  {
+    -1.0f,-1.0f, 1.0f,1.0f,
+     1.0f,-1.0f, 1.0f,1.0f,
+    1.0f, 1.0f, 1.0f,1.0f,
+    -1.0f, 1.0f, 1.0f,1.0f,
+    -1.0f,-1.0f,-1.0f,1.0f,
+    1.0f,-1.0f,-1.0f,1.0f,
+     1.0f, 1.0f,-1.0f,1.0f,
+    -1.0f, 1.0f,-1.0f,1.0f,
+  // -1.0f, -1.0f,  1.0f, 1.0f,
+  //  1.0f, -1.0f,  1.0f, 1.0f,
+  //  1.0f,  1.0f,  1.0f, 1.0f,
+  // -1.0f,  1.0f,  1.0f, 1.0f,
+
+  // -1.0f, -1.0f, -1.0f, 1.0f,
+  // -1.0f,  1.0f, -1.0f, 1.0f,
+  //  1.0f,  1.0f, -1.0f, 1.0f,
+  //  1.0f, -1.0f, -1.0f, 1.0f,
+
+  // -1.0f,  1.0f, -1.0f, 1.0f,
+  // -1.0f,  1.0f,  1.0f, 1.0f,
+  //  1.0f,  1.0f,  1.0f, 1.0f,
+  //  1.0f,  1.0f, -1.0f, 1.0f,
+
+  // -1.0f, -1.0f, -1.0f, 1.0f,
+  //  1.0f, -1.0f, -1.0f, 1.0f,
+  //  1.0f, -1.0f,  1.0f, 1.0f,
+  // -1.0f, -1.0f,  1.0f, 1.0f,
+
+  //  1.0f, -1.0f, -1.0f, 1.0f,
+  //  1.0f,  1.0f, -1.0f, 1.0f,
+  //  1.0f,  1.0f,  1.0f, 1.0f,
+  //  1.0f, -1.0f,  1.0f, 1.0f,
+
+  // -1.0f, -1.0f, -1.0f, 1.0f,
+  // -1.0f, -1.0f,  1.0f, 1.0f,
+  // -1.0f,  1.0f,  1.0f, 1.0f,
+  // -1.0f,  1.0f, -1.0f, 1.0f,
+  };
+
+  std::vector<unsigned int> cubeIndices
+  {
+    // front   
+    0, 1, 2, 2, 3, 0,
+    // right   
+    1, 5, 6, 6, 2, 1,
+    // back   
+    7, 6, 5, 5, 4, 7,
+    // left   
+    4, 0, 3, 3, 7, 4,
+    // bottom   
+    4, 5, 1, 1, 0, 4,
+    // top   
+    3, 2, 6, 6, 7, 3
+  };
 };
 
 #endif//CHIMERA_SCENE_MGR_H

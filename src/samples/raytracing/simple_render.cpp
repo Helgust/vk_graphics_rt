@@ -1174,6 +1174,14 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
     }
 
+    pushConst2M.model = m_pScnMgr->GetVehicleInstanceMatrix(0);
+    pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
+    pushConst2M.color = float4(1.f, 1.f, 0.f, 1.f);
+    vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
+
+    auto mesh_info = m_pScnMgr->GetMeshInfo(m_pScnMgr->GetVehicleMeshId());
+    vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
+
     vkCmdEndRenderPass(a_cmdBuff);
   }
 
@@ -2039,6 +2047,8 @@ void SimpleRender::UpdateView()
 void SimpleRender::LoadScene(const char* path)
 {
   m_pScnMgr->LoadScene(path);
+
+  m_pScnMgr->InstanceVehicle(float3(0.0, 1.0, 0.0), 1.0f);
 
   if(ENABLE_HARDWARE_RT)
   {

@@ -73,11 +73,14 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
       totalMeshes++;
     }
 
+    AddVechicleGenericMesh(1.0f, 1.0f, 1.0f);
+
     InitGeoBuffersGPU(totalMeshes, totalVerticesCount, totalPrimitiveCount * 3);
     if(m_config.build_acc_structs)
     {
       m_pBuilderV2->Init(maxVertexCountPerMesh, maxPrimitiveCountPerMesh, totalPrimitiveCount, m_pMeshData->SingleVertexSize(),
         m_config.build_acc_structs_while_loading_scene);
+      AddBLAS(m_vehicleMesh);
     }
 
     for(auto loc : hscene_main->MeshFiles())
@@ -235,11 +238,14 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
       totalMeshes++;
     }
 
+    AddVechicleGenericMesh(1.0f, 1.0f, 1.0f);
+
     InitGeoBuffersGPU(totalMeshes, totalVerticesCount, totalPrimitiveCount * 3);
     if(m_config.build_acc_structs)
     {
       m_pBuilderV2->Init(maxVertexCountPerMesh, maxPrimitiveCountPerMesh, totalPrimitiveCount,
         m_pMeshData->SingleVertexSize(), m_config.build_acc_structs_while_loading_scene);
+      AddBLAS(m_vehicleMesh);
     }
 
     std::unordered_map<int, uint32_t> loaded_meshes_to_meshId;
@@ -277,7 +283,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
       m_textureInfos.push_back(texInfo);
     }
   }
-
+  
   if(m_config.load_geometry)
   {
     LoadCommonGeoDataOnGPU();

@@ -291,9 +291,9 @@ void SceneManager::LoadOneMeshOnGPU(uint32_t meshIdx)
 
 void SceneManager::LoadCommonGeoDataOnGPU()
 {
-//  VkDeviceSize vertexBufSize = m_pMeshData->VertexDataSize();
-//  VkDeviceSize indexBufSize  = m_pMeshData->IndexDataSize();
-//  VkDeviceSize instMatBufSize = m_instanceMatrices.size() * sizeof(m_instanceMatrices[0]);
+ VkDeviceSize vertexBufSize = m_pMeshData->VertexDataSize();
+ VkDeviceSize indexBufSize  = m_pMeshData->IndexDataSize();
+ VkDeviceSize instMatBufSize = m_instanceMatrices.size() * sizeof(m_instanceMatrices[0]);
 
   std::vector<LiteMath::uint2> mesh_info_tmp;
   for(const auto& m : m_meshInfos)
@@ -546,7 +546,7 @@ void SceneManager::AddBLAS(uint32_t meshIdx)
   vertexBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, m_geoVertBuf);
   indexBufferDeviceAddress.deviceAddress  = vk_rt_utils::getBufferDeviceAddress(m_device, m_geoIdxBuf);
 
-  m_pBuilderV2->AddBLAS(m_meshInfos[meshIdx], m_pMeshData->SingleVertexSize(),
+  uint32_t idx = m_pBuilderV2->AddBLAS(m_meshInfos[meshIdx], m_pMeshData->SingleVertexSize(),
     vertexBufferDeviceAddress, indexBufferDeviceAddress);
 }
 
@@ -620,4 +620,32 @@ void SceneManager::BuildTLAS()
   {
     vkDestroyBuffer(m_device, instancesBuffer, nullptr);
   }
+}
+
+void SceneManager::MadeCubeMesh (cmesh::SimpleMesh& cube, float size_x, float size_y, float size_z)
+{ 
+  cube.vPos4f = cubePos4f;
+  cube.vNorm4f = std::vector<float>(cube.vPos4f.size(), 1);
+  cube.vTang4f = std::vector<float>(cube.vPos4f.size(), 0);
+  cube.vTexCoord2f = std::vector<float>(cube.vPos4f.size()/2, 0);
+  cube.indices = cubeIndices;
+}
+
+void SceneManager::AddVechicleGenericMesh(float size_x, float size_y, float size_z)
+{
+  cmesh::SimpleMesh cube = cmesh::SimpleMesh();
+  MadeCubeMesh(cube, 10.0f, 10.0f, 10.0f);
+  m_vehicleMesh = AddMeshFromData(cube);
+
+  // if(m_config.build_acc_structs)
+  // {
+  //   AddBLAS(m_vehicleMesh);
+  // }
+}
+
+uint32_t SceneManager::InstanceVehicle(float3 pos, float scale)
+{
+  LiteMath::float4x4 m = LiteMath::translate4x4(pos) * LiteMath::scale4x4(float3(scale));
+  m_currVehicleInstanceMatrices.push_back(m);
+  return m_currVehicleInstanceMatrices.size() - 1;
 }

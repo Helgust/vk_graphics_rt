@@ -168,6 +168,7 @@ protected:
     LiteMath::float4x4 model;
     LiteMath::float4x4 lightView;
     LiteMath::float4 color;
+    LiteMath::float4 vehiclePos;
     LiteMath::float2 screenSize;
   } pushConst2M;
 
