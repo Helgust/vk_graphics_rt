@@ -1161,11 +1161,12 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       float4(1.f, 1.f, 1.f, 1.f)
     };
 
-    for (uint32_t i = 0; i < m_pScnMgr->InstancesNum(); ++i)
+    for (uint32_t i = 0; i < m_pScnMgr->InstancesNum()-1; ++i)
     {
       auto inst = m_pScnMgr->GetInstanceInfo(i);
 
       pushConst2M.model = m_pScnMgr->GetInstanceMatrix(i);
+      pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
       pushConst2M.color = colors[i % 4];
       vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0,
                          sizeof(pushConst2M), &pushConst2M);
@@ -2046,9 +2047,8 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
+  m_pScnMgr->InstanceVehicle(float3(40.0, 20.0, 0.0), 1.0f, 4.0f);
   m_pScnMgr->LoadScene(path);
-
-  m_pScnMgr->InstanceVehicle(float3(0.0, 1.0, 0.0), 1.0f);
 
   if(ENABLE_HARDWARE_RT)
   {

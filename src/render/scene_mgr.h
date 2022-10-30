@@ -70,15 +70,14 @@ struct SceneManager
 //  void LoadSingleTriangle(); // TODO: rework
 
   bool InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh);
-
-  void AddVechicleGenericMesh(float size_x = 1.0f, float size_y= 1.0f, float size_z = 1.0f); // for nor it's just cube :D
-  void MadeCubeMesh(cmesh::SimpleMesh& cube, float size_x = 10.0f, float size_y= 10.0f, float size_z = 10.0f);
+  void AddVechicleGenericMesh(float m_CubeSize);
+  void MadeCubeMesh(cmesh::SimpleMesh& cube, float size);
   uint32_t AddMeshFromFile(const std::string& meshPath);
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData);
 
 
   uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender = true);
-  uint32_t InstanceVehicle(float3 pos, float scale);
+  uint32_t InstanceVehicle(float3 pos, float scale, float size);
 
   void MarkInstance(uint32_t instId);
   void UnmarkInstance(uint32_t instId);
@@ -190,61 +189,76 @@ private:
 
   LoaderConfig m_config;
   bool m_useRTX = false;
-  std::vector<float> cubePos4f
+  float m_CubeSize = 1.0f;
+  std::vector<float> cubePos
   {
-    -1.0f,-1.0f, 1.0f,1.0f,
-     1.0f,-1.0f, 1.0f,1.0f,
-    1.0f, 1.0f, 1.0f,1.0f,
-    -1.0f, 1.0f, 1.0f,1.0f,
-    -1.0f,-1.0f,-1.0f,1.0f,
-    1.0f,-1.0f,-1.0f,1.0f,
-     1.0f, 1.0f,-1.0f,1.0f,
-    -1.0f, 1.0f,-1.0f,1.0f,
-  // -1.0f, -1.0f,  1.0f, 1.0f,
-  //  1.0f, -1.0f,  1.0f, 1.0f,
-  //  1.0f,  1.0f,  1.0f, 1.0f,
-  // -1.0f,  1.0f,  1.0f, 1.0f,
-
-  // -1.0f, -1.0f, -1.0f, 1.0f,
-  // -1.0f,  1.0f, -1.0f, 1.0f,
-  //  1.0f,  1.0f, -1.0f, 1.0f,
-  //  1.0f, -1.0f, -1.0f, 1.0f,
-
-  // -1.0f,  1.0f, -1.0f, 1.0f,
-  // -1.0f,  1.0f,  1.0f, 1.0f,
-  //  1.0f,  1.0f,  1.0f, 1.0f,
-  //  1.0f,  1.0f, -1.0f, 1.0f,
-
-  // -1.0f, -1.0f, -1.0f, 1.0f,
-  //  1.0f, -1.0f, -1.0f, 1.0f,
-  //  1.0f, -1.0f,  1.0f, 1.0f,
-  // -1.0f, -1.0f,  1.0f, 1.0f,
-
-  //  1.0f, -1.0f, -1.0f, 1.0f,
-  //  1.0f,  1.0f, -1.0f, 1.0f,
-  //  1.0f,  1.0f,  1.0f, 1.0f,
-  //  1.0f, -1.0f,  1.0f, 1.0f,
-
-  // -1.0f, -1.0f, -1.0f, 1.0f,
-  // -1.0f, -1.0f,  1.0f, 1.0f,
-  // -1.0f,  1.0f,  1.0f, 1.0f,
-  // -1.0f,  1.0f, -1.0f, 1.0f,
+    -1.0f, -1.0f, +1.0f, +1.0f,
+    +1.0f, -1.0f, +1.0f, +1.0f,
+    +1.0f, +1.0f, +1.0f, +1.0f,
+    -1.0f, +1.0f, +1.0f, +1.0f,
+    -1.0f, -1.0f, -1.0f, +1.0f,
+    +1.0f, -1.0f, -1.0f, +1.0f,
+    +1.0f, +1.0f, -1.0f, +1.0f,
+    -1.0f, +1.0f, -1.0f, +1.0f,
   };
 
   std::vector<unsigned int> cubeIndices
   {
     // front   
-    0, 1, 2, 2, 3, 0,
+    0, 1, 2,
+    2, 3, 0,
     // right   
-    1, 5, 6, 6, 2, 1,
+    1, 5, 6,
+    6, 2, 1,
     // back   
-    7, 6, 5, 5, 4, 7,
+    7, 6, 5,
+    5, 4, 7,
     // left   
-    4, 0, 3, 3, 7, 4,
+    4, 0, 3,
+    3, 7, 4,
     // bottom   
-    4, 5, 1, 1, 0, 4,
+    4, 5, 1,
+    1, 0, 4,
     // top   
-    3, 2, 6, 6, 7, 3
+    3, 2, 6,
+    6, 7, 3
+  };
+
+  std::vector<float> cubeNorm
+  {
+    -1.0f, -1.0f, +1.0f, 0.0f,
+    +1.0f, -1.0f, +1.0f, 0.0f,
+    +1.0f, +1.0f, +1.0f, 0.0f,
+    -1.0f, +1.0f, +1.0f, 0.0f,
+
+    +0.0f, +1.0f, -1.0f, 0.0f,
+    +0.0f, +1.0f, -1.0f, 0.0f,
+    +0.0f, +1.0f, -1.0f, 0.0f,
+    +0.0f, +1.0f, -1.0f, 0.0f,
+  };
+
+  std::vector<float> cubeTexCord
+  {
+    +0.0f, +1.0f,
+    +1.0f, +0.0f,
+    +1.0f, +0.0f,
+    +1.0f, +1.0f,
+    +1.0f, +1.0f,
+    +1.0f, +1.0f,
+    +0.0f, +1.0f,
+    +0.0f, +1.0f,
+  };
+
+  std::vector<float> cubeMatInd
+  {
+    +0.0f, +1.0f,
+    +1.0f, +0.0f,
+    +1.0f, +0.0f,
+    +1.0f, +1.0f,
+    +1.0f, +1.0f,
+    +1.0f, +1.0f,
+    +0.0f, +1.0f,
+    +0.0f, +1.0f,
   };
 };
 

@@ -73,16 +73,18 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
       totalMeshes++;
     }
 
-    AddVechicleGenericMesh(1.0f, 1.0f, 1.0f);
+    totalMeshes++;
+    totalVerticesCount += 8;
+    totalPrimitiveCount += 12;
+    maxVertexCountPerMesh    = std::max((uint32_t)8, maxVertexCountPerMesh);
+    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working 
 
     InitGeoBuffersGPU(totalMeshes, totalVerticesCount, totalPrimitiveCount * 3);
     if(m_config.build_acc_structs)
     {
       m_pBuilderV2->Init(maxVertexCountPerMesh, maxPrimitiveCountPerMesh, totalPrimitiveCount, m_pMeshData->SingleVertexSize(),
         m_config.build_acc_structs_while_loading_scene);
-      AddBLAS(m_vehicleMesh);
     }
-
     for(auto loc : hscene_main->MeshFiles())
     {
       auto meshId = AddMeshFromFile(loc);
@@ -104,6 +106,14 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
         else
           InstanceMesh(meshId, instances[j]);
       }
+    }
+    
+    AddVechicleGenericMesh(m_CubeSize);
+    LoadOneMeshOnGPU(m_vehicleMesh);
+    if(m_config.build_acc_structs)
+    {
+      AddBLAS(m_vehicleMesh);
+      InstanceMesh(m_vehicleMesh, m_currVehicleInstanceMatrices[0]);
     }
   }
 
@@ -238,14 +248,17 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
       totalMeshes++;
     }
 
-    AddVechicleGenericMesh(1.0f, 1.0f, 1.0f);
+    totalMeshes++;
+    totalVerticesCount += 8;
+    totalPrimitiveCount += 12;
+    maxVertexCountPerMesh    = std::max((uint32_t)8, maxVertexCountPerMesh);
+    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working 
 
     InitGeoBuffersGPU(totalMeshes, totalVerticesCount, totalPrimitiveCount * 3);
     if(m_config.build_acc_structs)
     {
       m_pBuilderV2->Init(maxVertexCountPerMesh, maxPrimitiveCountPerMesh, totalPrimitiveCount,
         m_pMeshData->SingleVertexSize(), m_config.build_acc_structs_while_loading_scene);
-      AddBLAS(m_vehicleMesh);
     }
 
     std::unordered_map<int, uint32_t> loaded_meshes_to_meshId;
@@ -254,6 +267,14 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
       const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
       auto identity = LiteMath::float4x4();
       LoadGLTFNodesRecursive(gltfModel, node, identity, loaded_meshes_to_meshId);
+    }
+    
+    AddVechicleGenericMesh(m_CubeSize);
+    LoadOneMeshOnGPU(m_vehicleMesh);
+    if(m_config.build_acc_structs)
+    {
+      AddBLAS(m_vehicleMesh);
+      InstanceMesh(m_vehicleMesh, m_currVehicleInstanceMatrices[0]);
     }
   }
 
