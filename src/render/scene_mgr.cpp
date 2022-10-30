@@ -647,5 +647,27 @@ uint32_t SceneManager::InstanceVehicle(float3 pos, float scale, float size)
   m_CubeSize = size;
   LiteMath::float4x4 m = LiteMath::translate4x4(pos) * LiteMath::scale4x4(float3(scale));
   m_currVehicleInstanceMatrices.push_back(m);
+  m_prevVehicleInstanceMatrices.push_back(m);
   return m_currVehicleInstanceMatrices.size() - 1;
+}
+
+void SceneManager::MoveCarX(float a_time)
+{
+  if(a_time < 0.0001f)
+    return;
+  m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
+  LiteMath::float4x4 m = GetVehicleInstanceMatrix(0);
+  float4 newPos = m.get_col(3);
+  if ( m_distanceTraveled > 15.f)
+  {
+    direction *= -1.0f;
+    m_distanceTraveled = 0.0;
+  }
+  float dist = m_velocity*a_time;
+  newPos.x += direction * dist;
+  m_distanceTraveled += dist;
+  m.set_col(3, newPos);
+  m_currVehicleInstanceMatrices[0] = m;
+  //put here update BLAS
+  
 }
