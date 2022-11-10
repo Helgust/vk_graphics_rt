@@ -1,5 +1,6 @@
 #include "simple_render.h"
 #include "../../utils/input_definitions.h"
+#include <render/VulkanRTX.h>
 
 #include <geom/vk_mesh.h>
 #include <vk_pipeline.h>
@@ -2047,7 +2048,7 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
-  m_pScnMgr->InstanceVehicle(float3(40.0,10.0, 0.0), 1.0f, 4.0f);
+  m_pScnMgr->InstanceVehicle(float3(40.0,4.0, 0.0), 1.0f, 4.0f);
   m_pScnMgr->LoadScene(path);
 
   if(ENABLE_HARDWARE_RT)
@@ -2190,6 +2191,7 @@ void SimpleRender::DrawFrame(float a_time, DrawMode a_mode)
   default:
     DrawFrameSimple(a_time);
   }
+  m_pScnMgr->BuildTLAS(true);
 }
 
 void SimpleRender::Cleanup()

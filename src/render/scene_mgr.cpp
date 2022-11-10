@@ -552,11 +552,11 @@ void SceneManager::AddBLAS(uint32_t meshIdx)
 
 void SceneManager::BuildAllBLAS()
 {
-//  m_pBuilder->BuildBLAS(m_blasData);
+  //m_pBuilder->BuildBLAS(m_blasData);
   m_pBuilderV2->BuildAllBLAS();
 }
 
-void SceneManager::BuildTLAS()
+void SceneManager::BuildTLAS(bool need_update)
 {
   BuildAllBLAS(); //Do  this really need?
 
@@ -610,7 +610,9 @@ void SceneManager::BuildTLAS()
 
   VkDeviceOrHostAddressConstKHR instBufferDeviceAddress{};
   instBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, instancesBuffer);
-  m_pBuilderV2->BuildTLAS(geometryInstances.size(), instBufferDeviceAddress);
+  m_pBuilderV2->BuildTLAS(geometryInstances.size(), instBufferDeviceAddress,
+    VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR, 
+    need_update);
 
   if (instancesAlloc != VK_NULL_HANDLE)
   {
@@ -668,6 +670,5 @@ void SceneManager::MoveCarX(float a_time)
   m_distanceTraveled += dist;
   m.set_col(3, newPos);
   m_currVehicleInstanceMatrices[0] = m;
-  //put here update BLAS
-  
+  m_instanceMatrices[GetVehicleMeshId()] = m;
 }
