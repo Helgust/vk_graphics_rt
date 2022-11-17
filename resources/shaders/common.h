@@ -32,6 +32,7 @@ struct UniformParams
   mat4 invProjView;
   mat4 prevProjView;
   mat4 invPrevProjView;
+  mat4 PrevVecMat;
   ivec4 settings;// x taa y softShadow zw dummy
 };
 

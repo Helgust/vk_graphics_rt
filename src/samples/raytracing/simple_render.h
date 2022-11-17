@@ -34,12 +34,28 @@ enum class RenderMode
   RAYTRACING,
 };
 
+struct FrameBufferAttachment {
+  VkImage image;
+  VkDeviceMemory mem;
+  VkImageView view;
+  VkFormat format;
+  };
+struct FrameBuffer {
+  int32_t width, height;
+  VkFramebuffer frameBuffer;
+  FrameBufferAttachment position, normal, albedo;
+  FrameBufferAttachment velocity;
+  FrameBufferAttachment depth;
+  VkRenderPass renderPass;
+};
+
 class RayTracer_GPU : public RayTracer_Generated
 {
 public:
   RayTracer_GPU(int32_t a_width, uint32_t a_height) : RayTracer_Generated(a_width, a_height) {} 
   std::string AlterShaderPath(const char* a_shaderPath) override { return std::string("../../src/samples/raytracing/") + std::string(a_shaderPath); }
-  void InitDescriptors(std::shared_ptr<SceneManager> sceneManager, vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler);
+  void InitDescriptors(std::shared_ptr<SceneManager> sceneManager, 
+    vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, FrameBuffer a_gbuffer, VkSampler colorSampler);
   //void InitDescriptors(std::shared_ptr<SceneManager> sceneManager);
 };
 
@@ -90,6 +106,7 @@ public:
 
   void LoadScene(const char *path) override;
   void DrawFrame(float a_time, DrawMode a_mode) override;
+  
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -155,11 +172,13 @@ protected:
     VkSemaphore imageAvailable    = VK_NULL_HANDLE;
     VkSemaphore renderingFinished = VK_NULL_HANDLE;
     VkSemaphore gbufferFinished = VK_NULL_HANDLE;
+    VkSemaphore rtFinished = VK_NULL_HANDLE;
   } m_presentationResources;
 
   std::vector<VkFence> m_frameFences;
   std::vector<VkCommandBuffer> m_cmdBuffersDrawMain;
   std::vector<VkCommandBuffer> m_cmdBuffersGbuffer;
+  std::vector<VkCommandBuffer> m_cmdBuffersRT;
 
 
   struct
@@ -170,22 +189,10 @@ protected:
     LiteMath::float4 color;
     LiteMath::float4 vehiclePos;
     LiteMath::float2 screenSize;
+    LiteMath::int2 dynamicBit;
   } pushConst2M;
 
-  struct FrameBufferAttachment {
-  VkImage image;
-  VkDeviceMemory mem;
-  VkImageView view;
-  VkFormat format;
-	};
-	struct FrameBuffer {
-		int32_t width, height;
-		VkFramebuffer frameBuffer;
-		FrameBufferAttachment position, normal, albedo;
-    FrameBufferAttachment velocity;
-		FrameBufferAttachment depth;
-		VkRenderPass renderPass;
-	} m_gBuffer, m_omniShadowBuffer;
+ FrameBuffer m_gBuffer, m_omniShadowBuffer;
 
   struct InputControlMouseEtc
   {
@@ -301,7 +308,7 @@ protected:
   uint32_t m_taaImageId = 0;          
 
   void RayTraceCPU();
-  void RayTraceGPU(float a_time);
+  void RayTraceGPU(VkCommandBuffer commandBuffer, float a_time);
 
   VkBuffer m_genColorBuffer = VK_NULL_HANDLE;
   VkDeviceMemory m_colorMem = VK_NULL_HANDLE;

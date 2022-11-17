@@ -113,6 +113,7 @@ struct SceneManager
   InstanceInfo GetInstanceInfo(uint32_t instId) const {assert(instId < m_instanceInfos.size()); return m_instanceInfos[instId];}
   LiteMath::float4x4 GetInstanceMatrix(uint32_t instId) const {assert(instId < m_instanceMatrices.size()); return m_instanceMatrices[instId];}
   LiteMath::float4x4 GetVehicleInstanceMatrix(uint32_t instId) const {assert(instId < m_currVehicleInstanceMatrices.size()); return m_currVehicleInstanceMatrices[instId];}
+  LiteMath::float4x4 GetVehiclePrevInstanceMatrix(uint32_t instId) const {assert(instId < m_prevVehicleInstanceMatrices.size()); return m_prevVehicleInstanceMatrices[instId];}
   LiteMath::float4 GetVehicleInstancePos(uint32_t instId) const {
     assert(instId < m_currVehicleInstanceMatrices.size()); return GetVehicleInstanceMatrix(instId).get_col(3);}
 //  void DestroyAS();
@@ -193,7 +194,7 @@ private:
   float m_CubeSize = 1.0f;
   float m_distanceTraveled = 0.0f;
   float direction = -1.0f;
-  float m_velocity = 1.0f;
+  float m_velocity = 50.0f;
   std::vector<float> cubePos
   {
     -1.0f, -1.0f, +1.0f, +1.0f,
@@ -230,6 +231,16 @@ private:
 
   std::vector<float> cubeNorm
   {
+    -1.0f, -1.0f, +1.0f, 0.0f,
+    +1.0f, -1.0f, +1.0f, 0.0f,
+    +1.0f, +1.0f, +1.0f, 0.0f,
+    -1.0f, +1.0f, +1.0f, 0.0f,
+
+    +0.0f, +1.0f, -1.0f, 0.0f,
+    +0.0f, +1.0f, -1.0f, 0.0f,
+    +0.0f, +1.0f, -1.0f, 0.0f,
+    +0.0f, +1.0f, -1.0f, 0.0f,
+
     -1.0f, -1.0f, +1.0f, 0.0f,
     +1.0f, -1.0f, +1.0f, 0.0f,
     +1.0f, +1.0f, +1.0f, 0.0f,

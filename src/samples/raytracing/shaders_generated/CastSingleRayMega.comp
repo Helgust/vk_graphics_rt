@@ -16,6 +16,9 @@ layout(binding = 7, set = 0) buffer InstanceMats { mat4 instance_mats[]; };
 layout(binding = 8, set = 0) buffer MeshInfos { MeshInfo mesh_infos[]; };
 layout(binding = 9, set = 0) uniform texture2D NoiseTexture;
 layout(binding = 10, set = 0) uniform sampler NoiseSamp;
+layout(binding = 11, set = 0) uniform texture2D gBufferPos;
+layout(binding = 12, set = 0) uniform texture2D gBufferNorm;
+layout(binding = 13, set = 0) uniform sampler colorSampler;
 
 
 uint ColorToInt(vec4 color) 
@@ -163,17 +166,15 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
   vec3 color = vec3(0.0f, 0.0f, 0.0f);
   
   uint hash = ((uint(coordInit.x) << 12) | uint(coordInit.y)) ^ floatBitsToUint(ubo.time);
-
+  vec2 screenPos = vec2(tidX/1024.0f, tidY/1024.0f);
   for (int j = 0; j < light_cnt; ++j)
   {
-    CRT_Hit hit = m_pAccelStruct_RayQuery_NearestHit(rayPos, rayDir);
-    if (hit.primId == -1) {
-      //color = vec3(0.3f, 0.3f, 0.3f);
-      break;
-    }
-    
-    vec3 hit_point = vec3(rayPos) + vec3(rayDir)*hit.t;
-    vec3 n = GetNormal(hit);
+    //CRT_Hit hit = m_pAccelStruct_RayQuery_NearestHit(rayPos, rayDir);
+    vec3 hit_point = texture(sampler2D(gBufferPos, colorSampler), screenPos).xyz;
+    vec3 n = texture(sampler2D(gBufferNorm, colorSampler), screenPos).xyz;
+
+    //vec3 hit_point_old = vec3(rayPos) + vec3(rayDir)*hit.t;
+    //debugPrintfEXT("Gbuffer %1.2v3f; RT %1.2v3f\n", hit_point,hit_point_old);
     vec3 lightDir = normalize(ubo.lights[j].dir.xyz);
     vec3 lightTangent = normalize(cross(lightDir, vec3(0.0f, 1.0f, 0.0f)));
     vec3 lightBitangent = normalize(cross(lightTangent, lightDir));
@@ -201,7 +202,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
 
         // bool isIntersect = m_pAccelStruct_RayQuery_AnyHit(vec4(shadow_orig, 0.0001f), vec4(shadowDir, rayMax));
         // if (!isIntersect && distanceToLight <= m_lights[j].light_dist)
-        CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.0001f), vec4(shadowDir, rayMax));
+        CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.1f), vec4(shadowDir, rayMax));
         if (hitShadow.primId == -1)// intersect
         {
           float shade = max(dot(shadowDir, n), 0.0f);
@@ -213,12 +214,12 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
     }
     else
     {
-      vec3 shadow_orig  = (dot(vec3(rayDir), n) < 0) ? hit_point + n * 1e-4 : hit_point - n * 1e-4;
+      vec3 shadow_orig  = texture(sampler2D(gBufferPos, colorSampler), screenPos).xyz;
       vec3 shadowDir = ubo.lights[j].dir.xyz;
-      float rayMax = hit.t;
+      float rayMax = rayMax;
       
       //CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.1f), vec4(shadowDir, MAXFLOAT));
-      bool isIntersect = m_pAccelStruct_RayQuery_AnyHit(vec4(hit_point, 0.1f), vec4(shadowDir, rayMax));
+      bool isIntersect = m_pAccelStruct_RayQuery_AnyHit(vec4(shadow_orig, 0.1f), vec4(shadowDir, rayMax));
 
       if (!isIntersect) // condition for to be in light
       {
@@ -254,9 +255,6 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
 
 void kernel_InitEyeRay(uint tidX, uint tidY, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar) 
 {
-  
-  uint hash = ((uint(gl_GlobalInvocationID[0]) << 12) | uint(gl_GlobalInvocationID[1])) ^ floatBitsToUint(ubo.time);
-  hash += uint(gl_LocalInvocationIndex);
   rayPosAndNear = ubo.m_camPos; // to_float4(m_camPos, 1.0f);
   
   const vec3 rayDir = EyeRayDir(float(tidX), float(tidY), float(ubo.m_width), float(ubo.m_height), ubo.m_invProjView);

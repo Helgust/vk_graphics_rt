@@ -22,7 +22,8 @@ layout(push_constant) uniform params_t
     mat4 lightMatrix;
     vec4 color;
     vec4 vehiclePos;
-    vec2 screenSize; 
+    vec2 screenSize;
+    ivec2 dynamicBit; 
 } params;
 
 
@@ -53,7 +54,15 @@ void main(void)
     vOut.currClipSpacePos = clipSpacePos;
     gl_Position = clipSpacePos;
 
-    
-    vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
+    if (params.dynamicBit.x != 1)
+    {
+        vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
+    }
+    else
+    {
+        vOut.prevClipSpacePos = UboParams.prevProjView * UboParams.PrevVecMat * vec4(vOut.wPos, 1.0);//Fixme
+        //vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
+    }
+
     
 }

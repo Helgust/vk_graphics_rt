@@ -660,7 +660,7 @@ void SceneManager::MoveCarX(float a_time)
   m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
   LiteMath::float4x4 m = GetVehicleInstanceMatrix(0);
   float4 newPos = m.get_col(3);
-  if ( m_distanceTraveled > 15.f)
+  if ( m_distanceTraveled > 50.f)
   {
     direction *= -1.0f;
     m_distanceTraveled = 0.0;

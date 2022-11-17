@@ -323,7 +323,7 @@ void SimpleRender::RayTraceCPU()
   m_pCopyHelper->UpdateImage(m_rtImage.image, m_raytracedImageData.data(), m_width, m_height, 4, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-void SimpleRender::RayTraceGPU(float a_time)
+void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time)
 {
   if(!m_pRayTracerGPU)
   {
@@ -341,7 +341,7 @@ void SimpleRender::RayTraceGPU(float a_time)
 
     m_pRayTracerGPU->SetScene(tmp);
     m_pRayTracerGPU->SetVulkanInOutFor_CastSingleRay(m_genColorBuffer, 0);
-    m_pRayTracerGPU->InitDescriptors(m_pScnMgr, m_NoiseMapTex, m_NoiseTexSampler);
+    m_pRayTracerGPU->InitDescriptors(m_pScnMgr, m_NoiseMapTex, m_NoiseTexSampler, m_gBuffer, m_colorSampler);
     //m_pRayTracerGPU->InitDescriptors(m_pScnMgr);
     
     m_pRayTracerGPU->UpdateAll(m_pCopyHelper, a_time, m_uniforms.lights[0]);
@@ -353,9 +353,9 @@ void SimpleRender::RayTraceGPU(float a_time)
   // do ray tracing
   //
   {
-    VkCommandBuffer commandBuffer = vk_utils::createCommandBuffer(m_device, m_commandPool);
+    // VkCommandBuffer commandBuffer = vk_utils::createCommandBuffer(m_device, m_commandPool);
     setObjectName(commandBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER, "RaytracingCommandBuffer");
-
+    vkResetCommandBuffer(commandBuffer, 0);
     VkCommandBufferBeginInfo beginCommandBufferInfo = {};
     beginCommandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginCommandBufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -440,9 +440,7 @@ void SimpleRender::RayTraceGPU(float a_time)
     }
 
 
-    vkEndCommandBuffer(commandBuffer);
-
-    vk_utils::executeCommandBufferNow(commandBuffer, m_graphicsQueue, m_device);
+    VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
   }
 
 }

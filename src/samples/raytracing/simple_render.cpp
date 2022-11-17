@@ -480,16 +480,25 @@ void SimpleRender::CreateAttachment(
   VK_CHECK_RESULT(vkCreateImageView(m_device, &imageView, nullptr, &attachment->view));
 }
 
-void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler) 
+void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, 
+ FrameBuffer a_gbuffer, VkSampler colorSampler) 
 {
   std::array<VkDescriptorBufferInfo, 6> descriptorBufferInfo;
-  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(1);
-  std::vector<VkWriteDescriptorSet> writeDescriptorSet(8);
+  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(3);
+  std::vector<VkWriteDescriptorSet> writeDescriptorSet(11);
 
 
   descriptorImageInfos[0].sampler = nullptr;
   descriptorImageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   descriptorImageInfos[0].imageView = noiseMapTex.view;
+
+  descriptorImageInfos[1].sampler = nullptr;
+  descriptorImageInfos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  descriptorImageInfos[1].imageView = a_gbuffer.position.view;
+
+  descriptorImageInfos[2].sampler = nullptr;
+  descriptorImageInfos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  descriptorImageInfos[2].imageView = a_gbuffer.normal.view;
 
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorBufferInfo[0], nullptr, sceneManager->GetVertexBuffer(), 3);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[1], &descriptorBufferInfo[1], nullptr, sceneManager->GetIndexBuffer(), 4);
@@ -501,9 +510,12 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, 
   
   VkDescriptorImageInfo samplerInfo;
   samplerInfo.sampler = noiseTexSampler;
-  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[6], nullptr, descriptorImageInfos.data(), VK_NULL_HANDLE, 9);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[6], nullptr, &descriptorImageInfos[0], VK_NULL_HANDLE, 9);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[7], nullptr, &samplerInfo ,VK_NULL_HANDLE, 10);
-  //fillWriteDescriptorSetEntry2(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorImageInfo[0], noiseMapTex.view, noiseTexSampler, 3);
+  samplerInfo.sampler = colorSampler;
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[8], nullptr, &descriptorImageInfos[1], VK_NULL_HANDLE, 11);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[9], nullptr, &descriptorImageInfos[2], VK_NULL_HANDLE, 12);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[10], nullptr, &samplerInfo ,VK_NULL_HANDLE, 13);
 
 
   vkUpdateDescriptorSets(device, uint32_t(writeDescriptorSet.size()), writeDescriptorSet.data(), 0, NULL);
@@ -607,6 +619,7 @@ void SimpleRender::InitVulkan(const char** a_instanceExtensions, uint32_t a_inst
   m_cmdBuffersDrawMain.reserve(m_framesInFlight);
   m_cmdBuffersDrawMain = vk_utils::createCommandBuffers(m_device, m_commandPool, m_framesInFlight);
   m_cmdBuffersGbuffer = vk_utils::createCommandBuffers(m_device, m_commandPool, m_framesInFlight);
+  m_cmdBuffersRT = vk_utils::createCommandBuffers(m_device, m_commandPool, m_framesInFlight);
 
   m_frameFences.resize(m_framesInFlight);
   VkFenceCreateInfo fenceInfo = {};
@@ -651,6 +664,7 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.imageAvailable));
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.gbufferFinished));
   VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.renderingFinished));
+  VK_CHECK_RESULT(vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_presentationResources.rtFinished));
   m_screenRenderPass = vk_utils::createDefaultRenderPass(m_device, m_swapchain.GetFormat());
   setObjectName(m_screenRenderPass,VK_OBJECT_TYPE_RENDER_PASS,"screen_renderpass");
   m_quadRenderPass = vk_utils::createDefaultRenderPass(m_device, m_swapchain.GetFormat(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -1091,6 +1105,7 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   m_uniforms.m_time_gbuffer_index = vec4(0, 0, a_time, gbuffer_index);
   m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
   m_pScnMgr->MoveCarX(a_time);
+  m_uniforms.PrevVecMat = m_pScnMgr->GetVehiclePrevInstanceMatrix(0);
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
 
@@ -1169,6 +1184,7 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       pushConst2M.model = m_pScnMgr->GetInstanceMatrix(i);
       pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
       pushConst2M.color = colors[i % 4];
+      pushConst2M.dynamicBit = int2(0,0);
       vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0,
                          sizeof(pushConst2M), &pushConst2M);
 
@@ -1179,6 +1195,7 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     pushConst2M.model = m_pScnMgr->GetVehicleInstanceMatrix(0);
     pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
     pushConst2M.color = float4(1.f, 1.f, 0.f, 1.f);
+    pushConst2M.dynamicBit = int2(1,0);
     vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
 
     auto mesh_info = m_pScnMgr->GetMeshInfo(m_pScnMgr->GetVehicleMeshId());
@@ -2048,7 +2065,7 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
-  m_pScnMgr->InstanceVehicle(float3(40.0,4.0, 0.0), 1.0f, 4.0f);
+  m_pScnMgr->InstanceVehicle(float3(40.0, 8.0, -20.0), 1.0f, 4.0f);
   m_pScnMgr->LoadScene(path);
 
   if(ENABLE_HARDWARE_RT)
@@ -2110,27 +2127,28 @@ void SimpleRender::DrawFrameSimple(float a_time)
 
   auto currentResolveCmdBuf = m_cmdBuffersDrawMain[m_presentationResources.currentFrame];
   auto currentGbufferCmdBuf = m_cmdBuffersGbuffer[m_presentationResources.currentFrame];
+  auto currentRTCmdBuf = m_cmdBuffersRT[m_presentationResources.currentFrame];
 
   VkSemaphore waitSemaphores[] = {m_presentationResources.imageAvailable};
   VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
   if(m_currentRenderMode == RenderMode::RASTERIZATION)
   {
-    if (ENABLE_HARDWARE_RT && softShadow)
-      RayTraceGPU(a_time);
     setObjectName(currentGbufferCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer DrawFrameSimple");
     BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,
     m_gBufferPipeline.pipeline);
+    
+    RayTraceGPU(currentRTCmdBuf, a_time);
   }
-  else if(m_currentRenderMode == RenderMode::RAYTRACING)
-  {
-    if (ENABLE_HARDWARE_RT)
-      RayTraceGPU(a_time);
-    else
-      RayTraceCPU();
+  // else if(m_currentRenderMode == RenderMode::RAYTRACING)
+  // {
+  //   if (ENABLE_HARDWARE_RT)
+  //     RayTraceGPU(currentRTCmdBuf, a_time);
+  //   else
+  //     RayTraceCPU();
 
-    //BuildCommandBufferQuad(currentResolveCmdBuf, m_swapchain.GetAttachment(imageIdx).view);
-  }
+  //   //BuildCommandBufferQuad(currentResolveCmdBuf, m_swapchain.GetAttachment(imageIdx).view);
+  // }
 
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -2293,6 +2311,12 @@ void SimpleRender::Cleanup()
     vkDestroySemaphore(m_device, m_presentationResources.gbufferFinished, nullptr);
     m_presentationResources.gbufferFinished = VK_NULL_HANDLE;
   }
+
+  if (m_presentationResources.rtFinished != VK_NULL_HANDLE)
+  {
+    vkDestroySemaphore(m_device, m_presentationResources.rtFinished, nullptr);
+    m_presentationResources.rtFinished = VK_NULL_HANDLE;
+  }
   ClearBuffer(m_gBuffer);
   ClearBuffer(m_omniShadowBuffer);
 
@@ -2424,33 +2448,15 @@ void SimpleRender::DrawFrameWithGUI(float a_time)
 
   auto currentResolveCmdBuf = m_cmdBuffersDrawMain[m_presentationResources.currentFrame];
   auto currentGbufferCmdBuf = m_cmdBuffersGbuffer[m_presentationResources.currentFrame];
+  auto currentRTCmdBuf = m_cmdBuffersRT[m_presentationResources.currentFrame];
 
   VkSemaphore waitSemaphores[] = {m_presentationResources.imageAvailable};
   VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
-  if(m_currentRenderMode == RenderMode::RASTERIZATION)
-  {
-    if (ENABLE_HARDWARE_RT && softShadow)
-      RayTraceGPU(a_time);
-    setObjectName(currentGbufferCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer DrawFrameWithGUI");
-    BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,
-    m_gBufferPipeline.pipeline);
-  }
-  else if(m_currentRenderMode == RenderMode::RAYTRACING)
-  {
-    if (ENABLE_HARDWARE_RT)
-      RayTraceGPU(a_time);
-    else
-      RayTraceCPU();
 
-    //BuildCommandBufferQuad(currentGbufferCmdBuf, m_swapchain.GetAttachment(imageIdx).view);
-  }
-
-  // ImDrawData* pDrawData = ImGui::GetDrawData();
-  // auto currentGUICmdBuf = m_pGUIRender->BuildGUIRenderCommand(imageIdx, pDrawData);
-
-  // std::vector<VkCommandBuffer> submitCmdBufs = { currentGbufferCmdBuf, currentGUICmdBuf};
-
+  setObjectName(currentGbufferCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer DrawFrameWithGUI");
+  BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,
+  m_gBufferPipeline.pipeline);
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.waitSemaphoreCount = 1;
@@ -2464,6 +2470,18 @@ void SimpleRender::DrawFrameWithGUI(float a_time)
   submitInfo.pSignalSemaphores = signalSemaphores;
 
   VK_CHECK_RESULT(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, nullptr));
+
+  RayTraceGPU(currentRTCmdBuf,a_time);
+
+  waitSemaphores[0] = m_presentationResources.gbufferFinished;
+  submitInfo.pWaitSemaphores = waitSemaphores;
+  waitStages[0] = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+  submitInfo.pWaitDstStageMask = waitStages;
+  signalSemaphores[0] = m_presentationResources.rtFinished;
+  submitInfo.pSignalSemaphores = signalSemaphores;
+  submitInfo.pCommandBuffers = &currentRTCmdBuf;
+  VK_CHECK_RESULT(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, nullptr));
+
   setObjectName(currentResolveCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build resolve DrawFrameWithGUI");
   BuildResolveCommandBuffer(currentResolveCmdBuf, m_frameBuffers[imageIdx], m_swapchain.GetAttachment(imageIdx).view,
                            m_resolvePipeline.pipeline);
@@ -2476,7 +2494,7 @@ void SimpleRender::DrawFrameWithGUI(float a_time)
   submitInfo.commandBufferCount = (uint32_t)submitCmdBufs.size();
   submitInfo.pCommandBuffers = submitCmdBufs.data();
 
-  waitSemaphores[0] = m_presentationResources.gbufferFinished;
+  waitSemaphores[0] = m_presentationResources.rtFinished;
   submitInfo.pWaitSemaphores = waitSemaphores;
   signalSemaphores[0] = m_presentationResources.renderingFinished;
   submitInfo.pSignalSemaphores = signalSemaphores;
