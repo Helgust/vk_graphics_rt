@@ -74,7 +74,7 @@ struct SceneManager
   void MoveCarX(float a_time);
   void MadeCubeMesh(cmesh::SimpleMesh& cube, float size);
   uint32_t AddMeshFromFile(const std::string& meshPath);
-  uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData);
+  uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData, uint dynamicBit = 0);
 
 
   uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender = true);

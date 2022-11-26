@@ -1,6 +1,7 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 #extension GL_ARB_separate_shader_objects : enable
+//#extension GL_EXT_debug_printf : enable
 #extension GL_EXT_ray_query : require
 
 #include "common_generated.h"
@@ -133,6 +134,12 @@ vec3 GetNormal(CRT_Hit hit) {
   return n;
 }
 
+
+uint GetDynamic(CRT_Hit hit) {
+  return mesh_infos[hit.geomId].dynamicBit;
+}
+
+
 vec4 GetPos(CRT_Hit hit)
 {
   uint indexOffset = mesh_infos[hit.geomId].indexOffset;
@@ -203,14 +210,25 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
         // bool isIntersect = m_pAccelStruct_RayQuery_AnyHit(vec4(shadow_orig, 0.0001f), vec4(shadowDir, rayMax));
         // if (!isIntersect && distanceToLight <= m_lights[j].light_dist)
         CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.1f), vec4(shadowDir, rayMax));
-        if (hitShadow.primId == -1)// intersect
+        color.z = 0.0;
+        if ((hitShadow.primId != -1))// intersect
         {
-          float shade = max(dot(shadowDir, n), 0.0f);
-          total +=1.0f;
-          color += shade;
+          uint dynamic = GetDynamic(hitShadow);
+          if(dynamic != 1)
+          {
+            float shade = max(dot(shadowDir, n), 0.0f);
+            total +=1.0f;
+            color.x += shade;
+            color.y += hitShadow.t;
+          }
+          else
+          {
+            color.z = 1.0;
+          }
         }
       }
       color*=(total / (samples_cnt));
+      color.x = 1 - color.x;
     }
     else
     {

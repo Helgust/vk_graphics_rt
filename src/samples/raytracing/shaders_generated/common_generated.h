@@ -79,6 +79,8 @@ struct MeshInfo
 {
   uint indexOffset;
   uint vertexOffset;
+  uint dynamicBit;
+  uint dummy;
 };
 
 struct Vertex {

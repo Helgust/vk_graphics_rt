@@ -166,7 +166,7 @@ uint32_t SceneManager::AddMeshFromFile(const std::string& meshPath)
   return AddMeshFromData(data);
 }
 
-uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData)
+uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData, uint a_dynamic)
 {
   assert(meshData.VerticesNum() > 0);
   assert(meshData.IndicesNum() > 0);
@@ -185,6 +185,7 @@ uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData)
 
   info.m_vertexBufOffset = info.m_vertexOffset * m_pMeshData->SingleVertexSize();
   info.m_indexBufOffset  = info.m_indexOffset  * m_pMeshData->SingleIndexSize();
+  info.m_dynamicBit = a_dynamic;
 
   m_totalVertices += meshData.VerticesNum();
   m_totalIndices  += meshData.IndicesNum();
@@ -246,7 +247,7 @@ void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum
   m_geoIdxBuf = vk_utils::createBuffer(m_device, indexBufSize, idxFlags);
   all_buffers.push_back(m_geoIdxBuf);
 
-  VkDeviceSize infoBufSize = a_meshNum * sizeof(uint32_t) * 2;
+  VkDeviceSize infoBufSize = a_meshNum * sizeof(uint32_t) * 4;
   m_meshInfoBuf = vk_utils::createBuffer(m_device, infoBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   all_buffers.push_back(m_meshInfoBuf);
 
@@ -295,10 +296,10 @@ void SceneManager::LoadCommonGeoDataOnGPU()
 //  VkDeviceSize indexBufSize  = m_pMeshData->IndexDataSize();
 //  VkDeviceSize instMatBufSize = m_instanceMatrices.size() * sizeof(m_instanceMatrices[0]);
 
-  std::vector<LiteMath::uint2> mesh_info_tmp;
+  std::vector<LiteMath::uint4> mesh_info_tmp;
   for(const auto& m : m_meshInfos)
   {
-    mesh_info_tmp.emplace_back(m.m_indexOffset, m.m_vertexOffset);
+    mesh_info_tmp.emplace_back(m.m_indexOffset, m.m_vertexOffset, m.m_dynamicBit, 0U);
   }
 
 //  m_pCopyHelper->UpdateBuffer(m_geoVertBuf, 0, m_pMeshData->VertexData(), vertexBufSize);
@@ -641,7 +642,7 @@ void SceneManager::AddVechicleGenericMesh(float size)
 {
   cmesh::SimpleMesh cube = cmesh::SimpleMesh();
   MadeCubeMesh(cube, size);
-  m_vehicleMesh = AddMeshFromData(cube);
+  m_vehicleMesh = AddMeshFromData(cube, 1U);
 }
 
 uint32_t SceneManager::InstanceVehicle(float3 pos, float scale, float size)
