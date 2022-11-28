@@ -20,6 +20,8 @@ layout(binding = 10, set = 0) uniform sampler NoiseSamp;
 layout(binding = 11, set = 0) uniform texture2D gBufferPos;
 layout(binding = 12, set = 0) uniform texture2D gBufferNorm;
 layout(binding = 13, set = 0) uniform sampler colorSampler;
+layout(binding = 14, set = 0) uniform texture2D prevRTImage;
+layout(binding = 15, set = 0) uniform sampler prevRTImage_sampler;
 
 
 uint ColorToInt(vec4 color) 
@@ -174,100 +176,70 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, in vec4 rayPosAndNear, in v
   
   uint hash = ((uint(coordInit.x) << 12) | uint(coordInit.y)) ^ floatBitsToUint(ubo.time);
   vec2 screenPos = vec2(tidX/1024.0f, tidY/1024.0f);
-  for (int j = 0; j < light_cnt; ++j)
+  //CRT_Hit hit = m_pAccelStruct_RayQuery_NearestHit(rayPos, rayDir);
+  vec3 hit_point = texture(sampler2D(gBufferPos, colorSampler), screenPos).xyz;
+  if (ubo.needUpdate != 1U)
   {
-    //CRT_Hit hit = m_pAccelStruct_RayQuery_NearestHit(rayPos, rayDir);
-    vec3 hit_point = texture(sampler2D(gBufferPos, colorSampler), screenPos).xyz;
-    vec3 n = texture(sampler2D(gBufferNorm, colorSampler), screenPos).xyz;
-
-    //vec3 hit_point_old = vec3(rayPos) + vec3(rayDir)*hit.t;
-    //debugPrintfEXT("Gbuffer %1.2v3f; RT %1.2v3f\n", hit_point,hit_point_old);
-    vec3 lightDir = normalize(ubo.lights[j].dir.xyz);
-    vec3 lightTangent = normalize(cross(lightDir, vec3(0.0f, 1.0f, 0.0f)));
-    vec3 lightBitangent = normalize(cross(lightTangent, lightDir));
-
-    if(soft_shadow)
+    vec4 prevScreenPos= (ubo.m_prevProjView) * vec4(hit_point,1.0f);
+    vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
+    vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
+    vec3 prevShadow = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
+    //debugPrintfEXT("Got prevShadow %f \n", prevShadow.x);
+    if(prevShadow.x == 0.0f)
     {
-      float total = 0.0f;
-      for (int u = 0; u < samples_cnt; u++)
-      {   
-        hash += uint(u);
-        vec3 random = random_pcg3d(uvec3(coordInit, hash));
-        vec4 rngState = texture(sampler2D(NoiseTexture, NoiseSamp),random.xy);
-        float criteria = (random.z*2) - 1;
-        float rngOffset;
-        if(criteria > 0)
-          rngOffset = rngState.x;
-        else
-          if(criteria < 0)
-            rngOffset = rngState.y;
-          else
-            rngOffset = rngState.z;
-        vec2 samplesPos = BlueNoiseInDisk[u];
-        vec2 diskPoint = PointOnDisk(ubo.lights[j], rngOffset, samplesPos);
-        vec3 shadowDir = normalize(lightDir + diskPoint.x * lightTangent + diskPoint.y * lightBitangent); 
-
-        // bool isIntersect = m_pAccelStruct_RayQuery_AnyHit(vec4(shadow_orig, 0.0001f), vec4(shadowDir, rayMax));
-        // if (!isIntersect && distanceToLight <= m_lights[j].light_dist)
-        CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.1f), vec4(shadowDir, rayMax));
-        color.z = 0.0;
-        if ((hitShadow.primId != -1))// intersect
-        {
-          uint dynamic = GetDynamic(hitShadow);
-          if(dynamic != 1)
-          {
-            float shade = max(dot(shadowDir, n), 0.0f);
-            total +=1.0f;
-            color.x += shade;
-            color.y += hitShadow.t;
-          }
-          else
-          {
-            color.z = 1.0;
-          }
-        }
-      }
-      color*=(total / (samples_cnt));
-      color.x = 1 - color.x;
+      out_color[tidY * ubo.m_width + tidX + out_colorOffset] = ColorToInt(vec4(clamp(prevShadow, 0.0, 1.0), 1.0));
+      return;
     }
-    else
-    {
-      vec3 shadow_orig  = texture(sampler2D(gBufferPos, colorSampler), screenPos).xyz;
-      vec3 shadowDir = ubo.lights[j].dir.xyz;
-      float rayMax = rayMax;
-      
-      //CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.1f), vec4(shadowDir, MAXFLOAT));
-      bool isIntersect = m_pAccelStruct_RayQuery_AnyHit(vec4(shadow_orig, 0.1f), vec4(shadowDir, rayMax));
+  }
+    
+  vec3 n = texture(sampler2D(gBufferNorm, colorSampler), screenPos).xyz;
 
-      if (!isIntersect) // condition for to be in light
+  //vec3 hit_point_old = vec3(rayPos) + vec3(rayDir)*hit.t;
+  vec3 lightDir = normalize(ubo.lights[0].dir.xyz);
+  vec3 lightTangent = normalize(cross(lightDir, vec3(0.0f, 1.0f, 0.0f)));
+  vec3 lightBitangent = normalize(cross(lightTangent, lightDir));
+
+  float total = 0.0f;
+  for (int u = 0; u < samples_cnt; u++)
+  {   
+    hash += uint(u);
+    vec3 random = random_pcg3d(uvec3(coordInit, hash));
+    vec4 rngState = texture(sampler2D(NoiseTexture, NoiseSamp),random.xy);
+    float criteria = (random.z*2) - 1;
+    float rngOffset;
+    if(criteria > 0)
+      rngOffset = rngState.x;
+    else
+      if(criteria < 0)
+        rngOffset = rngState.y;
+      else
+        rngOffset = rngState.z;
+    vec2 samplesPos = BlueNoiseInDisk[u];
+    vec2 diskPoint = PointOnDisk(ubo.lights[0], rngOffset, samplesPos);
+    vec3 shadowDir = normalize(lightDir + diskPoint.x * lightTangent + diskPoint.y * lightBitangent); 
+
+    // bool isIntersect = m_pAccelStruct_RayQuery_AnyHit(vec4(shadow_orig, 0.0001f), vec4(shadowDir, rayMax));
+    // if (!isIntersect && distanceToLight <= m_lights[0].light_dist)
+    CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.1f), vec4(shadowDir, rayMax));
+    color.z = 0.0;
+    if ((hitShadow.primId != -1))// intersect
+    {
+      uint dynamic = GetDynamic(hitShadow);
+      if(dynamic != 1)
       {
-        color+=vec3(0.0,1.0,0.0);
-        //float shade = max(dot(normalize(shadowDir), n), 0.0f);
-        //color += shade;
-        //color += shade*m_lights[j].intensity/(4 * M_PI * m_lights[j].rad*m_lights[j].rad);
+        float shade = max(dot(shadowDir, n), 0.0f);
+        total +=1.0f;
+        color.x += shade;
+        color.y += hitShadow.t;
+      }
+      else
+      {
+        color.z = 1.0;
       }
     }
   }
-
-  // if(debug_light_pos)
-  // {
-  //   vec3 k = vec3(rayPos) - vec3(m_lights[0].pos);
-  //   float b = dot(k,vec3(rayDir));
-  //   float c =dot(k,k) - m_lights[0].rad * m_lights[0].rad;
-  //   float d = b*b -c;
-  //   if(d >=0)
-  //   {
-  //     float sqrtd = sqrt(d);
-  //     // t, a == 1
-  //     float t1 = -b + sqrtd;
-  //     float t2 = -b - sqrtd; 
-  //     float min_t  = min(t1,t2);
-  //     float max_t = max(t1,t2);
-  //     float t = (min_t >= 0) ? min_t : max_t;
-  //     if (t > 0)
-  //       color=vec3(1.0f,1.0f,0.0f) ;
-  //   }
-  // }
+  color*=(total / (samples_cnt));
+  color.x = 1 - color.x;
   out_color[tidY * ubo.m_width + tidX + out_colorOffset] = ColorToInt(vec4(clamp(color, 0.0, 1.0), 1.0));
 }
 
@@ -295,6 +267,7 @@ void main()
   vec4 rayPosAndNear,  rayDirAndFar;
   kernel_InitEyeRay(tidX, tidY, rayPosAndNear, rayDirAndFar);
 
+  kernel_RayTrace_out_color(tidX, tidY, rayPosAndNear, rayDirAndFar, 0);
   kernel_RayTrace_out_color(tidX, tidY, rayPosAndNear, rayDirAndFar, 0);
 
 }

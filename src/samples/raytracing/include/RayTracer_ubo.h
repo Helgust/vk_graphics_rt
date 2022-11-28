@@ -19,7 +19,8 @@ typedef unsigned uint;
 #include "../../../../resources/shaders/lights_common.h"
 struct RayTracer_UBO_Data
 {
-  mat4 m_invProjView; 
+  mat4 m_invProjView;
+  mat4 m_prevProjView;  
   vec4 m_camPos; 
   uint m_height; 
   uint m_width; 
@@ -27,7 +28,7 @@ struct RayTracer_UBO_Data
   uint m_pAccelStruct_size;
   Light lights[1];
   float time; 
-  uint dummy;
+  uint needUpdate;
 };
 
 #endif

@@ -481,11 +481,11 @@ void SimpleRender::CreateAttachment(
 }
 
 void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, 
- FrameBuffer a_gbuffer, VkSampler colorSampler) 
+ FrameBuffer a_gbuffer, VkSampler colorSampler, vk_utils::VulkanImageMem a_prevRT,  VkSampler a_prevRTImageSampler) 
 {
   std::array<VkDescriptorBufferInfo, 6> descriptorBufferInfo;
-  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(3);
-  std::vector<VkWriteDescriptorSet> writeDescriptorSet(11);
+  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(4);
+  std::vector<VkWriteDescriptorSet> writeDescriptorSet(13);
 
 
   descriptorImageInfos[0].sampler = nullptr;
@@ -499,6 +499,10 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, 
   descriptorImageInfos[2].sampler = nullptr;
   descriptorImageInfos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   descriptorImageInfos[2].imageView = a_gbuffer.normal.view;
+
+  descriptorImageInfos[3].sampler = nullptr;
+  descriptorImageInfos[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  descriptorImageInfos[3].imageView = a_prevRT.view;
 
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorBufferInfo[0], nullptr, sceneManager->GetVertexBuffer(), 3);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[1], &descriptorBufferInfo[1], nullptr, sceneManager->GetIndexBuffer(), 4);
@@ -516,6 +520,9 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, 
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[8], nullptr, &descriptorImageInfos[1], VK_NULL_HANDLE, 11);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[9], nullptr, &descriptorImageInfos[2], VK_NULL_HANDLE, 12);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[10], nullptr, &samplerInfo ,VK_NULL_HANDLE, 13);
+  samplerInfo.sampler = a_prevRTImageSampler;
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[11], nullptr, &descriptorImageInfos[3] ,VK_NULL_HANDLE, 14);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[12], nullptr, &samplerInfo ,VK_NULL_HANDLE, 15);
 
 
   vkUpdateDescriptorSets(device, uint32_t(writeDescriptorSet.size()), writeDescriptorSet.data(), 0, NULL);
@@ -2047,6 +2054,7 @@ void SimpleRender::UpdateView()
     JitterMat(0,3) = jitter.x;
     JitterMat(1,3) = jitter.y;
     mWorldViewProj = mProjFix * JitterMat * mProj * mLookAt;
+    m_prevProjViewMatrix = m_uniforms.prevProjView;
     m_inverseProjViewMatrix = LiteMath::inverse4x4(mProjFix * JitterMat * mProj * transpose(inverse4x4(mLookAt)));
     m_uniforms.m_cur_prev_jiiter.x = jitter.x;
     m_uniforms.m_cur_prev_jiiter.y = jitter.y;
@@ -2055,6 +2063,7 @@ void SimpleRender::UpdateView()
   else
   {
     mWorldViewProj = mProjFix * mProj * mLookAt;
+    m_prevProjViewMatrix = m_uniforms.prevProjView;
     m_inverseProjViewMatrix = LiteMath::inverse4x4(mProjFix * mProj * transpose(inverse4x4(mLookAt)));
   }   
   pushConst2M.projView = mWorldViewProj;
@@ -2138,7 +2147,7 @@ void SimpleRender::DrawFrameSimple(float a_time)
     BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,
     m_gBufferPipeline.pipeline);
     
-    RayTraceGPU(currentRTCmdBuf, a_time);
+    RayTraceGPU(currentRTCmdBuf, a_time, m_needUpdate);
   }
   // else if(m_currentRenderMode == RenderMode::RAYTRACING)
   // {
@@ -2410,6 +2419,8 @@ void SimpleRender::SetupGUIElements()
     ImGui::SliderInt("FaceIndex", &gbuffer_index, 0, 6); //0 no debug, 1 pos, 2 normal, 3 albedo, 4 shadow, 5 velocity
     ImGui::Checkbox("Taa", &taaFlag);
     ImGui::Checkbox("TurnOff", &softShadow);
+    ImGui::Checkbox("NeedUpdate", &m_needUpdateSlider);
+    
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
@@ -2471,7 +2482,8 @@ void SimpleRender::DrawFrameWithGUI(float a_time)
 
   VK_CHECK_RESULT(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, nullptr));
 
-  RayTraceGPU(currentRTCmdBuf,a_time);
+  m_needUpdate = m_needUpdateSlider ? 1U : 0U;
+  RayTraceGPU(currentRTCmdBuf,a_time, m_needUpdate);
 
   waitSemaphores[0] = m_presentationResources.gbufferFinished;
   submitInfo.pWaitSemaphores = waitSemaphores;

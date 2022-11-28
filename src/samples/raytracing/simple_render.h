@@ -55,7 +55,8 @@ public:
   RayTracer_GPU(int32_t a_width, uint32_t a_height) : RayTracer_Generated(a_width, a_height) {} 
   std::string AlterShaderPath(const char* a_shaderPath) override { return std::string("../../src/samples/raytracing/") + std::string(a_shaderPath); }
   void InitDescriptors(std::shared_ptr<SceneManager> sceneManager, 
-    vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, FrameBuffer a_gbuffer, VkSampler colorSampler);
+    vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, FrameBuffer a_gbuffer, VkSampler colorSampler,
+    vk_utils::VulkanImageMem prevRT, VkSampler a_prevRTimage_sampler);
   //void InitDescriptors(std::shared_ptr<SceneManager> sceneManager);
 };
 
@@ -239,6 +240,7 @@ protected:
 
   LiteMath::float4x4 m_projectionMatrix;
   LiteMath::float4x4 m_inverseProjViewMatrix;
+  LiteMath::float4x4 m_prevProjViewMatrix;
   float2 prevJitter = float2(0.0, 0.0f);
 
   // *** ray tracing
@@ -308,7 +310,7 @@ protected:
   uint32_t m_taaImageId = 0;          
 
   void RayTraceCPU();
-  void RayTraceGPU(VkCommandBuffer commandBuffer, float a_time);
+  void RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, uint32_t &a_needUpdate);
 
   VkBuffer m_genColorBuffer = VK_NULL_HANDLE;
   VkDeviceMemory m_colorMem = VK_NULL_HANDLE;
@@ -339,6 +341,8 @@ protected:
   uint32_t m_shadowHeight = 1024u;
 
   uint32_t m_framesInFlight  = 2u;
+  uint32_t m_needUpdate = 1U;
+  bool m_needUpdateSlider = true;
   bool m_vsync = false;
   const int HALTON_COUNT = 8;
   const vec2 HALTON_SEQUENCE[8] = {

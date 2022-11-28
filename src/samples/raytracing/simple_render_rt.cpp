@@ -310,7 +310,7 @@ void SimpleRender::RayTraceCPU()
     m_pRayTracerCPU->SetScene(m_pAccelStruct);
   }
 
-  m_pRayTracerCPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix);
+  m_pRayTracerCPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix, m_prevProjViewMatrix);
 #pragma omp parallel for default(none)
   for (int64_t j = 0; j < m_height; ++j)
   {
@@ -323,7 +323,7 @@ void SimpleRender::RayTraceCPU()
   m_pCopyHelper->UpdateImage(m_rtImage.image, m_raytracedImageData.data(), m_width, m_height, 4, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time)
+void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, uint32_t &a_needUpdate)
 {
   if(!m_pRayTracerGPU)
   {
@@ -341,14 +341,19 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time)
 
     m_pRayTracerGPU->SetScene(tmp);
     m_pRayTracerGPU->SetVulkanInOutFor_CastSingleRay(m_genColorBuffer, 0);
-    m_pRayTracerGPU->InitDescriptors(m_pScnMgr, m_NoiseMapTex, m_NoiseTexSampler, m_gBuffer, m_colorSampler);
+    m_pRayTracerGPU->InitDescriptors(m_pScnMgr, m_NoiseMapTex, m_NoiseTexSampler,
+      m_gBuffer, m_colorSampler, m_prevRTImage, m_prevRTImageSampler);
     //m_pRayTracerGPU->InitDescriptors(m_pScnMgr);
     
-    m_pRayTracerGPU->UpdateAll(m_pCopyHelper, a_time, m_uniforms.lights[0]);
+    m_pRayTracerGPU->UpdateAll(m_pCopyHelper, a_time, m_uniforms.lights[0], a_needUpdate);
   }
 
-  m_pRayTracerGPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix);
-  m_pRayTracerGPU->UpdatePlainMembers(m_pCopyHelper, a_time, m_uniforms.lights[0]);
+  m_pRayTracerGPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix, m_prevProjViewMatrix);
+  m_pRayTracerGPU->UpdatePlainMembers(m_pCopyHelper, a_time, m_uniforms.lights[0], a_needUpdate);
+  // if (a_needUpdate == 1U)
+  // {
+  //   a_needUpdate = 0U;
+  // }
   
   // do ray tracing
   //
@@ -442,5 +447,4 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time)
 
     VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
   }
-
 }

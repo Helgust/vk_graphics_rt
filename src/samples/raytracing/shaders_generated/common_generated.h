@@ -55,6 +55,7 @@ const int light_cnt = 1;
 const float rayMax = 1000.0f;
 //const float light_dist = 20.0f;
 bool soft_shadow = true;
+bool first_run = true;
 bool debug_light_pos = false;
 
 struct MaterialData_pbrMR
