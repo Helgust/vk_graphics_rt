@@ -511,11 +511,11 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
   descriptorImageInfos[3].imageView = a_prevRT.view;
 
   descriptorImageInfos[4].sampler = nullptr;
-  descriptorImageInfos[4].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  descriptorImageInfos[4].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
   descriptorImageInfos[4].imageView = a_rtImage.view;
 
   descriptorImageInfos[5].sampler = nullptr;
-  descriptorImageInfos[5].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  descriptorImageInfos[5].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
   descriptorImageInfos[5].imageView = a_rtImageDynamic.view;
 
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorBufferInfo[0], nullptr, sceneManager->GetVertexBuffer(), 3);
@@ -1240,6 +1240,13 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
   VK_CHECK_RESULT(vkBeginCommandBuffer(a_cmdBuff, &beginInfo));
+
+  vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_rtImage.image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
   vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);

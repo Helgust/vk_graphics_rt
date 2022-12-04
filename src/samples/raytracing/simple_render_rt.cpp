@@ -385,6 +385,20 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, uint
     beginCommandBufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     vkBeginCommandBuffer(commandBuffer, &beginCommandBufferInfo);
+    vk_utils::setImageLayout(
+			commandBuffer,
+			m_prevRTImage.image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    vk_utils::setImageLayout(
+			commandBuffer,
+			m_rtImage.image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_GENERAL);
+
     m_pRayTracerGPU->CastSingleRayCmd(commandBuffer, m_width, m_height, nullptr);
     
     // // prepare buffer and image for copy command
