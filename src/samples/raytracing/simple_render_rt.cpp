@@ -135,6 +135,8 @@ void SimpleRender::SetupRTImage()
     m_rtImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
+  setObjectName(m_rtImage.image, VK_OBJECT_TYPE_IMAGE, "rtStatic_Image");
+
   vk_utils::deleteImg(m_device, &m_rtImageDynamic);  
   // change format and usage according to your implementation of RT
   m_rtImageDynamic.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -145,6 +147,8 @@ void SimpleRender::SetupRTImage()
   {
     m_rtImageDynamicSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
+
+  setObjectName(m_rtImageDynamic.image, VK_OBJECT_TYPE_IMAGE, "rtDyanic_Image");
 }
 
 void SimpleRender::SetupOmniShadowImage() // it is prepareCubeMap at Sasha Willems

@@ -22,8 +22,8 @@ layout(binding = 12, set = 0) uniform texture2D gBufferNorm;
 layout(binding = 13, set = 0) uniform sampler colorSampler;
 layout(binding = 14, set = 0) uniform texture2D prevRTImage;
 layout(binding = 15, set = 0) uniform sampler prevRTImage_sampler;
-layout(binding = 16, set = 0, rgba8) uniform writeonly image2D resultImageStatic;
-layout(binding = 17, set = 0, rgba8) uniform writeonly image2D resultImageDynamic;
+layout(binding = 16, set = 0, rgba8) uniform coherent image2D resultImageStatic;
+layout(binding = 17, set = 0, rgba8) uniform coherent image2D resultImageDynamic;
 
 
 uint ColorToInt(vec4 color) 

@@ -7,8 +7,8 @@
 #include <vk_buffers.h>
 
 void fillWriteDescriptorSetEntry(VkDescriptorSet set, VkWriteDescriptorSet& writeDS, 
-  VkDescriptorBufferInfo* bufferInfo, VkDescriptorImageInfo* imageInfo, VkBuffer buffer, int binding, int descriptorCount = 1, 
-    bool isRWtexture = false) {
+  VkDescriptorBufferInfo* bufferInfo, VkDescriptorImageInfo* imageInfo, VkBuffer buffer, int binding, bool isRWtexture = false,
+   int descriptorCount = 1) {
     if (bufferInfo) {
       bufferInfo->buffer = buffer;
       bufferInfo->offset = 0;
@@ -26,10 +26,10 @@ void fillWriteDescriptorSetEntry(VkDescriptorSet set, VkWriteDescriptorSet& writ
       writeDS.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     else if (imageInfo->sampler)
       writeDS.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-    else if (isRWtexture)
-      writeDS.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     else
       writeDS.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    if (isRWtexture)
+      writeDS.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     writeDS.pBufferInfo = bufferInfo;
     writeDS.pImageInfo = imageInfo;
     writeDS.pTexelBufferView = nullptr; 
@@ -487,7 +487,7 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
  FrameBuffer a_gbuffer, VkSampler colorSampler, 
  vk_utils::VulkanImageMem a_prevRT,  VkSampler a_prevRTImageSampler,
  vk_utils::VulkanImageMem a_rtImage,  VkSampler a_RtImageSampler,
- vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_a_rtImageDynamicSampler) 
+ vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_rtImageDynamicSampler) 
 {
   std::array<VkDescriptorBufferInfo, 6> descriptorBufferInfo;
   std::vector<VkDescriptorImageInfo>	descriptorImageInfos(6);
@@ -537,8 +537,8 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
   samplerInfo.sampler = a_prevRTImageSampler;
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[11], nullptr, &descriptorImageInfos[3] ,VK_NULL_HANDLE, 14);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[12], nullptr, &samplerInfo ,VK_NULL_HANDLE, 15);
-  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[13], nullptr, &descriptorImageInfos[4] ,VK_NULL_HANDLE, 16);
-  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[14], nullptr, &descriptorImageInfos[5] ,VK_NULL_HANDLE, 17);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[13], nullptr, &descriptorImageInfos[4] ,VK_NULL_HANDLE, 16, true);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[14], nullptr, &descriptorImageInfos[5] ,VK_NULL_HANDLE, 17, true);
 
   vkUpdateDescriptorSets(device, uint32_t(writeDescriptorSet.size()), writeDescriptorSet.data(), 0, NULL);
 }

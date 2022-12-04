@@ -140,14 +140,14 @@ VkDescriptorSetLayout RayTracer_Generated::CreateCastSingleRayMegaDSLayout()
   
   // binding for rtImage static
   dsBindings[16].binding            = 16;
-  dsBindings[16].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  dsBindings[16].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
   dsBindings[16].descriptorCount    = 1;
   dsBindings[16].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[16].pImmutableSamplers = nullptr;
 
   // binding for rtImage dynamic
   dsBindings[17].binding            = 17;
-  dsBindings[17].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  dsBindings[17].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
   dsBindings[17].descriptorCount    = 1;
   dsBindings[17].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[17].pImmutableSamplers = nullptr;
