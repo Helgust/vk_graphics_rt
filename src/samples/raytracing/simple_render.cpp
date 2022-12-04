@@ -7,7 +7,8 @@
 #include <vk_buffers.h>
 
 void fillWriteDescriptorSetEntry(VkDescriptorSet set, VkWriteDescriptorSet& writeDS, 
-  VkDescriptorBufferInfo* bufferInfo, VkDescriptorImageInfo* imageInfo, VkBuffer buffer, int binding, int descriptorCount = 1) {
+  VkDescriptorBufferInfo* bufferInfo, VkDescriptorImageInfo* imageInfo, VkBuffer buffer, int binding, int descriptorCount = 1, 
+    bool isRWtexture = false) {
     if (bufferInfo) {
       bufferInfo->buffer = buffer;
       bufferInfo->offset = 0;
@@ -25,9 +26,10 @@ void fillWriteDescriptorSetEntry(VkDescriptorSet set, VkWriteDescriptorSet& writ
       writeDS.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     else if (imageInfo->sampler)
       writeDS.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    else if (isRWtexture)
+      writeDS.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     else
       writeDS.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-
     writeDS.pBufferInfo = bufferInfo;
     writeDS.pImageInfo = imageInfo;
     writeDS.pTexelBufferView = nullptr; 
@@ -480,12 +482,16 @@ void SimpleRender::CreateAttachment(
   VK_CHECK_RESULT(vkCreateImageView(m_device, &imageView, nullptr, &attachment->view));
 }
 
-void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, 
- FrameBuffer a_gbuffer, VkSampler colorSampler, vk_utils::VulkanImageMem a_prevRT,  VkSampler a_prevRTImageSampler) 
+void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, 
+ vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, 
+ FrameBuffer a_gbuffer, VkSampler colorSampler, 
+ vk_utils::VulkanImageMem a_prevRT,  VkSampler a_prevRTImageSampler,
+ vk_utils::VulkanImageMem a_rtImage,  VkSampler a_RtImageSampler,
+ vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_a_rtImageDynamicSampler) 
 {
   std::array<VkDescriptorBufferInfo, 6> descriptorBufferInfo;
-  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(4);
-  std::vector<VkWriteDescriptorSet> writeDescriptorSet(13);
+  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(6);
+  std::vector<VkWriteDescriptorSet> writeDescriptorSet(15);
 
 
   descriptorImageInfos[0].sampler = nullptr;
@@ -503,6 +509,14 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, 
   descriptorImageInfos[3].sampler = nullptr;
   descriptorImageInfos[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   descriptorImageInfos[3].imageView = a_prevRT.view;
+
+  descriptorImageInfos[4].sampler = nullptr;
+  descriptorImageInfos[4].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  descriptorImageInfos[4].imageView = a_rtImage.view;
+
+  descriptorImageInfos[5].sampler = nullptr;
+  descriptorImageInfos[5].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  descriptorImageInfos[5].imageView = a_rtImageDynamic.view;
 
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorBufferInfo[0], nullptr, sceneManager->GetVertexBuffer(), 3);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[1], &descriptorBufferInfo[1], nullptr, sceneManager->GetIndexBuffer(), 4);
@@ -523,7 +537,8 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager, 
   samplerInfo.sampler = a_prevRTImageSampler;
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[11], nullptr, &descriptorImageInfos[3] ,VK_NULL_HANDLE, 14);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[12], nullptr, &samplerInfo ,VK_NULL_HANDLE, 15);
-
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[13], nullptr, &descriptorImageInfos[4] ,VK_NULL_HANDLE, 16);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[14], nullptr, &descriptorImageInfos[5] ,VK_NULL_HANDLE, 17);
 
   vkUpdateDescriptorSets(device, uint32_t(writeDescriptorSet.size()), writeDescriptorSet.data(), 0, NULL);
 }

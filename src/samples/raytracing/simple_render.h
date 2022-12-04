@@ -56,7 +56,9 @@ public:
   std::string AlterShaderPath(const char* a_shaderPath) override { return std::string("../../src/samples/raytracing/") + std::string(a_shaderPath); }
   void InitDescriptors(std::shared_ptr<SceneManager> sceneManager, 
     vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, FrameBuffer a_gbuffer, VkSampler colorSampler,
-    vk_utils::VulkanImageMem prevRT, VkSampler a_prevRTimage_sampler);
+    vk_utils::VulkanImageMem prevRT, VkSampler a_prevRTimage_sampler,
+    vk_utils::VulkanImageMem a_rtImage,  VkSampler a_RtImageSampler,
+    vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_a_rtImageDynamicSampler);
   //void InitDescriptors(std::shared_ptr<SceneManager> sceneManager);
 };
 
@@ -258,6 +260,9 @@ protected:
   VkDescriptorSetLayout m_quadDSLayout = VK_NULL_HANDLE;
   vk_utils::VulkanImageMem m_rtImage;
   VkSampler                m_rtImageSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_rtImageDynamic;
+  VkSampler                m_rtImageDynamicSampler = VK_NULL_HANDLE;
 
   vk_utils::VulkanImageMem m_omniShadowImage;
   VkSampler                m_omniShadowImageSampler = VK_NULL_HANDLE;
