@@ -16,6 +16,7 @@ layout (binding = 4) uniform sampler2D samplerDepth;
 layout (binding = 5) uniform samplerCube shadowCubeMap;
 layout (binding = 6) uniform sampler2D samplerVelocity;
 layout (binding = 7) uniform sampler2D samplerRtImage;
+layout (binding = 8) uniform sampler2D samplerRtImageDynamic;
 
 layout(push_constant) uniform params_t
 {
@@ -76,5 +77,10 @@ void main()
     case 6:
         outFragcolor = vec4(texture(samplerRtImage, uv).x);
         break;
+    case 7:
+        outFragcolor = vec4(texture(samplerRtImageDynamic, uv).x);
+        break;
+    default:
+        outFragcolor = vec4(0.0f, 1.0f, 0.0f, 1.0f);
     }
 }

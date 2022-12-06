@@ -85,7 +85,7 @@ void RayTracer_Generated::UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyEn
 { 
 }
 
-void RayTracer_Generated::CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uint32_t* out_color)
+void RayTracer_Generated::CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uint32_t* out_color, uint32_t a_IsStaticPass)
 {
   uint32_t blockSizeX = 256;
   uint32_t blockSizeY = 1;
@@ -97,6 +97,7 @@ void RayTracer_Generated::CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uin
     uint32_t m_sizeY;
     uint32_t m_sizeZ;
     uint32_t m_tFlags;
+    uint32_t m_tIsStaticPass;
   } pcData;
   
   uint32_t sizeX  = uint32_t(tidX);
@@ -107,6 +108,7 @@ void RayTracer_Generated::CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uin
   pcData.m_sizeY  = tidY;
   pcData.m_sizeZ  = 1;
   pcData.m_tFlags = m_currThreadFlags;
+  pcData.m_tIsStaticPass = a_IsStaticPass;
 
   vkCmdPushConstants(m_currCmdBuffer, CastSingleRayMegaLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(KernelArgsPC), &pcData);
   
@@ -171,13 +173,32 @@ void RayTracer_Generated::BarriersForSeveralBuffers(VkBuffer* a_inBuffers, VkBuf
   }
 }
 
-void RayTracer_Generated::CastSingleRayCmd(VkCommandBuffer a_commandBuffer, uint32_t tidX, uint32_t tidY, uint32_t* out_color)
+void RayTracer_Generated::CastSingleRayCmd(VkCommandBuffer a_commandBuffer, 
+ uint32_t tidX, uint32_t tidY, uint32_t* out_color, VkImage a_image, uint32_t a_isStaticPass)
 {
   m_currCmdBuffer = a_commandBuffer;
   VkMemoryBarrier memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT }; 
+  
+  VkImageMemoryBarrier imageBarrier;
+  imageBarrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  imageBarrier.pNext               = nullptr;
+  imageBarrier.srcAccessMask       = VK_ACCESS_SHADER_WRITE_BIT;
+  imageBarrier.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT;
+  imageBarrier.oldLayout           = VK_IMAGE_LAYOUT_GENERAL;
+  imageBarrier.newLayout           = VK_IMAGE_LAYOUT_GENERAL; 
+  imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  imageBarrier.image               = a_image;
+
+  imageBarrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+  imageBarrier.subresourceRange.baseMipLevel   = 0;
+  imageBarrier.subresourceRange.baseArrayLayer = 0;
+  imageBarrier.subresourceRange.layerCount     = 1;
+  imageBarrier.subresourceRange.levelCount     = 1;
+
   vkCmdBindDescriptorSets(a_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, CastSingleRayMegaLayout, 0, 1, &m_allGeneratedDS[0], 0, nullptr);
-  CastSingleRayMegaCmd(tidX, tidY, out_color);
-  vkCmdPipelineBarrier(m_currCmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &memoryBarrier, 0, nullptr, 0, nullptr); 
+  CastSingleRayMegaCmd(tidX, tidY, out_color, a_isStaticPass);
+  vkCmdPipelineBarrier(m_currCmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier); 
 }
 
 

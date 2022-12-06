@@ -13,8 +13,9 @@ layout(binding = 0, set = 0) uniform AppData
 };
 
 layout (binding = 1, set = 0) uniform sampler2D colorTex;
-layout (binding = 2, set = 0) uniform sampler2D oldColorTex;
-layout (binding = 3, set = 0) uniform sampler2D velocityTex;
+layout (binding = 2, set = 0) uniform sampler2D colorDynamicTex;
+layout (binding = 3, set = 0) uniform sampler2D oldColorTex;
+layout (binding = 4, set = 0) uniform sampler2D velocityTex;
 
 layout (location = 0 ) in VS_OUT
 {
