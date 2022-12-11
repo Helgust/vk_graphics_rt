@@ -58,7 +58,8 @@ public:
     vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, FrameBuffer a_gbuffer, VkSampler colorSampler,
     vk_utils::VulkanImageMem prevRT, VkSampler a_prevRTimage_sampler,
     vk_utils::VulkanImageMem a_rtImage,  VkSampler a_RtImageSampler,
-    vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_a_rtImageDynamicSampler);
+    vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_rtImageDynamicSampler,
+    vk_utils::VulkanImageMem a_prevDepth,  VkSampler a_prevDepthSampler);
   //void InitDescriptors(std::shared_ptr<SceneManager> sceneManager);
 };
 
@@ -243,6 +244,7 @@ protected:
   LiteMath::float4x4 m_projectionMatrix;
   LiteMath::float4x4 m_inverseProjViewMatrix;
   LiteMath::float4x4 m_prevProjViewMatrix;
+  LiteMath::float4x4 m_inverseTransMatrix;
   float2 prevJitter = float2(0.0, 0.0f);
 
   // *** ray tracing

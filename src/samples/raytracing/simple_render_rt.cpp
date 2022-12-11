@@ -325,7 +325,7 @@ void SimpleRender::RayTraceCPU()
     m_pRayTracerCPU->SetScene(m_pAccelStruct);
   }
 
-  m_pRayTracerCPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix, m_prevProjViewMatrix);
+  m_pRayTracerCPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix, m_prevProjViewMatrix, m_inverseTransMatrix);
 #pragma omp parallel for default(none)
   for (int64_t j = 0; j < m_height; ++j)
   {
@@ -361,13 +361,14 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, uint
       m_gBuffer, m_colorSampler, 
       m_prevRTImage, m_prevRTImageSampler,
       m_rtImage, m_rtImageSampler,
-      m_rtImageDynamic, m_rtImageDynamicSampler);
+      m_rtImageDynamic, m_rtImageDynamicSampler,
+      m_prevDepthImage, m_prevDepthImageSampler);
     //m_pRayTracerGPU->InitDescriptors(m_pScnMgr);
     
     m_pRayTracerGPU->UpdateAll(m_pCopyHelper, a_time, m_uniforms.lights[0], a_needUpdate);
   }
 
-  m_pRayTracerGPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix, m_prevProjViewMatrix);
+  m_pRayTracerGPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix, m_prevProjViewMatrix, m_inverseTransMatrix);
   m_pRayTracerGPU->UpdatePlainMembers(m_pCopyHelper, a_time, m_uniforms.lights[0], a_needUpdate);
   // if (a_needUpdate == 1U)
   // {
@@ -405,6 +406,13 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, uint
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_GENERAL);
+
+    vk_utils::setImageLayout(
+			commandBuffer,
+			m_prevDepthImage.image,
+			VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
     m_pRayTracerGPU->CastSingleRayCmd(commandBuffer, m_width, m_height, nullptr, m_rtImage.image, 1);
     //m_pRayTracerGPU->UpdateIsStatic(m_pCopyHelper, 0);
     m_pRayTracerGPU->CastSingleRayCmd(commandBuffer, m_width, m_height, nullptr, m_rtImageDynamic.image, 0);    

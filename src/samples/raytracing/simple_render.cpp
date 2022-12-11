@@ -487,11 +487,12 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
  FrameBuffer a_gbuffer, VkSampler colorSampler, 
  vk_utils::VulkanImageMem a_prevRT,  VkSampler a_prevRTImageSampler,
  vk_utils::VulkanImageMem a_rtImage,  VkSampler a_RtImageSampler,
- vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_rtImageDynamicSampler) 
+ vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_rtImageDynamicSampler,
+ vk_utils::VulkanImageMem a_prevDepth,  VkSampler a_prevDepthSampler) 
 {
   std::array<VkDescriptorBufferInfo, 6> descriptorBufferInfo;
-  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(6);
-  std::vector<VkWriteDescriptorSet> writeDescriptorSet(15);
+  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(8);
+  std::vector<VkWriteDescriptorSet> writeDescriptorSet(18);
 
 
   descriptorImageInfos[0].sampler = nullptr;
@@ -518,6 +519,14 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
   descriptorImageInfos[5].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
   descriptorImageInfos[5].imageView = a_rtImageDynamic.view;
 
+  descriptorImageInfos[6].sampler = nullptr;
+  descriptorImageInfos[6].imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+  descriptorImageInfos[6].imageView = a_gbuffer.depth.view;
+
+  descriptorImageInfos[7].sampler = nullptr;
+  descriptorImageInfos[7].imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+  descriptorImageInfos[7].imageView = a_prevDepth.view;
+
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorBufferInfo[0], nullptr, sceneManager->GetVertexBuffer(), 3);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[1], &descriptorBufferInfo[1], nullptr, sceneManager->GetIndexBuffer(), 4);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[2], &descriptorBufferInfo[2], nullptr, sceneManager->GetMaterialIDsBuffer(), 5);
@@ -539,6 +548,11 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[12], nullptr, &samplerInfo ,VK_NULL_HANDLE, 15);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[13], nullptr, &descriptorImageInfos[4] ,VK_NULL_HANDLE, 16, true);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[14], nullptr, &descriptorImageInfos[5] ,VK_NULL_HANDLE, 17, true);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[15], nullptr, &descriptorImageInfos[6] ,VK_NULL_HANDLE, 18);//depth
+  samplerInfo.sampler = a_prevDepthSampler;
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[16], nullptr, &samplerInfo ,VK_NULL_HANDLE, 19);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[17], nullptr, &descriptorImageInfos[7] ,VK_NULL_HANDLE, 20);
+  
 
   vkUpdateDescriptorSets(device, uint32_t(writeDescriptorSet.size()), writeDescriptorSet.data(), 0, NULL);
 }
@@ -1129,7 +1143,7 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   m_uniforms.m_time_gbuffer_index = vec4(0, 0, a_time, gbuffer_index);
   m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
   m_pScnMgr->MoveCarX(a_time);
-  m_uniforms.PrevVecMat = m_pScnMgr->GetVehiclePrevInstanceMatrix(0);
+  m_uniforms.PrevVecMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
 
@@ -2086,16 +2100,30 @@ void SimpleRender::UpdateView()
     JitterMat(1,3) = jitter.y;
     mWorldViewProj = mProjFix * JitterMat * mProj * mLookAt;
     m_prevProjViewMatrix = m_uniforms.prevProjView;
-    m_inverseProjViewMatrix = LiteMath::inverse4x4(mProjFix * JitterMat * mProj * transpose(inverse4x4(mLookAt)));
+    m_inverseProjViewMatrix = LiteMath::inverse4x4(mWorldViewProj);
     m_uniforms.m_cur_prev_jiiter.x = jitter.x;
     m_uniforms.m_cur_prev_jiiter.y = jitter.y;
     prevJitter = jitter;
+    LiteMath::float4x4 curVehMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
+    LiteMath::float4x4 prevVehMat = m_pScnMgr->GetVehiclePrevInstanceMatrix(0);
+    curVehMat.set_col(0, curVehMat.get_col(0) - prevVehMat.get_col(0));
+    curVehMat.set_col(1, curVehMat.get_col(1) - prevVehMat.get_col(1));
+    curVehMat.set_col(2, curVehMat.get_col(2) - prevVehMat.get_col(2));
+    curVehMat.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
+    m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
   }
   else
   {
     mWorldViewProj = mProjFix * mProj * mLookAt;
     m_prevProjViewMatrix = m_uniforms.prevProjView;
-    m_inverseProjViewMatrix = LiteMath::inverse4x4(mProjFix * mProj * transpose(inverse4x4(mLookAt)));
+    m_inverseProjViewMatrix = LiteMath::inverse4x4(mWorldViewProj);
+    LiteMath::float4x4 curVehMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
+    LiteMath::float4x4 prevVehMat = m_pScnMgr->GetVehiclePrevInstanceMatrix(0);
+    curVehMat.set_col(0, curVehMat.get_col(0) - prevVehMat.get_col(0));
+    curVehMat.set_col(1, curVehMat.get_col(1) - prevVehMat.get_col(1));
+    curVehMat.set_col(2, curVehMat.get_col(2) - prevVehMat.get_col(2));
+    curVehMat.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
+    m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
   }   
   pushConst2M.projView = mWorldViewProj;
   pushConst2M.lightView = LiteMath::float4x4();

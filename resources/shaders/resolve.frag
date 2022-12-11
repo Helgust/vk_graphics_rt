@@ -15,7 +15,7 @@ layout (binding = 3) uniform sampler2D samplerAlbedo;
 layout (binding = 4) uniform sampler2D samplerDepth;
 layout (binding = 5) uniform samplerCube shadowCubeMap;
 layout (binding = 6) uniform sampler2D samplerVelocity;
-layout (binding = 7) uniform sampler2D samplerRtImage;
+layout (binding = 7) uniform sampler2D samplerSoftRtImage;
 layout (binding = 8) uniform sampler2D samplerRtImageDynamic;
 
 layout(push_constant) uniform params_t
@@ -42,7 +42,7 @@ void main()
 	vec3 normal = texture(samplerNormal, uv).rgb;
 	vec4 albedo = texture(samplerAlbedo, uv);
 
-    float softShadow = texture(samplerRtImage, uv).x;
+    float softShadow = texture(samplerSoftRtImage, uv).x;
 
     vec4 lightColor1 = UboParams.lights[0].color;
     vec3 N = normal; 
@@ -61,6 +61,11 @@ void main()
         break;
     case 1:
         outFragcolor = vec4(fragPos.xyz,1.0f);
+        // mat4 mInvProjView = inverse(params.mProjView); 
+        // vec4 screenSpacePos = vec4( 2.0f * uv - 1.0f, texture(samplerDepth, uv).x, 1.0f);
+        // vec4 camSpacePos  = mInvProjView * screenSpacePos;
+        // vec3 position = camSpacePos.xyz / camSpacePos.w;
+        // outFragcolor = vec4(position, 1.0);
         break;
     case 2:
         outFragcolor = vec4(normal.xyz,1.0f);
@@ -75,10 +80,16 @@ void main()
         outFragcolor = vec4(texture(samplerVelocity, uv).xy + 0.5f, 0.0f, 1.0f);
         break;
     case 6:
-        outFragcolor = vec4(texture(samplerRtImage, uv).x);
+        outFragcolor = vec4(texture(samplerSoftRtImage, uv).x);
         break;
     case 7:
         outFragcolor = vec4(texture(samplerRtImageDynamic, uv).x);
+        break;
+    case 8:
+        outFragcolor = vec4(texture(samplerSoftRtImage, uv).z);
+        break;
+    case 9:
+        outFragcolor = vec4(texture(samplerRtImageDynamic, uv).y);
         break;
     default:
         outFragcolor = vec4(0.0f, 1.0f, 0.0f, 1.0f);
