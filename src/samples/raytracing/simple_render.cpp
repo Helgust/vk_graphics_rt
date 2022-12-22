@@ -1123,7 +1123,7 @@ void SimpleRender::CreateUniformBuffer()
   m_uniforms.lights[0].dir  = LiteMath::float4(0.0f, 0.4f, -1.0f, 1.0f);
   m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 10.0f, 0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
-  m_uniforms.lights[0].radius_lightDist_dummies  = LiteMath::float4(0.5f, 60.0f,  0.0f, 1.0f);
+  m_uniforms.lights[0].radius_lightDist_dummies  = LiteMath::float4(0.1f, 60.0f,  0.0f, 1.0f);
   // m_uniforms.lights[1].dir  = LiteMath::float4(0.0f, 1.0f, 0.0f, 1.0f);
   // m_uniforms.lights[1].pos  = LiteMath::float4(0.0f, 2.0f,  1.0f, 1.0f);
   // m_uniforms.lights[1].color  = LiteMath::float4(1.0f, 0.0f,  0.0f, 1.0f);

@@ -22,13 +22,26 @@ layout (location = 0 ) in VS_OUT
   vec2 texCoord;
 } surf;
 
-vec2 mixedColor (vec2 coord)
+vec3 mixedColor (vec2 coord)
 {
-  vec2 currentFrame = textureLod(colorTex,coord,0).xy;
-  vec2 currentDynFrame = textureLod(colorDynamicTex,coord,0).xy;
-  currentFrame.y = min(currentFrame.y, currentDynFrame.y);
-  currentFrame.x = mix(currentFrame.x, currentDynFrame.x, 0.5f);
-  return currentFrame;
+  vec3 result = vec3(0.0f);
+  vec3 currentFrame = textureLod(colorTex,coord,0).xyz;
+  vec3 currentDynFrame = textureLod(colorDynamicTex,coord,0).xyz;
+  if (currentFrame.z == 1)
+  {
+    result.x = currentFrame.x;
+  }
+  else if (currentDynFrame.y == 1)
+  {
+    result.x = currentDynFrame.x;
+  }
+  else
+  {
+    result.x = currentFrame.x;
+  }
+  result.y = currentDynFrame.y;
+  result.z = currentFrame.z;
+  return result;
 }
 
 void main()
@@ -41,12 +54,12 @@ void main()
     vec2 reprojectedUV = surf.texCoord + velocityUV;
     // vec3 currentFrame = textureLod(colorTex,surf.texCoord,0).xyz;
     vec3 prevFrame = textureLod(oldColorTex,reprojectedUV,0).xyz;
-    vec3 currentShadow = vec3(mixedColor(surf.texCoord),0.0f);
+    vec3 currentShadow = vec3(mixedColor(surf.texCoord));
     for(int x = -1; x <= 1; ++x)
     {
       for(int y = -1; y <= 1; ++y)
       {   
-        vec3 color = vec3(mixedColor(surf.texCoord + vec2(x, y)/1024.0f),0.0f);
+        vec3 color = vec3(mixedColor(surf.texCoord + vec2(x, y)/1024.0f));
         minColor = min(minColor, color.x); // Take min and max
         maxColor = max(maxColor, color.x);
       }
@@ -58,14 +71,12 @@ void main()
         weight = 0.0;
     }
     float c = mix(currentShadow.x, previousColorClamped, weight);
-    currentShadow.x = c;
-    //vec3 c = mix(prevFrame,currentFrame,mix(0.05,0.6,0));
-    outColor = vec4(currentShadow,1.0);
+    outColor = vec4(c, currentShadow.y, currentShadow.z, 1.0);
   }
   else
   {
-    vec3 currentShadow = vec3(mixedColor(surf.texCoord),0.0f);
-    outColor = vec4(currentShadow,1.0);
+    vec3 res = mixedColor(surf.texCoord);
+    outColor = vec4(res, 1.0f);
   }
   
 }

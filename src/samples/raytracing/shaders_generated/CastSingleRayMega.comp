@@ -23,7 +23,7 @@ layout(binding = 13, set = 0) uniform sampler colorSampler;
 layout(binding = 14, set = 0) uniform texture2D prevRTImage;
 layout(binding = 15, set = 0) uniform sampler prevRTImage_sampler;
 layout(binding = 16, set = 0, rgba8) uniform coherent image2D resultImageStatic;
-layout(binding = 17, set = 0, rgba8) uniform coherent image2D resultImageDynamic;
+layout(binding = 17, set = 0, rgba8) uniform writeonly image2D resultImageDynamic;
 layout(binding = 18, set = 0) uniform texture2D gBufferDepth;
 layout(binding = 19, set = 0) uniform sampler prevDepth_sampler;
 layout(binding = 20, set = 0) uniform texture2D prevDepth;
@@ -211,9 +211,9 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
     if (ubo.needUpdate != 1U)
     {
       vec4 prevColor = imageLoad(resultImageStatic, ivec2(gl_GlobalInvocationID.xy)); 
-      if(prevColor.x == 0.0f && prevColor.y == 0.0f)
+      if(prevColor.x == 0.0f && prevColor.z == 1.0f)
       {
-        prevColor.y = 1.0f;
+        prevColor.z = 1.0f;
         imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), prevColor);
         return;
       }
@@ -264,7 +264,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
     vec3 shadowDir = normalize(lightDir + diskPoint.x * lightTangent + diskPoint.y * lightBitangent); 
     CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.1f), vec4(shadowDir, rayMax));
     color.y = 0.0;
-    color.z = 1.0;
+    color.z = 0.0;
     if ((hitShadow.primId != -1))// intersect
     {
       uint dynamic = GetDynamic(hitShadow);
@@ -273,6 +273,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
       {
         float shade = max(dot(shadowDir, n), 0.0f);
         color.x += shade;
+        color.z = 1.0;
         //color.y += hitShadow.t;
       }
       else if ((kgenArgs.isStaticPass == 0U) && dynamic == 1)
@@ -289,7 +290,6 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
   //out_color[tidY * ubo.m_width + tidX + out_colorOffset] = ColorToInt(vec4(clamp(color, 0.0, 1.0), 1.0));
   if((kgenArgs.isStaticPass == 1U))
   {
-    color.y = 0.0;
     imageStore(resultImageStatic, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));
   }
   else
