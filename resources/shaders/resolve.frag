@@ -92,7 +92,6 @@ void main()
         break;
     case 9:
         outFragcolor = vec4(texture(samplerRtImageDynamic, uv));
-        outFragcolor.x = 0;
         break;
     default:
         outFragcolor = vec4(0.0f, 1.0f, 0.0f, 1.0f);

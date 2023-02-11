@@ -127,7 +127,7 @@ vec3 EyeRayDir(float x, float y, float w, float h, mat4 a_mViewProjInv) {
 //   //float r =  sqrt(stepAndOutputRNGFloat(st))*light_rad;
 //   return vec3(m_light.pos.x + m_light.rad*sin(phi)*cos(theta),m_light.pos.y + m_light.rad*sin(phi)*sin(theta),m_light.pos.z + m_light.rad*cos(phi));
 // }
-
+bool reprojection = true;
 vec2 PointOnDisk(Light m_light, float st, vec2 samplePos)
 {
   float theta = st*2*M_PI;

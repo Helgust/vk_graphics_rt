@@ -182,15 +182,16 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
 {
   uvec2 coordInit = uvec2(gl_GlobalInvocationID[0], gl_GlobalInvocationID[1]);
   
-  vec3 color = vec3(0.0f, 0.0f, 0.0f);
+  vec3 color = vec3(0.15f, 0.15f, 0.15f);
   
   uint hash = ((uint(coordInit.x) << 12) | uint(coordInit.y)) ^ floatBitsToUint(ubo.time);
   vec2 screenPos = vec2(tidX/1024.0f, tidY/1024.0f);
   //CRT_Hit hit = m_pAccelStruct_RayQuery_NearestHit(rayPos, rayDir);
   //vec3 hit_point = texture(sampler2D(gBufferPos, colorSampler), screenPos).xyz;
   vec3 hit_point = GetPosFromDepth(screenPos);
+  vec3 lightDir = normalize(ubo.lights[0].dir.xyz);
   //debugPrintfEXT("hit_point %1.2v3f, hit_point2 %1.2v3f\n", hit_point, hit_point2);
-  if (kgenArgs.isStaticPass == 1U)
+  if (kgenArgs.isStaticPass == 1U) // here pass for static objects
   {
     if (ubo.needUpdate != 1U)
     {
@@ -198,7 +199,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
       vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
       vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
       vec3 prevShadow = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
-      if (prevShadow.x == 0.0f)
+      if (prevShadow.x == 0.0f && prevShadow.y == 1.0f)
       {
         //out_color[tidY * ubo.m_width + tidX + out_colorOffset] = ColorToInt(vec4(clamp(prevShadow, 0.0, 1.0), 1.0));
         imageStore(resultImageStatic, ivec2(gl_GlobalInvocationID.xy), vec4(prevShadow, 1.0));
@@ -206,31 +207,49 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
       }
     }
   }
-  else
+  else//here pass for dynamic objects
   {
     if (ubo.needUpdate != 1U)
     {
       vec4 prevColor = imageLoad(resultImageStatic, ivec2(gl_GlobalInvocationID.xy)); 
       if(prevColor.x == 0.0f && prevColor.z == 1.0f)
       {
-        prevColor.z = 1.0f;
+        prevColor.z = 0.0f;
         imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), prevColor);
         return;
       }
-      else
+      else // do a reprojection for dynamic
       {
         //put matrix here, not vehicle postion
         vec4 prevHitPoint = vec4(hit_point, 1.0f) - ubo.m_invTransMat[3];
         vec4 prevScreenPos= (ubo.m_prevProjView) * prevHitPoint;
         vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
         vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
-        float prevDepth = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
-        float currDepth = texture(sampler2D(gBufferDepth, colorSampler), screenPos).x;
-        if (abs(currDepth - prevDepth) > 0.01f)
+        if(reprojection)// try use trace throu depth
         {
+          //find distance for prevHitPoint
+          // vec4 prevShadow = imageLoad(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy));
           vec3 prevColor = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
-          imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
-          return;
+          if(prevColor.x == 0.0f && prevColor.y == 1.0f)
+          {
+            imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
+            return;
+          }
+        }
+        else
+        {
+          // CRT_Hit curr_hit = m_pAccelStruct_RayQuery_NearestHit(vec4(prevHitPoint.xyz, 0.1f), vec4(lightDir, rayMax));
+          // float prevDist = imageLoad(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy)).z;
+          // //float currDist = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
+          // // float currDepth = texture(sampler2D(gBufferDepth, colorSampler), screenPos).x;
+          // if (abs(prevDist- curr_hit.t) > 0.01f)
+          // {
+          //   vec3 prevColor = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
+          //   //imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
+          //   prevColor = vec3(1.0f, 1.0f, 0.0f);
+          //   imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
+          //   return;
+          // }
         }
       }
     }
@@ -240,7 +259,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
   vec3 n = texture(sampler2D(gBufferNorm, colorSampler), screenPos).xyz;
 
   //vec3 hit_point_old = vec3(rayPos) + vec3(rayDir)*hit.t;
-  vec3 lightDir = normalize(ubo.lights[0].dir.xyz);
+ 
   vec3 lightTangent = normalize(cross(lightDir, vec3(0.0f, 1.0f, 0.0f)));
   vec3 lightBitangent = normalize(cross(lightTangent, lightDir));
 
@@ -274,18 +293,16 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
         float shade = max(dot(shadowDir, n), 0.0f);
         color.x += shade;
         color.z = 1.0;
-        //color.y += hitShadow.t;
       }
       else if ((kgenArgs.isStaticPass == 0U) && dynamic == 1)
       {
         float shade = max(dot(shadowDir, n), 0.0f);
         color.x += shade;
         color.y = 1.0;
-        //color.y += hitShadow.t;
       }
     }
   }
-  color*=(total / (samples_cnt));
+  color.x*=(total / (samples_cnt));
   color.x = 1 - color.x;
   //out_color[tidY * ubo.m_width + tidX + out_colorOffset] = ColorToInt(vec4(clamp(color, 0.0, 1.0), 1.0));
   if((kgenArgs.isStaticPass == 1U))
@@ -295,7 +312,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
   else
   {
     //debugPrintfEXT("prevColor %1.2v4f", vec4(1.0, 1.0, 1.0, 1.0));
-    
+
     imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));
   }
   
