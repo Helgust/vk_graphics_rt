@@ -158,6 +158,30 @@ VkBufferMemoryBarrier RayTracer_Generated::BarrierForSingleBuffer(VkBuffer a_buf
   return bar;
 }
 
+VkImageMemoryBarrier RayTracer_Generated::BarrierForSingleImage(VkImage a_image, uint32_t srcFlag, uint32_t dstFlag, 
+VkImageLayout oldLayout,
+VkImageLayout newLayout,
+uint32_t a_aspectMask)
+{
+  VkImageMemoryBarrier bar = {};
+  bar.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  bar.pNext               = NULL;
+  bar.srcAccessMask       = srcFlag;
+  bar.dstAccessMask       = dstFlag;
+  bar.oldLayout           = oldLayout;
+  bar.newLayout           = newLayout; 
+  bar.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  bar.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  bar.image              = a_image;
+  
+  bar.subresourceRange.aspectMask     = a_aspectMask;
+  bar.subresourceRange.baseMipLevel   = 0;
+  bar.subresourceRange.baseArrayLayer = 0;
+  bar.subresourceRange.layerCount     = 1;
+  bar.subresourceRange.levelCount     = 1;
+  return bar;
+}
+
 void RayTracer_Generated::BarriersForSeveralBuffers(VkBuffer* a_inBuffers, VkBufferMemoryBarrier* a_outBarriers, uint32_t a_buffersNum)
 {
   for(uint32_t i=0; i<a_buffersNum;i++)
@@ -180,26 +204,25 @@ void RayTracer_Generated::CastSingleRayCmd(VkCommandBuffer a_commandBuffer,
   m_currCmdBuffer = a_commandBuffer;
   VkMemoryBarrier memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT }; 
   
-  VkImageMemoryBarrier imageBarrier;
-  imageBarrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  imageBarrier.pNext               = nullptr;
-  imageBarrier.srcAccessMask       = VK_ACCESS_SHADER_WRITE_BIT;
-  imageBarrier.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT;
-  imageBarrier.oldLayout           = VK_IMAGE_LAYOUT_GENERAL;
-  imageBarrier.newLayout           = VK_IMAGE_LAYOUT_GENERAL; 
-  imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  imageBarrier.image               = a_image;
+  // VkImageMemoryBarrier imageBarrier;
+  // imageBarrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  // imageBarrier.pNext               = nullptr;
+  // imageBarrier.srcAccessMask       = VK_ACCESS_SHADER_WRITE_BIT;
+  // imageBarrier.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT;
+  // imageBarrier.oldLayout           = VK_IMAGE_LAYOUT_GENERAL;
+  // imageBarrier.newLayout           = VK_IMAGE_LAYOUT_GENERAL; 
+  // imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  // imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  // imageBarrier.image               = a_image;
 
-  imageBarrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-  imageBarrier.subresourceRange.baseMipLevel   = 0;
-  imageBarrier.subresourceRange.baseArrayLayer = 0;
-  imageBarrier.subresourceRange.layerCount     = 1;
-  imageBarrier.subresourceRange.levelCount     = 1;
+  // imageBarrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+  // imageBarrier.subresourceRange.baseMipLevel   = 0;
+  // imageBarrier.subresourceRange.baseArrayLayer = 0;
+  // imageBarrier.subresourceRange.layerCount     = 1;
+  // imageBarrier.subresourceRange.levelCount     = 1;
 
   vkCmdBindDescriptorSets(a_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, CastSingleRayMegaLayout, 0, 1, &m_allGeneratedDS[0], 0, nullptr);
   CastSingleRayMegaCmd(tidX, tidY, out_color, a_isStaticPass);
-  vkCmdPipelineBarrier(m_currCmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier); 
 }
 
 

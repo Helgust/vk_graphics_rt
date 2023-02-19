@@ -214,7 +214,7 @@ protected:
   int gbuffer_index = 0;
   bool taaFlag;
   bool softShadow;
-  bool onlyOneLoadOfShadows = true;
+  bool onlyOneLoadOfShadows = false;
   vec4 currentLightPos, prevLightPos;
   std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
 
@@ -432,7 +432,11 @@ protected:
   void SetupHistoryImages();
   void SetupOmniShadowImage();
   void SetupRTScene();
-
+  void CopyImage(VkCommandBuffer a_cmdBuffer, VkImage srcImage, VkImage dstImage, 
+    uint32_t srcImageAspect = VK_IMAGE_ASPECT_COLOR_BIT, 
+    uint32_t dstImageAspect = VK_IMAGE_ASPECT_COLOR_BIT,
+    VkImageLayout srcLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    VkImageLayout dstLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   uint32_t findMemoryType(uint32_t memoryTypeBits, VkMemoryPropertyFlags properties, VkPhysicalDevice physicalDevice);
   // ***************************
 

@@ -116,7 +116,7 @@ void SimpleRender::SetupGbuffer() {
 
   VkAttachmentReference depthReference = {};
   depthReference.attachment = 3;
-  depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
 
   VkSubpassDescription subpass = {};
   subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -613,7 +613,6 @@ void SimpleRender::SetupDeviceExtensions()
   //Required for printf Debug
   m_deviceExtensions.push_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
   m_deviceExtensions.push_back(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
-  
   if(ENABLE_HARDWARE_RT)
   {
     m_deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
@@ -729,7 +728,7 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
   vk_utils::getSupportedDepthFormat(m_physicalDevice, depthFormats, &m_depthBuffer.format);
   m_depthBuffer  = vk_utils::createDepthTexture(m_device, m_physicalDevice, m_width, m_height, m_depthBuffer.format);
 
-  SetupOmniShadow();
+  //SetupOmniShadow();
   SetupGbuffer();
   SetupHistoryImages();
 
@@ -918,7 +917,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindImage(2, m_gBuffer.normal.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(3, m_gBuffer.albedo.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(4, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
-  m_pBindings->BindImage(5, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  //m_pBindings->BindImage(5, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(6, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(7, softRtFrame.view, m_pSoftRTImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(8, m_rtImageDynamic.view, m_rtImageDynamicSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -1008,21 +1007,21 @@ void SimpleRender::SetupSimplePipeline()
                                                        m_gBuffer.renderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
   setObjectName(m_gBufferPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "gbuffer_pipeline");
   
-   // make shadow pipeline
-  shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT]   = OMNI_SHADOW_FRAGMENT_SHADER_PATH + ".spv";
-  shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = OMNI_SHADOW_VERTEX_SHADER_PATH + ".spv";
-  maker.LoadShaders(m_device, shader_paths);
-  maker.viewport.width  = float(m_shadowWidth);
-  maker.viewport.height = float(m_shadowHeight);
-  maker.scissor.extent  = VkExtent2D{ uint32_t(m_shadowWidth), uint32_t(m_shadowHeight) };
-  m_omniShadowPipeline.layout = maker.MakeLayout(m_device, {m_dSetLayout}, sizeof(pushConst2M));
-  setObjectName(m_omniShadowPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "omni_shadow_pipeline_layout");
-  maker.SetDefaultState(m_shadowWidth, m_shadowHeight);
+  //  // make shadow pipeline
+  // shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT]   = OMNI_SHADOW_FRAGMENT_SHADER_PATH + ".spv";
+  // shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = OMNI_SHADOW_VERTEX_SHADER_PATH + ".spv";
+  // maker.LoadShaders(m_device, shader_paths);
+  // maker.viewport.width  = float(m_shadowWidth);
+  // maker.viewport.height = float(m_shadowHeight);
+  // maker.scissor.extent  = VkExtent2D{ uint32_t(m_shadowWidth), uint32_t(m_shadowHeight) };
+  // m_omniShadowPipeline.layout = maker.MakeLayout(m_device, {m_dSetLayout}, sizeof(pushConst2M));
+  // setObjectName(m_omniShadowPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "omni_shadow_pipeline_layout");
+  // maker.SetDefaultState(m_shadowWidth, m_shadowHeight);
 
-  m_omniShadowPipeline.pipeline = maker.MakePipeline(m_device, m_pScnMgr->GetPipelineVertexInputStateCreateInfo(),
-                                            m_omniShadowBuffer.renderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
+  // m_omniShadowPipeline.pipeline = maker.MakePipeline(m_device, m_pScnMgr->GetPipelineVertexInputStateCreateInfo(),
+  //                                           m_omniShadowBuffer.renderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
+  //setObjectName(m_omniShadowPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "omni_shadow_pipeline");
 
-  setObjectName(m_omniShadowPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "omni_shadow_pipeline");
   // make resolve pipeline
 
   shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = RESOLVE_VERTEX_SHADER_PATH + ".spv";
@@ -1260,6 +1259,81 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
   VK_CHECK_RESULT(vkEndCommandBuffer(a_cmdBuff));
 }
 
+void SimpleRender::CopyImage(VkCommandBuffer a_cmdBuff, VkImage srcImage, VkImage dstImage, 
+  uint32_t srcAspectmask,
+  uint32_t dstAspectmask,
+  VkImageLayout srcLayout,
+  VkImageLayout dstLayout)
+{
+  // Make sure color writes to the framebuffer are finished before using it as transfer source
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			srcImage,
+			srcAspectmask,
+			srcLayout,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		VkImageSubresourceRange imageSubresourceRange = {};
+		imageSubresourceRange.aspectMask = srcAspectmask;
+		imageSubresourceRange.baseMipLevel = 0;
+		imageSubresourceRange.levelCount = 1;
+		imageSubresourceRange.baseArrayLayer = 0;
+		imageSubresourceRange.layerCount = 1;
+
+		// Change image layout of one cubemap face to transfer destination
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			dstImage,
+			dstLayout,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			imageSubresourceRange);
+
+		// Copy region for transfer from framebuffer to cube face
+		VkImageCopy copyRegion = {};
+
+		copyRegion.srcSubresource.aspectMask = srcAspectmask;
+		copyRegion.srcSubresource.baseArrayLayer = 0;
+		copyRegion.srcSubresource.mipLevel = 0;
+		copyRegion.srcSubresource.layerCount = 1;
+		copyRegion.srcOffset = { 0, 0, 0 };
+
+		copyRegion.dstSubresource.aspectMask = dstAspectmask;
+		copyRegion.dstSubresource.baseArrayLayer = 0;
+		copyRegion.dstSubresource.mipLevel = 0;
+		copyRegion.dstSubresource.layerCount = 1;
+		copyRegion.dstOffset = { 0, 0, 0 };
+
+		copyRegion.extent.width = m_width;
+		copyRegion.extent.height = m_height;
+		copyRegion.extent.depth = 1;
+
+		// Put image copy into command buffer
+		vkCmdCopyImage(
+			a_cmdBuff,
+			srcImage,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			dstImage,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&copyRegion);
+
+		// Transform framebuffer color attachment back
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			srcImage,
+			srcAspectmask,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			srcLayout);
+
+		// Change image layout of copied face to shader read
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			dstImage,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			dstLayout,
+			imageSubresourceRange);
+}
+
 void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFramebuffer a_frameBuff,
                                             VkImageView, VkPipeline a_pipeline)
 {
@@ -1317,76 +1391,12 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
   }
   vkCmdEndRenderPass(a_cmdBuff);
 
-    // copy softRt to prev 
-  {
-    // Make sure color writes to the framebuffer are finished before using it as transfer source
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_pSoftRTImage->m_attachments[0].image,
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-		VkImageSubresourceRange cubeFaceSubresourceRange = {};
-		cubeFaceSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		cubeFaceSubresourceRange.baseMipLevel = 0;
-		cubeFaceSubresourceRange.levelCount = 1;
-		cubeFaceSubresourceRange.baseArrayLayer = 0;
-		cubeFaceSubresourceRange.layerCount = 1;
-
-		// Change image layout of one cubemap face to transfer destination
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_prevRTImage.image,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			cubeFaceSubresourceRange);
-
-		// Copy region for transfer from framebuffer to cube face
-		VkImageCopy copyRegion = {};
-
-		copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copyRegion.srcSubresource.baseArrayLayer = 0;
-		copyRegion.srcSubresource.mipLevel = 0;
-		copyRegion.srcSubresource.layerCount = 1;
-		copyRegion.srcOffset = { 0, 0, 0 };
-
-		copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copyRegion.dstSubresource.baseArrayLayer = 0;
-		copyRegion.dstSubresource.mipLevel = 0;
-		copyRegion.dstSubresource.layerCount = 1;
-		copyRegion.dstOffset = { 0, 0, 0 };
-
-		copyRegion.extent.width = m_width;
-		copyRegion.extent.height = m_height;
-		copyRegion.extent.depth = 1;
-
-		// Put image copy into command buffer
-		vkCmdCopyImage(
-			a_cmdBuff,
-			m_pSoftRTImage->m_attachments[0].image,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			m_prevRTImage.image,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1,
-			&copyRegion);
-
-		// Transform framebuffer color attachment back
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_pSoftRTImage->m_attachments[0].image,
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-		// Change image layout of copied face to shader read
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_prevRTImage.image,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			cubeFaceSubresourceRange);
-  }
+  // copy softRt to prev 
+  SimpleRender::CopyImage(a_cmdBuff, m_pSoftRTImage->m_attachments[0].image, m_prevRTImage.image, 
+    VK_IMAGE_ASPECT_COLOR_BIT, 
+    VK_IMAGE_ASPECT_COLOR_BIT,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 
   ///// draw final scene to scpecial image
@@ -1495,217 +1505,25 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     vkCmdEndRenderPass(a_cmdBuff);
 
   //copy to depth to prev
-  {
-    // Make sure color writes to the framebuffer are finished before using it as transfer source
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_gBuffer.depth.image,
-			VK_IMAGE_ASPECT_DEPTH_BIT,
-			VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-		VkImageSubresourceRange cubeFaceSubresourceRange = {};
-		cubeFaceSubresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-		cubeFaceSubresourceRange.baseMipLevel = 0;
-		cubeFaceSubresourceRange.levelCount = 1;
-		cubeFaceSubresourceRange.baseArrayLayer = 0;
-		cubeFaceSubresourceRange.layerCount = 1;
-
-		// Change image layout of one cubemap face to transfer destination
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_prevDepthImage.image,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			cubeFaceSubresourceRange);
-
-		// Copy region for transfer from framebuffer to cube face
-		VkImageCopy copyRegion = {};
-
-		copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-		copyRegion.srcSubresource.baseArrayLayer = 0;
-		copyRegion.srcSubresource.mipLevel = 0;
-		copyRegion.srcSubresource.layerCount = 1;
-		copyRegion.srcOffset = { 0, 0, 0 };
-
-		copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-		copyRegion.dstSubresource.baseArrayLayer = 0;
-		copyRegion.dstSubresource.mipLevel = 0;
-		copyRegion.dstSubresource.layerCount = 1;
-		copyRegion.dstOffset = { 0, 0, 0 };
-
-		copyRegion.extent.width = m_width;
-		copyRegion.extent.height = m_height;
-		copyRegion.extent.depth = 1;
-
-		// Put image copy into command buffer
-		vkCmdCopyImage(
-			a_cmdBuff,
-			m_gBuffer.depth.image,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			m_prevDepthImage.image,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1,
-			&copyRegion);
-
-		// Transform framebuffer color attachment back
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_gBuffer.depth.image,
-			VK_IMAGE_ASPECT_DEPTH_BIT,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
-
-		// Change image layout of copied face to shader read
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_prevDepthImage.image,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			cubeFaceSubresourceRange);
-  }
+    SimpleRender::CopyImage(a_cmdBuff, m_gBuffer.depth.image, m_prevDepthImage.image, 
+    VK_IMAGE_ASPECT_DEPTH_BIT, 
+    VK_IMAGE_ASPECT_DEPTH_BIT,
+    VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   //copy to normal to prev
-  {
-    // Make sure color writes to the framebuffer are finished before using it as transfer source
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_gBuffer.normal.image,
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-		VkImageSubresourceRange cubeFaceSubresourceRange = {};
-		cubeFaceSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		cubeFaceSubresourceRange.baseMipLevel = 0;
-		cubeFaceSubresourceRange.levelCount = 1;
-		cubeFaceSubresourceRange.baseArrayLayer = 0;
-		cubeFaceSubresourceRange.layerCount = 1;
-
-		// Change image layout of one cubemap face to transfer destination
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_prevNormalImage.image,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			cubeFaceSubresourceRange);
-
-		// Copy region for transfer from framebuffer to cube face
-		VkImageCopy copyRegion = {};
-
-		copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copyRegion.srcSubresource.baseArrayLayer = 0;
-		copyRegion.srcSubresource.mipLevel = 0;
-		copyRegion.srcSubresource.layerCount = 1;
-		copyRegion.srcOffset = { 0, 0, 0 };
-
-		copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copyRegion.dstSubresource.baseArrayLayer = 0;
-		copyRegion.dstSubresource.mipLevel = 0;
-		copyRegion.dstSubresource.layerCount = 1;
-		copyRegion.dstOffset = { 0, 0, 0 };
-
-		copyRegion.extent.width = m_width;
-		copyRegion.extent.height = m_height;
-		copyRegion.extent.depth = 1;
-
-		// Put image copy into command buffer
-		vkCmdCopyImage(
-			a_cmdBuff,
-			m_gBuffer.normal.image,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			m_prevNormalImage.image,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1,
-			&copyRegion);
-
-		// Transform framebuffer color attachment back
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_gBuffer.normal.image,
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-		// Change image layout of copied face to shader read
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_prevNormalImage.image,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			cubeFaceSubresourceRange);
-  }
+  SimpleRender::CopyImage(a_cmdBuff, m_gBuffer.normal.image, m_prevNormalImage.image, 
+    VK_IMAGE_ASPECT_COLOR_BIT, 
+    VK_IMAGE_ASPECT_COLOR_BIT,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   
-  // copy frame to prev 
-  {
-    // Make sure color writes to the framebuffer are finished before using it as transfer source
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_pFilterImage->m_attachments[0].image,
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-		VkImageSubresourceRange cubeFaceSubresourceRange = {};
-		cubeFaceSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		cubeFaceSubresourceRange.baseMipLevel = 0;
-		cubeFaceSubresourceRange.levelCount = 1;
-		cubeFaceSubresourceRange.baseArrayLayer = 0;
-		cubeFaceSubresourceRange.layerCount = 1;
-
-		// Change image layout of one cubemap face to transfer destination
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_prevFrameImage.image,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			cubeFaceSubresourceRange);
-
-		// Copy region for transfer from framebuffer to cube face
-		VkImageCopy copyRegion = {};
-
-		copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copyRegion.srcSubresource.baseArrayLayer = 0;
-		copyRegion.srcSubresource.mipLevel = 0;
-		copyRegion.srcSubresource.layerCount = 1;
-		copyRegion.srcOffset = { 0, 0, 0 };
-
-		copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copyRegion.dstSubresource.baseArrayLayer = 0;
-		copyRegion.dstSubresource.mipLevel = 0;
-		copyRegion.dstSubresource.layerCount = 1;
-		copyRegion.dstOffset = { 0, 0, 0 };
-
-		copyRegion.extent.width = m_width;
-		copyRegion.extent.height = m_height;
-		copyRegion.extent.depth = 1;
-
-		// Put image copy into command buffer
-		vkCmdCopyImage(
-			a_cmdBuff,
-			m_pFilterImage->m_attachments[0].image,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			m_prevFrameImage.image,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1,
-			&copyRegion);
-
-		// Transform framebuffer color attachment back
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_pFilterImage->m_attachments[0].image,
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-		// Change image layout of copied face to shader read
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_prevFrameImage.image,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			cubeFaceSubresourceRange);
-  }
+  // copy frame to prev
+  SimpleRender::CopyImage(a_cmdBuff, m_pFilterImage->m_attachments[0].image, m_prevFrameImage.image, 
+    VK_IMAGE_ASPECT_COLOR_BIT, 
+    VK_IMAGE_ASPECT_COLOR_BIT,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   // render to screen
     VkRenderPassBeginInfo screenRenderInfo = {};
@@ -2244,7 +2062,7 @@ void SimpleRender::LoadScene(const char* path)
   
   SetupNoiseImage();
   SetupRTImage();
-  SetupOmniShadowImage();
+  //SetupOmniShadowImage();
   SetupHistoryImages();
 
   CreateUniformBuffer();
@@ -2409,12 +2227,12 @@ void SimpleRender::Cleanup()
   }
   vk_utils::deleteImg(m_device, &m_resolveImage);
 
-  if(m_omniShadowImageSampler != VK_NULL_HANDLE)
-  {
-    vkDestroySampler(m_device, m_omniShadowImageSampler, nullptr);
-    m_omniShadowImageSampler = VK_NULL_HANDLE;
-  }
-  vk_utils::deleteImg(m_device, &m_omniShadowImage);
+  // if(m_omniShadowImageSampler != VK_NULL_HANDLE)
+  // {
+  //   vkDestroySampler(m_device, m_omniShadowImageSampler, nullptr);
+  //   m_omniShadowImageSampler = VK_NULL_HANDLE;
+  // }
+  // vk_utils::deleteImg(m_device, &m_omniShadowImage);
 
   m_pFSQuad = nullptr;
 

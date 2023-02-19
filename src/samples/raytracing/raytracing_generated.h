@@ -58,6 +58,10 @@ public:
   virtual void copyKernelFloatCmd(uint32_t length);
   
   virtual void CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uint32_t* out_color, uint32_t isStaticPass);
+  VkImageMemoryBarrier BarrierForSingleImage(VkImage a_buffer, uint32_t srcFlag, uint32_t dstFlag, 
+    VkImageLayout oldImagelayout = VK_IMAGE_LAYOUT_GENERAL,
+    VkImageLayout newImagelayout = VK_IMAGE_LAYOUT_GENERAL,
+    uint32_t a_aspectMask  = VK_IMAGE_ASPECT_COLOR_BIT);
   
   struct MemLoc
   {

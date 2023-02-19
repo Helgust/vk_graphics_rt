@@ -433,10 +433,38 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, uint
 			m_prevNormalImage.image,
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);  
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    
+    std::vector<VkImageMemoryBarrier> imageBarriers;
+    VkImageMemoryBarrier imageBarrierStatic;
+    VkImageMemoryBarrier imageBarrierDynamic;
+    VkImageMemoryBarrier imageBarrierPrevDepth;
+    imageBarrierStatic = m_pRayTracerGPU->BarrierForSingleImage(m_rtImage.image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT);
+    imageBarrierDynamic = m_pRayTracerGPU->BarrierForSingleImage(m_rtImageDynamic.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT);
+    imageBarrierPrevDepth = m_pRayTracerGPU->BarrierForSingleImage(m_prevDepthImage.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL, 
+      VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+    imageBarriers.push_back(imageBarrierStatic);
+    imageBarriers.push_back(imageBarrierDynamic);
+    imageBarriers.push_back(imageBarrierPrevDepth);
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());
     m_pRayTracerGPU->CastSingleRayCmd(commandBuffer, m_width, m_height, nullptr, m_rtImage.image, 1U);
-    //m_pRayTracerGPU->UpdateIsStatic(m_pCopyHelper, 0);
-    m_pRayTracerGPU->CastSingleRayCmd(commandBuffer, m_width, m_height, nullptr, m_rtImageDynamic.image, 0U);    
+
+    imageBarriers.clear();
+    imageBarrierStatic = m_pRayTracerGPU->BarrierForSingleImage(m_rtImage.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+    imageBarrierDynamic = m_pRayTracerGPU->BarrierForSingleImage(m_rtImageDynamic.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT);
+    imageBarriers.push_back(imageBarrierStatic);
+    imageBarriers.push_back(imageBarrierDynamic);
+    imageBarriers.push_back(imageBarrierPrevDepth);
+
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data()); 
+    m_pRayTracerGPU->CastSingleRayCmd(commandBuffer, m_width, m_height, nullptr, m_rtImageDynamic.image, 0U);  
+    imageBarriers.clear();
+    imageBarrierStatic = m_pRayTracerGPU->BarrierForSingleImage(m_rtImage.image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT);
+    imageBarrierDynamic = m_pRayTracerGPU->BarrierForSingleImage(m_rtImageDynamic.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT);
+    imageBarriers.push_back(imageBarrierStatic);
+    imageBarriers.push_back(imageBarrierDynamic);
+    imageBarriers.push_back(imageBarrierPrevDepth);
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());   
     VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
   }
 }

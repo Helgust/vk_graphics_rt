@@ -1,6 +1,6 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
-#extension GL_EXT_debug_printf : enable
+//#extension GL_EXT_debug_printf : enable#extension GL_EXT_debug_printf : enable
 
 #include "common.h"
 
@@ -13,7 +13,7 @@ layout (binding = 1) uniform sampler2D samplerPosition;
 layout (binding = 2) uniform sampler2D samplerNormal;
 layout (binding = 3) uniform sampler2D samplerAlbedo;
 layout (binding = 4) uniform sampler2D samplerDepth;
-layout (binding = 5) uniform samplerCube shadowCubeMap;
+//layout (binding = 5) uniform samplerCube shadowCubeMap;
 layout (binding = 6) uniform sampler2D samplerVelocity;
 layout (binding = 7) uniform sampler2D samplerSoftRtImage;
 layout (binding = 8) uniform sampler2D samplerRtImageDynamic;
