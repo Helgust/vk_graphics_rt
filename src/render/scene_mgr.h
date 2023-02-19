@@ -21,6 +21,7 @@ struct InstanceInfo
   uint32_t mesh_id = 0u;
   VkDeviceSize instBufOffset = 0u;
   bool renderMark = false;
+  uint32_t cullMask = 0xFF;
 };
 
 enum class BVH_BUILDER_TYPE
@@ -77,7 +78,7 @@ struct SceneManager
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData, uint dynamicBit = 0);
 
 
-  uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender = true);
+  uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender = true, uint32_t cullMask = 1U);
   uint32_t InstanceVehicle(float3 pos, float scale, float size);
 
   void MarkInstance(uint32_t instId);
@@ -194,7 +195,7 @@ private:
   float m_CubeSize = 1.0f;
   float m_distanceTraveled = 0.0f;
   float direction = -1.0f;
-  float m_velocity = 50.0f;
+  float m_velocity = 10.0f;
   std::vector<float> cubePos
   {
     -1.0f, -1.0f, +1.0f, +1.0f,
@@ -211,7 +212,7 @@ private:
   {
     // front   
     0, 1, 2,
-    2, 3, 0,
+    0, 2, 3,
     // right   
     1, 5, 6,
     6, 2, 1,

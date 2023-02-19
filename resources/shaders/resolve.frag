@@ -17,6 +17,7 @@ layout (binding = 5) uniform samplerCube shadowCubeMap;
 layout (binding = 6) uniform sampler2D samplerVelocity;
 layout (binding = 7) uniform sampler2D samplerSoftRtImage;
 layout (binding = 8) uniform sampler2D samplerRtImageDynamic;
+layout (binding = 9) uniform sampler2D samplerRtImageStatic;
 
 layout(push_constant) uniform params_t
 {
@@ -80,18 +81,19 @@ void main()
         outFragcolor = vec4(texture(samplerVelocity, uv).xy + 0.5f, 0.0f, 1.0f);
         break;
     case 6:
-        outFragcolor = vec4(texture(samplerSoftRtImage, uv).x);
+        outFragcolor = vec4(texture(samplerRtImageStatic, uv).x);
         break;
     case 7:
-        outFragcolor = vec4(texture(samplerRtImageDynamic, uv).x);
+        outFragcolor = vec4(texture(samplerRtImageStatic, uv));
         break;
     case 8:
-        outFragcolor = vec4(texture(samplerSoftRtImage, uv));
-        outFragcolor.y = 0;
-        outFragcolor.z = 0;
+        outFragcolor = vec4(texture(samplerRtImageDynamic, uv).x);
         break;
     case 9:
         outFragcolor = vec4(texture(samplerRtImageDynamic, uv));
+        break;
+    case 10:
+        outFragcolor = vec4(texture(samplerSoftRtImage, uv));
         break;
     default:
         outFragcolor = vec4(0.0f, 1.0f, 0.0f, 1.0f);

@@ -195,7 +195,7 @@ uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData, uint a_dynam
   return m_meshInfos.size() - 1;
 }
 
-uint32_t SceneManager::InstanceMesh(const uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender)
+uint32_t SceneManager::InstanceMesh(const uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender, uint32_t cullMask)
 {
   assert(meshId < m_meshInfos.size());
 
@@ -207,7 +207,7 @@ uint32_t SceneManager::InstanceMesh(const uint32_t meshId, const LiteMath::float
   info.mesh_id       = meshId;
   info.renderMark    = markForRender;
   info.instBufOffset = (m_instanceMatrices.size() - 1) * sizeof(matrix);
-
+  info.cullMask = cullMask;
   m_instanceInfos.push_back(info);
 
   return info.inst_id;
@@ -574,7 +574,7 @@ void SceneManager::BuildTLAS(bool need_update)
     VkAccelerationStructureInstanceKHR instance{};
     instance.transform = transform;
     instance.instanceCustomIndex = inst.mesh_id;
-    instance.mask = 0xFF;
+    instance.mask = inst.cullMask;
 #ifdef USE_MANY_HIT_SHADERS
     instance.instanceShaderBindingTableRecordOffset = materialMap[inst.mesh_id];
 #else

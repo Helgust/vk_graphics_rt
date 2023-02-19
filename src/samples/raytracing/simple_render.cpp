@@ -52,7 +52,7 @@ void SimpleRender::SetupGbuffer() {
   CreateAttachment(
     VK_FORMAT_R16G16B16A16_SFLOAT,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
     &m_gBuffer.normal, m_gBuffer.width, m_gBuffer.height);
 
   // Albedo (color)
@@ -488,11 +488,12 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
  vk_utils::VulkanImageMem a_prevRT,  VkSampler a_prevRTImageSampler,
  vk_utils::VulkanImageMem a_rtImage,  VkSampler a_RtImageSampler,
  vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_rtImageDynamicSampler,
- vk_utils::VulkanImageMem a_prevDepth,  VkSampler a_prevDepthSampler) 
+ vk_utils::VulkanImageMem a_prevDepth,  VkSampler a_prevDepthSampler,
+ vk_utils::VulkanImageMem a_prevNormal,  VkSampler a_prevColorSampler) 
 {
   std::array<VkDescriptorBufferInfo, 6> descriptorBufferInfo;
-  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(8);
-  std::vector<VkWriteDescriptorSet> writeDescriptorSet(18);
+  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(10);
+  std::vector<VkWriteDescriptorSet> writeDescriptorSet(21);
 
 
   descriptorImageInfos[0].sampler = nullptr;
@@ -527,6 +528,15 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
   descriptorImageInfos[7].imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
   descriptorImageInfos[7].imageView = a_prevDepth.view;
 
+  descriptorImageInfos[8].sampler = nullptr;
+  descriptorImageInfos[8].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  descriptorImageInfos[8].imageView = a_gbuffer.velocity.view;
+
+  descriptorImageInfos[9].sampler = nullptr;
+  descriptorImageInfos[9].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  descriptorImageInfos[9].imageView = a_gbuffer.velocity.view;
+  
+
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorBufferInfo[0], nullptr, sceneManager->GetVertexBuffer(), 3);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[1], &descriptorBufferInfo[1], nullptr, sceneManager->GetIndexBuffer(), 4);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[2], &descriptorBufferInfo[2], nullptr, sceneManager->GetMaterialIDsBuffer(), 5);
@@ -552,6 +562,10 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
   samplerInfo.sampler = a_prevDepthSampler;
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[16], nullptr, &samplerInfo ,VK_NULL_HANDLE, 19);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[17], nullptr, &descriptorImageInfos[7] ,VK_NULL_HANDLE, 20);
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[18], nullptr, &descriptorImageInfos[8] ,VK_NULL_HANDLE, 21);//velocity
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[19], nullptr, &descriptorImageInfos[9] ,VK_NULL_HANDLE, 22);//velocity
+  samplerInfo.sampler = a_prevColorSampler;
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[20], nullptr, &samplerInfo ,VK_NULL_HANDLE, 23);
   
 
   vkUpdateDescriptorSets(device, uint32_t(writeDescriptorSet.size()), writeDescriptorSet.data(), 0, NULL);
@@ -908,6 +922,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindImage(6, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(7, softRtFrame.view, m_pSoftRTImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(8, m_rtImageDynamic.view, m_rtImageDynamicSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(9, m_rtImage.view, m_rtImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dResolveSet, &m_dResolveSetLayout);
 
   auto curentFrame = m_pResolveImage->m_attachments[m_resolveImageId];
@@ -1549,6 +1564,77 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			cubeFaceSubresourceRange);
   }
+
+  //copy to normal to prev
+  {
+    // Make sure color writes to the framebuffer are finished before using it as transfer source
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_gBuffer.normal.image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		VkImageSubresourceRange cubeFaceSubresourceRange = {};
+		cubeFaceSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		cubeFaceSubresourceRange.baseMipLevel = 0;
+		cubeFaceSubresourceRange.levelCount = 1;
+		cubeFaceSubresourceRange.baseArrayLayer = 0;
+		cubeFaceSubresourceRange.layerCount = 1;
+
+		// Change image layout of one cubemap face to transfer destination
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_prevNormalImage.image,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			cubeFaceSubresourceRange);
+
+		// Copy region for transfer from framebuffer to cube face
+		VkImageCopy copyRegion = {};
+
+		copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.srcSubresource.baseArrayLayer = 0;
+		copyRegion.srcSubresource.mipLevel = 0;
+		copyRegion.srcSubresource.layerCount = 1;
+		copyRegion.srcOffset = { 0, 0, 0 };
+
+		copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.dstSubresource.baseArrayLayer = 0;
+		copyRegion.dstSubresource.mipLevel = 0;
+		copyRegion.dstSubresource.layerCount = 1;
+		copyRegion.dstOffset = { 0, 0, 0 };
+
+		copyRegion.extent.width = m_width;
+		copyRegion.extent.height = m_height;
+		copyRegion.extent.depth = 1;
+
+		// Put image copy into command buffer
+		vkCmdCopyImage(
+			a_cmdBuff,
+			m_gBuffer.normal.image,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			m_prevNormalImage.image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&copyRegion);
+
+		// Transform framebuffer color attachment back
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_gBuffer.normal.image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		// Change image layout of copied face to shader read
+		vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_prevNormalImage.image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			cubeFaceSubresourceRange);
+  }
   
   // copy frame to prev 
   {
@@ -2110,7 +2196,8 @@ void SimpleRender::UpdateView()
     curVehMat.set_col(1, curVehMat.get_col(1) - prevVehMat.get_col(1));
     curVehMat.set_col(2, curVehMat.get_col(2) - prevVehMat.get_col(2));
     curVehMat.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
-    m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
+    //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
+    m_inverseTransMatrix = curVehMat;
   }
   else
   {
@@ -2123,7 +2210,8 @@ void SimpleRender::UpdateView()
     curVehMat.set_col(1, curVehMat.get_col(1) - prevVehMat.get_col(1));
     curVehMat.set_col(2, curVehMat.get_col(2) - prevVehMat.get_col(2));
     curVehMat.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
-    m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
+    //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
+    m_inverseTransMatrix = curVehMat;
   }   
   pushConst2M.projView = mWorldViewProj;
   pushConst2M.lightView = LiteMath::float4x4();

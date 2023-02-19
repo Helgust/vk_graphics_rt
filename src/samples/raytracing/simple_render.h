@@ -59,7 +59,8 @@ public:
     vk_utils::VulkanImageMem prevRT, VkSampler a_prevRTimage_sampler,
     vk_utils::VulkanImageMem a_rtImage,  VkSampler a_RtImageSampler,
     vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_rtImageDynamicSampler,
-    vk_utils::VulkanImageMem a_prevDepth,  VkSampler a_prevDepthSampler);
+    vk_utils::VulkanImageMem a_prevDepth,  VkSampler a_prevDepthSampler,
+    vk_utils::VulkanImageMem a_prevNormal,  VkSampler a_prevColorSampler);
   //void InitDescriptors(std::shared_ptr<SceneManager> sceneManager);
 };
 
@@ -274,6 +275,9 @@ protected:
 
   vk_utils::VulkanImageMem m_prevDepthImage;
   VkSampler                m_prevDepthImageSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_prevNormalImage;
+  VkSampler                m_prevColorImageSampler = VK_NULL_HANDLE;
 
   vk_utils::VulkanImageMem m_prevFrameImage;
   VkSampler                m_prevFrameImageSampler = VK_NULL_HANDLE;

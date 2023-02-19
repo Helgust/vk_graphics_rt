@@ -113,7 +113,7 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
     if(m_config.build_acc_structs)
     {
       AddBLAS(m_vehicleMesh);
-      InstanceMesh(m_vehicleMesh, m_currVehicleInstanceMatrices[0]);
+      InstanceMesh(m_vehicleMesh, m_currVehicleInstanceMatrices[0],true, (1U << 2));
     }
   }
 
@@ -274,7 +274,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
     if(m_config.build_acc_structs)
     {
       AddBLAS(m_vehicleMesh);
-      InstanceMesh(m_vehicleMesh, m_currVehicleInstanceMatrices[0]);
+      InstanceMesh(m_vehicleMesh, m_currVehicleInstanceMatrices[0],true, (1U << 2));
     }
   }
 

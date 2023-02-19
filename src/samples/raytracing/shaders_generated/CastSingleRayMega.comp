@@ -18,7 +18,7 @@ layout(binding = 8, set = 0) buffer MeshInfos { MeshInfo mesh_infos[]; };
 layout(binding = 9, set = 0) uniform texture2D NoiseTexture;
 layout(binding = 10, set = 0) uniform sampler NoiseSamp;
 layout(binding = 11, set = 0) uniform texture2D gBufferPos;
-layout(binding = 12, set = 0) uniform texture2D gBufferNorm;
+layout(binding = 12, set = 0) uniform texture2D gBufferNormal;
 layout(binding = 13, set = 0) uniform sampler colorSampler;
 layout(binding = 14, set = 0) uniform texture2D prevRTImage;
 layout(binding = 15, set = 0) uniform sampler prevRTImage_sampler;
@@ -27,6 +27,9 @@ layout(binding = 17, set = 0, rgba8) uniform writeonly image2D resultImageDynami
 layout(binding = 18, set = 0) uniform texture2D gBufferDepth;
 layout(binding = 19, set = 0) uniform sampler prevDepth_sampler;
 layout(binding = 20, set = 0) uniform texture2D prevDepth;
+layout(binding = 21, set = 0) uniform texture2D gBufferVelocity;
+layout(binding = 22, set = 0) uniform texture2D prevNormal;
+layout(binding = 23, set = 0) uniform sampler prevColor_sampler;
 
 
 uint ColorToInt(vec4 color) 
@@ -69,10 +72,10 @@ vec3 DecodeNormal(uint a_data)
 
 // RayScene intersection with 'm_pAccelStruct'
 //
-CRT_Hit m_pAccelStruct_RayQuery_NearestHit(const vec4 rayPos, const vec4 rayDir)
+CRT_Hit m_pAccelStruct_RayQuery_NearestHit(const vec4 rayPos, const vec4 rayDir, const uint cullMask)
 {
   rayQueryEXT rayQuery;
-  rayQueryInitializeEXT(rayQuery, m_pAccelStruct, gl_RayFlagsOpaqueEXT, 0xff, rayPos.xyz, rayPos.w, rayDir.xyz, rayDir.w);
+  rayQueryInitializeEXT(rayQuery, m_pAccelStruct, gl_RayFlagsTerminateOnFirstHitEXT, cullMask, rayPos.xyz, rayPos.w, rayDir.xyz, rayDir.w);
   
   while(rayQueryProceedEXT(rayQuery)) { } // actually may omit 'while' when 'gl_RayFlagsOpaqueEXT' is used
  
@@ -182,13 +185,14 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
 {
   uvec2 coordInit = uvec2(gl_GlobalInvocationID[0], gl_GlobalInvocationID[1]);
   
-  vec3 color = vec3(0.15f, 0.15f, 0.15f);
+  vec3 color = vec3(0.0f, 0.0f, 0.0f);
   
   uint hash = ((uint(coordInit.x) << 12) | uint(coordInit.y)) ^ floatBitsToUint(ubo.time);
   vec2 screenPos = vec2(tidX/1024.0f, tidY/1024.0f);
   //CRT_Hit hit = m_pAccelStruct_RayQuery_NearestHit(rayPos, rayDir);
   //vec3 hit_point = texture(sampler2D(gBufferPos, colorSampler), screenPos).xyz;
   vec3 hit_point = GetPosFromDepth(screenPos);
+  vec3 n = texture(sampler2D(gBufferNormal, colorSampler), screenPos).xyz;
   vec3 lightDir = normalize(ubo.lights[0].dir.xyz);
   //debugPrintfEXT("hit_point %1.2v3f, hit_point2 %1.2v3f\n", hit_point, hit_point2);
   if (kgenArgs.isStaticPass == 1U) // here pass for static objects
@@ -196,13 +200,32 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
     if (ubo.needUpdate != 1U)
     {
       vec4 prevScreenPos= (ubo.m_prevProjView) * vec4(hit_point,1.0f);
+      vec2 velocityUV = texture(sampler2D(gBufferVelocity, colorSampler), screenPos,0).xy;
       vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
       vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
+      //prevUV += velocityUV;
+      //need to think about it, do we need it?
+      const bool  outOfView = (prevUV.x < 0.00001f || prevUV.x > 0.999999f || prevUV.y < 0.00001f || prevUV.y > 0.99999f);
+      if (outOfView)
+      {
+        imageStore(resultImageStatic, ivec2(gl_GlobalInvocationID.xy), vec4(1.0f, 0.0f, 0.0f, 1.0));
+        return;
+      }
       vec3 prevShadow = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
-      if (prevShadow.x == 0.0f && prevShadow.y == 1.0f)
+      float prevDepth = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
+      float currDepth = texture(sampler2D(gBufferDepth, colorSampler), prevUV).x;
+      vec3 currNormal = texture(sampler2D(gBufferNormal, colorSampler), prevUV).xyz;
+      vec3 prevNormal = texture(sampler2D(prevNormal, prevColor_sampler), prevUV).xyz;
+      
+      //add a store for prevNormal
+      if (prevShadow.x == 0.0f && prevShadow.z == 1.0f 
+        && abs(currDepth - prevDepth) < 0.001 && (dot(currNormal, prevNormal) < 0.95))
       {
         //out_color[tidY * ubo.m_width + tidX + out_colorOffset] = ColorToInt(vec4(clamp(prevShadow, 0.0, 1.0), 1.0));
+        // vec2 newUv = screenPos - velocityUV;
+        // newUv*=1024.0f;
         imageStore(resultImageStatic, ivec2(gl_GlobalInvocationID.xy), vec4(prevShadow, 1.0));
+        //imageStore(resultImageStatic, ivec2(gl_GlobalInvocationID.xy), vec4(1.0f,0.0f,1.0f, 1.0));
         return;
       }
     }
@@ -214,49 +237,53 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
       vec4 prevColor = imageLoad(resultImageStatic, ivec2(gl_GlobalInvocationID.xy)); 
       if(prevColor.x == 0.0f && prevColor.z == 1.0f)
       {
-        prevColor.z = 0.0f;
-        imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), prevColor);
+        imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(1.0f,0.0f,0.6f,1.0f));
         return;
       }
       else // do a reprojection for dynamic
       {
         //put matrix here, not vehicle postion
-        vec4 prevHitPoint = vec4(hit_point, 1.0f) - ubo.m_invTransMat[3];
+        vec4 prevHitPoint = vec4(hit_point, 1.0f) + ubo.m_invTransMat[3];
         vec4 prevScreenPos= (ubo.m_prevProjView) * prevHitPoint;
         vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
         vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
-        if(reprojection)// try use trace throu depth
+        //find distance for prevHitPoint
+        vec3 diffVec = prevHitPoint.xyz - hit_point;
+        if (abs(diffVec.y) >= 0.1f)
         {
-          //find distance for prevHitPoint
-          // vec4 prevShadow = imageLoad(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy));
+          int directionOfDepthTrace =  prevHitPoint.y > hit_point.y ? -1 : 1;
+        }
+        else // don't have any movement on y axis
+        {
           vec3 prevColor = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
-          if(prevColor.x == 0.0f && prevColor.y == 1.0f)
+          float prevDepth = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
+          float currDepth = texture(sampler2D(gBufferDepth, colorSampler), prevUV).x;
+          if ((prevColor.x == 0.0f) && (prevColor.y == 1.0f))
           {
-            imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
+            imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(1.0f,1.0f,0.5f,1.0f));
+            //imageStore(resultImageDynamic, ivec2(prevUV.xy), vec4(1.0f,0.0,0.0f, 1.0f));
             return;
           }
-        }
-        else
-        {
-          // CRT_Hit curr_hit = m_pAccelStruct_RayQuery_NearestHit(vec4(prevHitPoint.xyz, 0.1f), vec4(lightDir, rayMax));
-          // float prevDist = imageLoad(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy)).z;
-          // //float currDist = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
-          // // float currDepth = texture(sampler2D(gBufferDepth, colorSampler), screenPos).x;
-          // if (abs(prevDist- curr_hit.t) > 0.01f)
-          // {
-          //   vec3 prevColor = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
-          //   //imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
-          //   prevColor = vec3(1.0f, 1.0f, 0.0f);
-          //   imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
-          //   return;
-          // }
+          else
+          {
+            // CRT_Hit curr_hit = m_pAccelStruct_RayQuery_NearestHit(vec4(prevHitPoint.xyz, 0.1f), vec4(lightDir, rayMax));
+            // float prevDist = imageLoad(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy)).z;
+            // //float currDist = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
+            // // float currDepth = texture(sampler2D(gBufferDepth, colorSampler), screenPos).x;
+            // if (abs(prevDist- curr_hit.t) > 0.01f)
+            // {
+            //   vec3 prevColor = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
+            //   //imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
+            //   prevColor = vec3(1.0f, 1.0f, 0.0f);
+            //   imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
+            //   return;
+            // }
+          }
         }
       }
     }
   }
   
-    
-  vec3 n = texture(sampler2D(gBufferNorm, colorSampler), screenPos).xyz;
 
   //vec3 hit_point_old = vec3(rayPos) + vec3(rayDir)*hit.t;
  
@@ -280,23 +307,26 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
         rngOffset = rngState.z;
     vec2 samplesPos = BlueNoiseInDisk[u];
     vec2 diskPoint = PointOnDisk(ubo.lights[0], rngOffset, samplesPos);
-    vec3 shadowDir = normalize(lightDir + diskPoint.x * lightTangent + diskPoint.y * lightBitangent); 
-    CRT_Hit hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.1f), vec4(shadowDir, rayMax));
+    vec3 shadowDir = normalize(lightDir + diskPoint.x * lightTangent + diskPoint.y * lightBitangent);
+    CRT_Hit hitShadow;
+    if((kgenArgs.isStaticPass == 1U)) 
+     hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.15f), vec4(shadowDir, rayMax), 1U);
+    else
+     hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hit_point, 0.15f), vec4(shadowDir, rayMax), (1U << 2));
     color.y = 0.0;
     color.z = 0.0;
     if ((hitShadow.primId != -1))// intersect
     {
-      uint dynamic = GetDynamic(hitShadow);
-      total +=1.0f;
-      if((kgenArgs.isStaticPass == 1U) && dynamic == 0)
+      //uint dynamic = GetDynamic(hitShadow);
+      total += 1;
+      float shade = max(dot(shadowDir, n), 0.0f);
+      if((kgenArgs.isStaticPass == 1U))
       {
-        float shade = max(dot(shadowDir, n), 0.0f);
         color.x += shade;
         color.z = 1.0;
       }
-      else if ((kgenArgs.isStaticPass == 0U) && dynamic == 1)
+      else if ((kgenArgs.isStaticPass == 0U))
       {
-        float shade = max(dot(shadowDir, n), 0.0f);
         color.x += shade;
         color.y = 1.0;
       }
@@ -311,8 +341,6 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
   }
   else
   {
-    //debugPrintfEXT("prevColor %1.2v4f", vec4(1.0, 1.0, 1.0, 1.0));
-
     imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));
   }
   
