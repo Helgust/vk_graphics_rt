@@ -654,22 +654,45 @@ uint32_t SceneManager::InstanceVehicle(float3 pos, float scale, float size)
   return m_currVehicleInstanceMatrices.size() - 1;
 }
 
-void SceneManager::MoveCarX(float a_time)
+void SceneManager::MoveCarX(float a_time, bool forceHistory)
 {
   if(a_time < 0.0001f)
     return;
-  m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
   LiteMath::float4x4 m = GetVehicleInstanceMatrix(0);
   float4 newPos = m.get_col(3);
-  if ( m_distanceTraveled > 50.f)
+  if (forceHistory)
   {
-    direction *= -1.0f;
-    m_distanceTraveled = 0.0;
+    if (deltaTime > 50.0f)
+    {
+      direction *= -1.0f;
+      m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
+      deltaTime = 0;
+    }
+    else
+    {
+      deltaTime+=0.5;
+    }
+    
+    if (direction < 0)
+      newPos.x = 30;
+    else
+      newPos.x = -2;
+    m.set_col(3, newPos);
   }
-  float dist = m_velocity*a_time;
-  newPos.x += direction * dist;
-  m_distanceTraveled += dist;
-  m.set_col(3, newPos);
+  else
+  {
+    m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
+    deltaTime = 0;
+    if ( m_distanceTraveled > 50.f)
+    {
+      direction *= -1.0f;
+      m_distanceTraveled = 0.0;
+    }
+    float dist = m_velocity*a_time;
+    newPos.x += direction * dist;
+    m_distanceTraveled += dist;
+    m.set_col(3, newPos);
+  }
   m_currVehicleInstanceMatrices[0] = m;
   m_instanceMatrices[GetVehicleMeshId()] = m;
 }

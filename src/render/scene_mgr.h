@@ -72,12 +72,12 @@ struct SceneManager
 
   bool InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh);
   void AddVechicleGenericMesh(float m_CubeSize);
-  void MoveCarX(float a_time);
+  void MoveCarX(float a_time, bool forceHistory);
   void MadeCubeMesh(cmesh::SimpleMesh& cube, float size);
   uint32_t AddMeshFromFile(const std::string& meshPath);
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData, uint dynamicBit = 0);
 
-
+  float deltaTime = 0;
   uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender = true, uint32_t cullMask = 1U);
   uint32_t InstanceVehicle(float3 pos, float scale, float size);
 

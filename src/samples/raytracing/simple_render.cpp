@@ -534,7 +534,7 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
 
   descriptorImageInfos[9].sampler = nullptr;
   descriptorImageInfos[9].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  descriptorImageInfos[9].imageView = a_gbuffer.velocity.view;
+  descriptorImageInfos[9].imageView = a_prevNormal.view;
   
 
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorBufferInfo[0], nullptr, sceneManager->GetVertexBuffer(), 3);
@@ -1134,7 +1134,7 @@ void SimpleRender::CreateUniformBuffer()
 
   vkMapMemory(m_device, m_uboAlloc, 0, sizeof(m_uniforms), 0, &m_uboMappedMem);
 
-  m_uniforms.lights[0].dir  = LiteMath::float4(0.0f, 0.4f, -1.0f, 1.0f);
+  m_uniforms.lights[0].dir  = LiteMath::float4(0.0f, 1.4f, 1.0f, 1.0f);
   m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 10.0f, 0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
   m_uniforms.lights[0].radius_lightDist_dummies  = LiteMath::float4(0.1f, 60.0f,  0.0f, 1.0f);
@@ -1156,7 +1156,7 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
 // most uniforms are updated in GUI -> SetupGUIElements()
   m_uniforms.m_time_gbuffer_index = vec4(0, 0, a_time, gbuffer_index);
   m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
-  m_pScnMgr->MoveCarX(a_time);
+  m_pScnMgr->MoveCarX(a_time, teleport);
   m_uniforms.PrevVecMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
@@ -1391,12 +1391,16 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
   }
   vkCmdEndRenderPass(a_cmdBuff);
 
-  // copy softRt to prev 
-  SimpleRender::CopyImage(a_cmdBuff, m_pSoftRTImage->m_attachments[0].image, m_prevRTImage.image, 
-    VK_IMAGE_ASPECT_COLOR_BIT, 
-    VK_IMAGE_ASPECT_COLOR_BIT,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  if (!forceHistory)
+  {
+    // copy softRt to prev 
+    SimpleRender::CopyImage(a_cmdBuff, m_pSoftRTImage->m_attachments[0].image, m_prevRTImage.image, 
+      VK_IMAGE_ASPECT_COLOR_BIT, 
+      VK_IMAGE_ASPECT_COLOR_BIT,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  }
+  
 
 
   ///// draw final scene to scpecial image
@@ -1504,26 +1508,30 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     }
     vkCmdEndRenderPass(a_cmdBuff);
 
-  //copy to depth to prev
+  if (!forceHistory)
+  {
+    //copy to depth to prev
     SimpleRender::CopyImage(a_cmdBuff, m_gBuffer.depth.image, m_prevDepthImage.image, 
     VK_IMAGE_ASPECT_DEPTH_BIT, 
     VK_IMAGE_ASPECT_DEPTH_BIT,
     VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-  //copy to normal to prev
-  SimpleRender::CopyImage(a_cmdBuff, m_gBuffer.normal.image, m_prevNormalImage.image, 
-    VK_IMAGE_ASPECT_COLOR_BIT, 
-    VK_IMAGE_ASPECT_COLOR_BIT,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    //copy to normal to prev
+    SimpleRender::CopyImage(a_cmdBuff, m_gBuffer.normal.image, m_prevNormalImage.image, 
+      VK_IMAGE_ASPECT_COLOR_BIT, 
+      VK_IMAGE_ASPECT_COLOR_BIT,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    
+    // copy frame to prev
+    SimpleRender::CopyImage(a_cmdBuff, m_pFilterImage->m_attachments[0].image, m_prevFrameImage.image, 
+      VK_IMAGE_ASPECT_COLOR_BIT, 
+      VK_IMAGE_ASPECT_COLOR_BIT,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  }
   
-  // copy frame to prev
-  SimpleRender::CopyImage(a_cmdBuff, m_pFilterImage->m_attachments[0].image, m_prevFrameImage.image, 
-    VK_IMAGE_ASPECT_COLOR_BIT, 
-    VK_IMAGE_ASPECT_COLOR_BIT,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   // render to screen
     VkRenderPassBeginInfo screenRenderInfo = {};
@@ -2015,7 +2023,12 @@ void SimpleRender::UpdateView()
     curVehMat.set_col(2, curVehMat.get_col(2) - prevVehMat.get_col(2));
     curVehMat.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
     //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
-    m_inverseTransMatrix = curVehMat;
+    //m_inverseTransMatrix = curVehMat;
+    if (!forceHistory)
+    {
+      m_inverseTransMatrix = curVehMat;
+      //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
+    }
   }
   else
   {
@@ -2029,7 +2042,12 @@ void SimpleRender::UpdateView()
     curVehMat.set_col(2, curVehMat.get_col(2) - prevVehMat.get_col(2));
     curVehMat.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
     //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
-    m_inverseTransMatrix = curVehMat;
+    if (!forceHistory)
+    {
+      m_inverseTransMatrix = curVehMat;
+      //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
+    }
+      
   }   
   pushConst2M.projView = mWorldViewProj;
   pushConst2M.lightView = LiteMath::float4x4();
@@ -2385,10 +2403,14 @@ void SimpleRender::SetupGUIElements()
     ImGui::Checkbox("Taa", &taaFlag);
     ImGui::Checkbox("TurnOff", &softShadow);
     ImGui::Checkbox("NeedUpdate", &m_needUpdateSlider);
+    ImGui::Checkbox("ForceHistory ", &forceHistory);
+    ImGui::Checkbox("teleport ", &teleport);
     
-
+    float4 curVehPos = m_pScnMgr->GetVehicleInstanceMatrix(0).get_col(3);
+    float4 prevVehPos = m_pScnMgr->GetVehiclePrevInstanceMatrix(0).get_col(3);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
+    ImGui::Text("CurrCarPos: x=%.3f, y=%.3f, z= %.3f",curVehPos.x,curVehPos.y,curVehPos.z);
+    ImGui::Text("PrevCarPos: x=%.3f, y=%.3f, z= %.3f",prevVehPos.x,prevVehPos.y,prevVehPos.z);
     ImGui::NewLine();
     ImGui::Text("CamPos: x=%.3f, y=%.3f, z= %.3f",GetCurrentCamera().pos.x,GetCurrentCamera().pos.y,GetCurrentCamera().pos.z);
     ImGui::NewLine();

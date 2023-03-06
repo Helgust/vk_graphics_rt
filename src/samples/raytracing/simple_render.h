@@ -215,6 +215,8 @@ protected:
   bool taaFlag;
   bool softShadow;
   bool onlyOneLoadOfShadows = false;
+  bool forceHistory = false;
+  bool teleport = false;
   vec4 currentLightPos, prevLightPos;
   std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
 
