@@ -20,6 +20,7 @@ typedef unsigned uint;
 struct RayTracer_UBO_Data
 {
   mat4 m_invProjView;
+  mat4 m_currProjView;
   mat4 m_prevProjView;
   mat4 m_invTransMat;   
   vec4 m_camPos; 

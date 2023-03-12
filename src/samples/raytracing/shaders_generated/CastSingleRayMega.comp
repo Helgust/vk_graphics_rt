@@ -152,6 +152,20 @@ vec3 GetPosFromDepth(vec2 screenPos){
   return (pixelPos.xyz/pixelPos.w);
 }
 
+vec3 GetPosFromPrevDepth(vec2 screenPos){
+  float depth = texture(sampler2D(prevDepth, prevDepth_sampler), screenPos).x;
+  vec4 clipPos = vec4( screenPos * 2.0f - 1.0f, depth, 1.0f);
+  vec4 pixelPos = ubo.m_invProjView * clipPos; 
+  return (pixelPos.xyz/pixelPos.w);
+}
+
+vec2 GetPrevUV(vec4 pos)
+{
+  vec4 prevScreenPos= (ubo.m_currProjView) * pos;
+  vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
+  vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
+  return prevUV;
+}
 uint GetDynamic(CRT_Hit hit) {
   return mesh_infos[hit.geomId].dynamicBit;
 }
@@ -234,58 +248,70 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
   {
     if (ubo.needUpdate != 1U)
     {
-      // vec4 prevColor = imageLoad(resultImageStatic, ivec2(gl_GlobalInvocationID.xy)); 
-      // if(prevColor.x == 0.0f && prevColor.z == 1.0f)
-      // {
-      //   imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(1.0f,0.0f,0.6f,1.0f));
-      //   return;
-      // }
-      // else // do a reprojection for dynamic
-      // {
+      vec4 prevColor = imageLoad(resultImageStatic, ivec2(gl_GlobalInvocationID.xy)); 
+      if(prevColor.x == 0.0f && prevColor.z == 1.0f)
+      {
+        imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0f,0.0f,0.6f,1.0f));
+        return;
+      }
+      else // do a reprojection for dynamic
+      {
         //put matrix here, not vehicle postion
         vec4 prevHitPoint = vec4(hit_point, 1.0f) - ubo.m_invTransMat[3];
+        bool needDepthTrace = false;
+        vec3 diffVec = prevHitPoint.xyz - hit_point;
+        if (length(prevHitPoint.xyz - hit_point) >= 0.01f)
+        {
+          int directionOfDepthTrace = hit_point.y > prevHitPoint.y  ? -1 : 1;
+          needDepthTrace = true;
+          vec3 initPos = prevHitPoint.xyz;
+          float L = lFactor;
+          for(int i = 0; i < depth_steps; i++)
+          {
+            vec4 currentRay = vec4(initPos + lightDir * directionOfDepthTrace * L, 1.0f);
+            vec4 rayScreenPos= (ubo.m_prevProjView) * currentRay;
+            //put here 
+            vec2 nuv = GetPrevUV(currentRay);
+            vec3 newPosition = GetPosFromDepth(nuv.xy);
+            L = length(initPos - newPosition);
+          }
+          prevHitPoint = vec4(initPos + lightDir * directionOfDepthTrace * L, 1.0f);
+        }
         vec4 prevScreenPos= (ubo.m_prevProjView) * prevHitPoint;
         vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
         vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
         //find distance for prevHitPoint
-        vec3 diffVec = prevHitPoint.xyz - hit_point;
-        if (abs(diffVec.y) >= 0.1f)
+        vec3 prevColor = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
+        float prevDepth = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
+        float currDepth = texture(sampler2D(gBufferDepth, colorSampler), prevUV).x;
+        vec3 currNormal = texture(sampler2D(gBufferNormal, colorSampler), prevUV).xyz;
+        vec3 prevNormal = texture(sampler2D(prevNormal, prevColor_sampler), prevUV).xyz;
+        const bool  outOfView = (prevUV.x < 0.00001f || prevUV.x > 0.999999f || prevUV.y < 0.00001f || prevUV.y > 0.99999f);
+        if ((prevColor.x == 0.0f) && (prevColor.y == 1.0f) && !outOfView 
+          && abs(currDepth - prevDepth) < 0.001)
         {
-          int directionOfDepthTrace =  prevHitPoint.y > hit_point.y ? -1 : 1;
-        }
-        else // don't have any movement on y axis
-        {
-          vec3 prevColor = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
-          float prevDepth = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
-          float currDepth = texture(sampler2D(gBufferDepth, colorSampler), prevUV).x;
-          vec3 currNormal = texture(sampler2D(gBufferNormal, colorSampler), prevUV).xyz;
-          vec3 prevNormal = texture(sampler2D(prevNormal, prevColor_sampler), prevUV).xyz;
-          vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
-          vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
-          const bool  outOfView = (prevUV.x < 0.00001f || prevUV.x > 0.999999f || prevUV.y < 0.00001f || prevUV.y > 0.99999f);
-          if ((prevColor.x == 0.0f) && (prevColor.y == 1.0f) && !outOfView 
-            && abs(currDepth - prevDepth) < 0.001)
-          {
+          if (needDepthTrace)
             imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 1.0f, 0.5f, 1.0f));
-            return;
-          }
           // else
-          // {
-          //   // CRT_Hit curr_hit = m_pAccelStruct_RayQuery_NearestHit(vec4(prevHitPoint.xyz, 0.1f), vec4(lightDir, rayMax));
-          //   // float prevDist = imageLoad(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy)).z;
-          //   // //float currDist = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
-          //   // // float currDepth = texture(sampler2D(gBufferDepth, colorSampler), screenPos).x;
-          //   // if (abs(prevDist- curr_hit.t) > 0.01f)
-          //   // {
-          //   //   vec3 prevColor = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
-          //   //   //imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
-          //   //   prevColor = vec3(1.0f, 1.0f, 0.0f);
-          //   //   imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
-          //   //   return;
-          //   // }
-          // }
+          //   imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 1.0f, 0.5f, 1.0f));
+          return;
         }
-      //}
+        // else
+        // {
+        //   // CRT_Hit curr_hit = m_pAccelStruct_RayQuery_NearestHit(vec4(prevHitPoint.xyz, 0.1f), vec4(lightDir, rayMax));
+        //   // float prevDist = imageLoad(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy)).z;
+        //   // //float currDist = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
+        //   // // float currDepth = texture(sampler2D(gBufferDepth, colorSampler), screenPos).x;
+        //   // if (abs(prevDist- curr_hit.t) > 0.01f)
+        //   // {
+        //   //   vec3 prevColor = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
+        //   //   //imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
+        //   //   prevColor = vec3(1.0f, 1.0f, 0.0f);
+        //   //   imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
+        //   //   return;
+        //   // }
+        // }
+      }
     }
   }
   

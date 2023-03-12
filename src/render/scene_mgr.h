@@ -73,6 +73,7 @@ struct SceneManager
   bool InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh);
   void AddVechicleGenericMesh(float m_CubeSize);
   void MoveCarX(float a_time, bool forceHistory);
+  void MoveCarY(float a_time, bool forceHistory);
   void MadeCubeMesh(cmesh::SimpleMesh& cube, float size);
   uint32_t AddMeshFromFile(const std::string& meshPath);
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData, uint dynamicBit = 0);
@@ -194,8 +195,8 @@ private:
   bool m_useRTX = false;
   float m_CubeSize = 1.0f;
   float m_distanceTraveled = 0.0f;
-  float direction = -1.0f;
-  float m_velocity = 10.0f;
+  float direction = 1.0f;
+  float m_velocity = 5.0f;
   std::vector<float> cubePos
   {
     -1.0f, -1.0f, +1.0f, +1.0f,

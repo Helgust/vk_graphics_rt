@@ -1156,7 +1156,8 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
 // most uniforms are updated in GUI -> SetupGUIElements()
   m_uniforms.m_time_gbuffer_index = vec4(0, 0, a_time, gbuffer_index);
   m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
-  m_pScnMgr->MoveCarX(a_time, teleport);
+  //m_pScnMgr->MoveCarX(a_time, teleport);
+  m_pScnMgr->MoveCarY(a_time, teleport);
   m_uniforms.PrevVecMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
@@ -2011,44 +2012,29 @@ void SimpleRender::UpdateView()
     JitterMat(0,3) = jitter.x;
     JitterMat(1,3) = jitter.y;
     mWorldViewProj = mProjFix * JitterMat * mProj * mLookAt;
-    m_prevProjViewMatrix = m_uniforms.prevProjView;
-    m_inverseProjViewMatrix = LiteMath::inverse4x4(mWorldViewProj);
     m_uniforms.m_cur_prev_jiiter.x = jitter.x;
     m_uniforms.m_cur_prev_jiiter.y = jitter.y;
     prevJitter = jitter;
-    LiteMath::float4x4 curVehMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
-    LiteMath::float4x4 prevVehMat = m_pScnMgr->GetVehiclePrevInstanceMatrix(0);
-    curVehMat.set_col(0, curVehMat.get_col(0) - prevVehMat.get_col(0));
-    curVehMat.set_col(1, curVehMat.get_col(1) - prevVehMat.get_col(1));
-    curVehMat.set_col(2, curVehMat.get_col(2) - prevVehMat.get_col(2));
-    curVehMat.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
-    //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
-    //m_inverseTransMatrix = curVehMat;
-    if (!forceHistory)
-    {
-      m_inverseTransMatrix = curVehMat;
-      //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
-    }
   }
   else
   {
     mWorldViewProj = mProjFix * mProj * mLookAt;
-    m_prevProjViewMatrix = m_uniforms.prevProjView;
-    m_inverseProjViewMatrix = LiteMath::inverse4x4(mWorldViewProj);
-    LiteMath::float4x4 curVehMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
-    LiteMath::float4x4 prevVehMat = m_pScnMgr->GetVehiclePrevInstanceMatrix(0);
-    curVehMat.set_col(0, curVehMat.get_col(0) - prevVehMat.get_col(0));
-    curVehMat.set_col(1, curVehMat.get_col(1) - prevVehMat.get_col(1));
-    curVehMat.set_col(2, curVehMat.get_col(2) - prevVehMat.get_col(2));
-    curVehMat.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
+  }
+  m_prevProjViewMatrix = m_uniforms.prevProjView; 
+  m_inverseProjViewMatrix = LiteMath::inverse4x4(mWorldViewProj);
+  m_projectionMatrix = mWorldViewProj;
+  LiteMath::float4x4 curVehMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
+  LiteMath::float4x4 prevVehMat = m_pScnMgr->GetVehiclePrevInstanceMatrix(0);     
+  curVehMat.set_col(0, curVehMat.get_col(0) - prevVehMat.get_col(0));
+  curVehMat.set_col(1, curVehMat.get_col(1) - prevVehMat.get_col(1));
+  curVehMat.set_col(2, curVehMat.get_col(2) - prevVehMat.get_col(2));
+  curVehMat.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
+  //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
+  if (!forceHistory)
+  {
+    m_inverseTransMatrix = curVehMat;
     //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
-    if (!forceHistory)
-    {
-      m_inverseTransMatrix = curVehMat;
-      //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
-    }
-      
-  }   
+  }
   pushConst2M.projView = mWorldViewProj;
   pushConst2M.lightView = LiteMath::float4x4();
   m_uniforms.invProjView = m_inverseProjViewMatrix;
@@ -2057,7 +2043,7 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
-  m_pScnMgr->InstanceVehicle(float3(40.0, 8.0, -20.0), 1.0f, 4.0f);
+  m_pScnMgr->InstanceVehicle(float3(40.0, 10.0, -20.0), 1.0f, 4.0f);
   m_pScnMgr->LoadScene(path);
 
   if(ENABLE_HARDWARE_RT)

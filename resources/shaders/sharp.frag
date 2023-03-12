@@ -30,6 +30,7 @@ void main()
       + texture(colorTexture, (texCoord + vec2( 0, -1)/ texSize)).rgb
       * neighbor;
 
-  out_color = vec4(color, texture(colorTexture, texCoord).a);
+  //out_color = vec4(color, texture(colorTexture, texCoord).a);
+  out_color = texture(colorTexture, texCoord);
 
 }

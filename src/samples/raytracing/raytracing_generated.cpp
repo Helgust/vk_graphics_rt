@@ -66,6 +66,7 @@ void RayTracer_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngi
   const size_t maxAllowedSize = std::numeric_limits<uint32_t>::max();
 
   m_uboData.m_invProjView = m_invProjView;
+  m_uboData.m_currProjView = m_currProjView;
   m_uboData.m_prevProjView = m_prevProjView;
   m_uboData.m_invTransMat = m_invTransMat;
   m_uboData.m_camPos = m_camPos;
