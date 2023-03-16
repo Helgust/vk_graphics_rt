@@ -683,14 +683,14 @@ void SceneManager::MoveCarX(float a_time, bool forceHistory)
   {
     m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
     deltaTime = 0;
-    if ( m_distanceTraveled > 50.f)
+    if ( m_distanceTraveledX > 50.f)
     {
       direction *= -1.0f;
-      m_distanceTraveled = 0.0;
+      m_distanceTraveledX = 0.0;
     }
     float dist = m_velocity*a_time;
     newPos.x += direction * dist;
-    m_distanceTraveled += dist;
+    m_distanceTraveledX += dist;
     m.set_col(3, newPos);
   }
   m_currVehicleInstanceMatrices[0] = m;
@@ -717,23 +717,66 @@ void SceneManager::MoveCarY(float a_time, bool forceHistory)
     }
     
     if (direction < 0)
-      newPos.x = 30;
+      newPos.y = 15;
     else
-      newPos.x = -2;
+      newPos.y = 8;
     m.set_col(3, newPos);
   }
   else
   {
     m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
     deltaTime = 0;
-    if ( m_distanceTraveled > 20.f)
+    if ( m_distanceTraveledY > 20.f)
     {
       direction *= -1.0f;
-      m_distanceTraveled = 0.0;
+      m_distanceTraveledY = 0.0;
     }
     float dist = m_velocity*a_time;
     newPos.y += direction * dist;
-    m_distanceTraveled += dist;
+    m_distanceTraveledY += dist;
+    m.set_col(3, newPos);
+  }
+  m_currVehicleInstanceMatrices[0] = m;
+  m_instanceMatrices[GetVehicleMeshId()] = m;
+}
+
+void SceneManager::MoveCarZ(float a_time, bool forceHistory)
+{
+  if(a_time < 0.0001f)
+    return;
+  LiteMath::float4x4 m = GetVehicleInstanceMatrix(0);
+  float4 newPos = m.get_col(3);
+  if (forceHistory)
+  {
+    if (deltaTime > 50.0f)
+    {
+      direction *= -1.0f;
+      m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
+      deltaTime = 0;
+    }
+    else
+    {
+      deltaTime+=0.5;
+    }
+    
+    if (direction < 0)
+      newPos.z = -20;
+    else
+      newPos.z = -25;
+    m.set_col(3, newPos);
+  }
+  else
+  {
+    m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
+    deltaTime = 0;
+    if ( m_distanceTraveledZ > 50.f)
+    {
+      direction *= -1.0f;
+      m_distanceTraveledZ = 0.0;
+    }
+    float dist = m_velocity*a_time;
+    newPos.z += direction * dist;
+    m_distanceTraveledZ += dist;
     m.set_col(3, newPos);
   }
   m_currVehicleInstanceMatrices[0] = m;

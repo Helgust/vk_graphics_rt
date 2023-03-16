@@ -1158,6 +1158,7 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
   //m_pScnMgr->MoveCarX(a_time, teleport);
   m_pScnMgr->MoveCarY(a_time, teleport);
+  //m_pScnMgr->MoveCarZ(a_time, teleport);
   m_uniforms.PrevVecMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
