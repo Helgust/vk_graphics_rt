@@ -58,7 +58,8 @@ bool soft_shadow = true;
 bool first_run = true;
 bool debug_light_pos = false;
 int depth_steps = 10;
-float lFactor = 10.0f;
+float step_size = 0.1f;
+float depth_eps = 0.01f;
 struct MaterialData_pbrMR
 {
   vec4 baseColor;
