@@ -1445,7 +1445,7 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     m_prevDepthImage.image,
     VK_IMAGE_ASPECT_DEPTH_BIT,
     VK_IMAGE_LAYOUT_UNDEFINED,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
 
     vk_utils::setImageLayout(
     a_cmdBuff,
@@ -1519,7 +1519,7 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     VK_IMAGE_ASPECT_DEPTH_BIT, 
     VK_IMAGE_ASPECT_DEPTH_BIT,
     VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
 
     //copy to normal to prev
     SimpleRender::CopyImage(a_cmdBuff, m_gBuffer.normal.image, m_prevNormalImage.image, 

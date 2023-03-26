@@ -444,7 +444,7 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, uint
     imageBarrierDynamic = m_pRayTracerGPU->BarrierForSingleImage(m_rtImageDynamic.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT);
     imageBarrierPrevDepth = m_pRayTracerGPU->BarrierForSingleImage(m_prevDepthImage.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL, 
       VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
-    imageBarrierPrevNormal = m_pRayTracerGPU->BarrierForSingleImage(m_prevNormalImage.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+    imageBarrierPrevNormal = m_pRayTracerGPU->BarrierForSingleImage(m_prevNormalImage.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     imageBarriers.push_back(imageBarrierStatic);
     imageBarriers.push_back(imageBarrierDynamic);
     imageBarriers.push_back(imageBarrierPrevDepth);
