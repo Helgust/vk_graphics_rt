@@ -75,6 +75,9 @@ struct SceneManager
   void MoveCarX(float a_time, bool forceHistory);
   void MoveCarY(float a_time, bool forceHistory);
   void MoveCarZ(float a_time, bool forceHistory);
+  void RotCarX(float a_time, bool forceHistory);
+  void RotCarY(float a_time, bool forceHistory);
+  void RotCarZ(float a_time, bool forceHistory);
   void MadeCubeMesh(cmesh::SimpleMesh& cube, float size);
   uint32_t AddMeshFromFile(const std::string& meshPath);
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData, uint dynamicBit = 0);
@@ -199,6 +202,7 @@ private:
   float m_distanceTraveledY = 0.0f;
   float m_distanceTraveledZ = 0.0f;
   float direction = 1.0f;
+  bool rotFlag = false;
   float m_velocity = 5.0f;
   std::vector<float> cubePos
   {

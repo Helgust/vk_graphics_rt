@@ -654,13 +654,13 @@ uint32_t SceneManager::InstanceVehicle(float3 pos, float scale, float size)
   return m_currVehicleInstanceMatrices.size() - 1;
 }
 
-void SceneManager::MoveCarX(float a_time, bool forceHistory)
+void SceneManager::MoveCarX(float a_time, bool teleport)
 {
   if(a_time < 0.0001f)
     return;
   LiteMath::float4x4 m = GetVehicleInstanceMatrix(0);
   float4 newPos = m.get_col(3);
-  if (forceHistory)
+  if (teleport)
   {
     if (deltaTime > 50.0f)
     {
@@ -697,13 +697,13 @@ void SceneManager::MoveCarX(float a_time, bool forceHistory)
   m_instanceMatrices[GetVehicleMeshId()] = m;
 }
 
-void SceneManager::MoveCarY(float a_time, bool forceHistory)
+void SceneManager::MoveCarY(float a_time, bool teleport)
 {
   if(a_time < 0.0001f)
     return;
   LiteMath::float4x4 m = GetVehicleInstanceMatrix(0);
   float4 newPos = m.get_col(3);
-  if (forceHistory)
+  if (teleport)
   {
     if (deltaTime > 50.0f)
     {
@@ -740,13 +740,13 @@ void SceneManager::MoveCarY(float a_time, bool forceHistory)
   m_instanceMatrices[GetVehicleMeshId()] = m;
 }
 
-void SceneManager::MoveCarZ(float a_time, bool forceHistory)
+void SceneManager::MoveCarZ(float a_time, bool teleport)
 {
   if(a_time < 0.0001f)
     return;
   LiteMath::float4x4 m = GetVehicleInstanceMatrix(0);
   float4 newPos = m.get_col(3);
-  if (forceHistory)
+  if (teleport)
   {
     if (deltaTime > 50.0f)
     {
@@ -778,6 +778,78 @@ void SceneManager::MoveCarZ(float a_time, bool forceHistory)
     newPos.z += direction * dist;
     m_distanceTraveledZ += dist;
     m.set_col(3, newPos);
+  }
+  m_currVehicleInstanceMatrices[0] = m;
+  m_instanceMatrices[GetVehicleMeshId()] = m;
+}
+
+void SceneManager::RotCarY(float a_time, bool teleport)
+{
+  if(a_time < 0.0001f)
+    return;
+  LiteMath::float4x4 m = GetVehicleInstanceMatrix(0);
+  float4 newPos = m.get_col(3);
+  if (teleport)
+  {
+    if (deltaTime > 50.0f)
+    {
+      direction *= -1.0f;
+      m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
+      deltaTime = 0;
+      rotFlag = true;
+    }
+    else
+    {
+      deltaTime+=0.5;
+    }
+    
+    if (rotFlag)
+    {
+      m = m * rotate4x4Y(45.0f * direction);
+      rotFlag = false;
+    }
+       
+    m.set_col(3, newPos);
+  }
+  else
+  {
+    m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
+    
+    m = m * rotate4x4Y(1.0f*a_time);
+  }
+  m_currVehicleInstanceMatrices[0] = m;
+  m_instanceMatrices[GetVehicleMeshId()] = m;
+}
+
+void SceneManager::RotCarX(float a_time, bool teleport)
+{
+  if(a_time < 0.0001f)
+    return;
+  LiteMath::float4x4 m = GetVehicleInstanceMatrix(0);
+  float4 newPos = m.get_col(3);
+  if (teleport)
+  {
+    if (deltaTime > 50.0f)
+    {
+      direction *= -1.0f;
+      m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
+      deltaTime = 0;
+    }
+    else
+    {
+      deltaTime+=0.5;
+    }
+    
+    if (direction < 0)
+      m = m * rotate4x4X(45.0f * direction);
+    
+    m.set_col(3, newPos);
+  }
+  else
+  {
+    m_prevVehicleInstanceMatrices[0] = GetVehicleInstanceMatrix(0);
+    
+    m = m * rotate4x4X(1.0f*a_time);
   }
   m_currVehicleInstanceMatrices[0] = m;
   m_instanceMatrices[GetVehicleMeshId()] = m;

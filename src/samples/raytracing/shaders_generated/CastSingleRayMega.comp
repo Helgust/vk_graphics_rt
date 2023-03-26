@@ -260,22 +260,19 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
         vec4 prevHitPoint = vec4(hitPoint, 1.0f) + ubo.m_invTransMat[3];
         bool needDepthTrace = false;
         vec3 diffVec = prevHitPoint.xyz - hitPoint;
-        if (length(prevHitPoint.xyz - hitPoint) >= 0.01f)
+        vec3 HitPointProj = lightDir * dot(lightDir,hitPoint.xyz);
+        vec3 PrevHitPointProj = lightDir * dot(lightDir,prevHitPoint.xyz);
+        int directionOfDepthTrace = length(HitPointProj) > length(PrevHitPointProj)  ? -1 : 1; //rework to distance between points
+        needDepthTrace = true;
+        vec3 initPos = prevHitPoint.xyz;
+        for(int i = 0; i < depth_steps; i++)
         {
-          vec3 HitPointProj = lightDir * dot(lightDir,hitPoint.xyz);
-          vec3 PrevHitPointProj = lightDir * dot(lightDir,prevHitPoint.xyz);
-          int directionOfDepthTrace = length(HitPointProj) > length(PrevHitPointProj)  ? -1 : 1; //rework to distance between points
-          needDepthTrace = true;
-          vec3 initPos = prevHitPoint.xyz;
-          for(int i = 0; i < depth_steps; i++)
+          vec4 tracePos = vec4(initPos + lightDir * directionOfDepthTrace * step_size * i, 1.0f);
+          vec4 currentPos = (ubo.m_prevProjView) * tracePos;
+          vec3 newPosition = GetPosFromPrevDepth(GetPrevUV(currentPos));
+          if(length(tracePos.xyz - newPosition) < depth_eps)
           {
-            vec4 tracePos = vec4(initPos + lightDir * directionOfDepthTrace * step_size * i, 1.0f);
-            vec4 currentPos = (ubo.m_prevProjView) * tracePos;
-            vec3 newPosition = GetPosFromPrevDepth(GetPrevUV(currentPos));
-            if(length(tracePos.xyz - newPosition) < depth_eps)
-            {
-              prevHitPoint = vec4(newPosition, 1.0f);
-            }
+            prevHitPoint = vec4(newPosition, 1.0f);
           }
         }
         vec4 prevScreenPos= (ubo.m_prevProjView) * prevHitPoint;
@@ -291,7 +288,6 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
         if ((prevColor.x == 0.0f) && (prevColor.y == 1.0f) && !outOfView 
           && abs(currDepth - prevDepth) < 0.001)
         {
-          if (needDepthTrace)
             imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 1.0f, 0.5f, 1.0f));
           return;
         }
