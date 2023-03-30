@@ -108,7 +108,7 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
       }
     }
     
-    AddVechicleGenericMesh(m_CubeSize);
+    //loadVehicleFromFile(modelPath);
     LoadOneMeshOnGPU(m_vehicleMesh);
     if(m_config.build_acc_structs)
     {
@@ -183,6 +183,7 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
 bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
 {
   tinygltf::Model gltfModel;
+  tinygltf::Model gltfVehModel;
   tinygltf::TinyGLTF gltfContext;
   std::string error, warning;
 
@@ -247,10 +248,23 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
       totalPrimitiveCount     += indexNum / 3;
       totalMeshes++;
     }
+    maxVertexCountPerMesh    = std::max((uint32_t)8, maxVertexCountPerMesh);
+    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working 
 
-    totalMeshes++;
-    totalVerticesCount += 8;
-    totalPrimitiveCount += 12;
+    loadVehicleFromFile(modelPath, gltfVehModel);
+
+    for(const auto& mesh : gltfVehModel.meshes)
+    {
+      uint32_t vertNum = 0;
+      uint32_t indexNum = 0;
+      getNumVerticesAndIndicesFromGLTFMesh(gltfVehModel, mesh, vertNum, indexNum);
+      maxVertexCountPerMesh    = std::max(vertNum, maxVertexCountPerMesh);
+      maxPrimitiveCountPerMesh = std::max(indexNum / 3, maxPrimitiveCountPerMesh);
+      totalVerticesCount      += vertNum;
+      totalPrimitiveCount     += indexNum / 3;
+      totalMeshes++;
+    }
+
     maxVertexCountPerMesh    = std::max((uint32_t)8, maxVertexCountPerMesh);
     maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working 
 
@@ -266,15 +280,18 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
     {
       const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
       auto identity = LiteMath::float4x4();
-      LoadGLTFNodesRecursive(gltfModel, node, identity, loaded_meshes_to_meshId);
+      LoadGLTFNodesRecursive(gltfModel, node, identity, loaded_meshes_to_meshId, false, false, 1U);
     }
     
-    AddVechicleGenericMesh(m_CubeSize);
-    LoadOneMeshOnGPU(m_vehicleMesh);
-    if(m_config.build_acc_structs)
+    //load vehicle here
+    //meshCounter = loaded_meshes_to_meshId.size();
+    std::unordered_map<int, uint32_t> vehloaded_meshes_to_meshId;
+    const tinygltf::Scene& scene = gltfVehModel.scenes[0];
+    for(size_t i = 0; i < scene.nodes.size(); ++i)
     {
-      AddBLAS(m_vehicleMesh);
-      InstanceMesh(m_vehicleMesh, m_currVehicleInstanceMatrices[0],true, (1U << 2));
+      const tinygltf::Node node = gltfVehModel.nodes[scene.nodes[0]];
+      auto identity = m_currVehicleInstanceMatrices[0];
+      LoadGLTFNodesRecursive(gltfVehModel, node, identity, vehloaded_meshes_to_meshId, true, true, (1U << 2));
     }
   }
 
@@ -320,30 +337,39 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
     LoadMaterialDataOnGPU();
   }
 
-//  if(m_config.build_acc_structs)
-//  {
-//    for(size_t i = 0 ; i < m_meshInfos.size(); ++i)
-//    {
-//      AddBLAS(i);
-//    }
-//  }
 
   return true;
 }
 
 void SceneManager::LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const tinygltf::Node& a_node, const LiteMath::float4x4& a_parentMatrix,
-  std::unordered_map<int, uint32_t> &a_loadedMeshesToMeshId)
+  std::unordered_map<int, uint32_t> &a_loadedMeshesToMeshId, bool loadVehicle, bool parentMesh, uint32_t cullMask)
 {
   auto nodeMatrix = a_parentMatrix * transformMatrixFromGLTFNode(a_node);
+  
+  if(m_config.debug_output)
+  {
+    std::cout << "Node Name # " << a_node.name << std::endl;
+    for (size_t i = 0; i < a_node.children.size(); i++)
+    {
+      std::cout << "Child Name " << a_model.nodes[a_node.children[i]].name << std::endl;
+    }
+    std::cout <<"---"<< std::endl;
+  }
+    
 
   for (size_t i = 0; i < a_node.children.size(); i++)
   {
-    LoadGLTFNodesRecursive(a_model, a_model.nodes[a_node.children[i]], nodeMatrix, a_loadedMeshesToMeshId);
+    LoadGLTFNodesRecursive(a_model, a_model.nodes[a_node.children[i]], nodeMatrix, a_loadedMeshesToMeshId, true, false, cullMask);
   }
 
   if(a_node.mesh > -1)
   {
-    if(!a_loadedMeshesToMeshId.count(a_node.mesh))
+    int meshMapId = a_node.mesh;
+    // if (loadVehicle)
+    // {
+    //   meshMapId += meshCounter;
+    // }
+    if(!a_loadedMeshesToMeshId.count(meshMapId))
     {
       const tinygltf::Mesh mesh = a_model.meshes[a_node.mesh];
       auto simpleMesh           = simpleMeshFromGLTFMesh(a_model, mesh);
@@ -351,10 +377,10 @@ void SceneManager::LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const 
       if(simpleMesh.VerticesNum() > 0)
       {
         auto meshId                         = AddMeshFromData(simpleMesh);
-        a_loadedMeshesToMeshId[a_node.mesh] = meshId;
+        a_loadedMeshesToMeshId[meshMapId] = meshId;
 
         if(m_config.debug_output)
-          std::cout << "Loading mesh # " << meshId << std::endl;
+          std::cout << "Loading mesh # " << meshId << "Name " << mesh.name << std::endl;
 
         LoadOneMeshOnGPU(meshId);
 
@@ -364,7 +390,18 @@ void SceneManager::LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const 
         }
       }
     }
-
-    InstanceMesh(a_loadedMeshesToMeshId[a_node.mesh], nodeMatrix);
+    if (loadVehicle)
+    {
+      if (parentMesh)
+      {
+        m_vehicleMesh = a_loadedMeshesToMeshId[a_node.mesh];
+        m_currVehicleInstanceMatrices[0] = nodeMatrix;
+      }
+      InstanceMesh(a_loadedMeshesToMeshId[a_node.mesh], nodeMatrix, true, cullMask);
+    }
+    else
+    {
+      InstanceMesh(a_loadedMeshesToMeshId[a_node.mesh], nodeMatrix);
+    }
   }
 }

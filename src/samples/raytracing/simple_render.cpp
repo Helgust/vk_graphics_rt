@@ -1158,10 +1158,10 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
   //m_pScnMgr->MoveCarX(a_time, teleport);
   //m_pScnMgr->MoveCarY(a_time, teleport);
-  m_pScnMgr->RotCarY(a_time, teleport);
+  //m_pScnMgr->RotCarY(a_time, teleport);
   //m_pScnMgr->RotCarX(a_time, teleport);
   //m_pScnMgr->MoveCarZ(a_time, teleport);
-  m_uniforms.PrevVecMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
+  //m_uniforms.PrevVecMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
 
@@ -1248,14 +1248,15 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
     }
 
-    pushConst2M.model = m_pScnMgr->GetVehicleInstanceMatrix(0);
-    pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
-    pushConst2M.color = float4(1.f, 1.f, 0.f, 1.f);
-    pushConst2M.dynamicBit = int2(1,0);
-    vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
-
-    auto mesh_info = m_pScnMgr->GetMeshInfo(m_pScnMgr->GetVehicleMeshId());
-    vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
+    // pushConst2M.model = m_pScnMgr->GetVehicleInstanceMatrix(0);
+    // pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
+    // pushConst2M.color = float4(1.f, 1.f, 0.f, 1.f);
+    // pushConst2M.dynamicBit = int2(1,0);
+    // vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
+    // auto meshSize = m_pScnMgr->MeshesNum();
+    // auto vehMeshId = m_pScnMgr->GetVehicleMeshId();
+    // auto mesh_info = m_pScnMgr->GetMeshInfo(vehMeshId);
+    // vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
 
     vkCmdEndRenderPass(a_cmdBuff);
   }
@@ -2046,7 +2047,7 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
-  m_pScnMgr->InstanceVehicle(float3(40.0, 10.0, -20.0), 1.0f, 4.0f);
+  m_pScnMgr->InstanceVehicle(float3(40.0, 10.0, -20.0), 5.0f, 4.0f);
   m_pScnMgr->LoadScene(path);
 
   if(ENABLE_HARDWARE_RT)

@@ -3,6 +3,7 @@
 #include "scene_mgr.h"
 #include "vk_utils.h"
 #include "vk_buffers.h"
+#include "../loader_utils/gltf_utils.h"
 
 VkTransformMatrixKHR transformMatrixFromFloat4x4(const LiteMath::float4x4 &m)
 {
@@ -645,6 +646,32 @@ void SceneManager::AddVechicleGenericMesh(float size)
   m_vehicleMesh = AddMeshFromData(cube, 1U);
 }
 
+bool SceneManager::loadVehicleFromFile(const std::string &modelPath, tinygltf::Model &a_gltfVehModel)
+{
+  tinygltf::Model gltfModel;
+  tinygltf::TinyGLTF gltfContext;
+  std::string error, warning;
+
+  std::string modelFolder;
+  auto found = modelPath.find_last_of('/');
+  if(found != std::string::npos && found != modelPath.size())
+    modelFolder = modelPath.substr(0, found + 1);
+  else
+    modelFolder = "./";
+
+  bool loaded = gltfContext.LoadASCIIFromFile(&gltfModel, &error, &warning, modelPath);
+
+  if(!loaded)
+  {
+    std::stringstream ss;
+    ss << "Cannot load glTF model from: " << modelPath;
+    vk_utils::logWarning(ss.str());
+
+    return false;
+  }
+  a_gltfVehModel = gltfModel;
+  return true;
+}
 uint32_t SceneManager::InstanceVehicle(float3 pos, float scale, float size)
 {
   m_CubeSize = size;

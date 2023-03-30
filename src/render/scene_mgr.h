@@ -54,7 +54,7 @@ struct LoaderConfig
   bool build_acc_structs_while_loading_scene = false;
   bool instance_matrix_as_vertex_attribute = false;
   bool instance_matrix_as_storage_buffer = false;
-  bool debug_output = false;
+  bool debug_output = true;
   BVH_BUILDER_TYPE builder_type = BVH_BUILDER_TYPE::RTX;
   MATERIAL_FORMAT material_format = MATERIAL_FORMAT::METALLIC_ROUGHNESS;
 };
@@ -65,6 +65,7 @@ struct SceneManager
     std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config = {});
   ~SceneManager();
 
+  const std::string &modelPath = "../resources/models/van/scene.gltf";
   bool LoadSceneXML(const std::string &scenePath, bool transpose = true);
   bool LoadSceneGLTF(const std::string &scenePath);
   bool LoadScene(const std::string &scenePath); // guess scene type by extension
@@ -72,6 +73,7 @@ struct SceneManager
 
   bool InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh);
   void AddVechicleGenericMesh(float m_CubeSize);
+  bool loadVehicleFromFile(const std::string &modelPath, tinygltf::Model &a_gltfVehModel);
   void MoveCarX(float a_time, bool forceHistory);
   void MoveCarY(float a_time, bool forceHistory);
   void MoveCarZ(float a_time, bool forceHistory);
@@ -83,6 +85,7 @@ struct SceneManager
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData, uint dynamicBit = 0);
 
   float deltaTime = 0;
+  int meshCounter = 0;
   uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender = true, uint32_t cullMask = 1U);
   uint32_t InstanceVehicle(float3 pos, float scale, float size);
 
@@ -141,14 +144,13 @@ private:
   void AddBLAS(uint32_t meshIdx);
 
   void LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const tinygltf::Node& a_node, const LiteMath::float4x4& a_parentMatrix,
-    std::unordered_map<int, uint32_t> &a_loadedMeshesToMeshId);
+    std::unordered_map<int, uint32_t> &a_loadedMeshesToMeshId, bool loadVehicle,bool parentMesh, uint32_t cullMask = 1U);
 
   std::vector<MeshInfo> m_meshInfos = {};
   std::shared_ptr<IMeshData> m_pMeshData = nullptr;
 
   std::vector<InstanceInfo> m_instanceInfos = {};
   std::vector<LiteMath::float4x4> m_instanceMatrices = {};
-  std::vector<LiteMath::float4x4> m_prevInstanceMatrices = {};
   std::vector<LiteMath::float4x4> m_currVehicleInstanceMatrices = {};
   std::vector<LiteMath::float4x4> m_prevVehicleInstanceMatrices = {};
 
