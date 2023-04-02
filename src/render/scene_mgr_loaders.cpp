@@ -280,7 +280,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
     {
       const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
       auto identity = LiteMath::float4x4();
-      LoadGLTFNodesRecursive(gltfModel, node, identity, loaded_meshes_to_meshId, false, false, 1U);
+      LoadGLTFNodesRecursive(gltfModel, node, identity, loaded_meshes_to_meshId, false);
     }
     
     //load vehicle here
@@ -291,7 +291,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
     {
       const tinygltf::Node node = gltfVehModel.nodes[scene.nodes[0]];
       auto identity = m_currVehicleInstanceMatrices[0];
-      LoadGLTFNodesRecursive(gltfVehModel, node, identity, vehloaded_meshes_to_meshId, true, true, (1U << 2));
+      LoadGLTFNodesRecursive(gltfVehModel, node, identity, vehloaded_meshes_to_meshId, true);
     }
   }
 
@@ -342,7 +342,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
 }
 
 void SceneManager::LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const tinygltf::Node& a_node, const LiteMath::float4x4& a_parentMatrix,
-  std::unordered_map<int, uint32_t> &a_loadedMeshesToMeshId, bool loadVehicle, bool parentMesh, uint32_t cullMask)
+  std::unordered_map<int, uint32_t> &a_loadedMeshesToMeshId, bool loadVehicle)
 {
   auto nodeMatrix = a_parentMatrix * transformMatrixFromGLTFNode(a_node);
   
@@ -359,16 +359,12 @@ void SceneManager::LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const 
 
   for (size_t i = 0; i < a_node.children.size(); i++)
   {
-    LoadGLTFNodesRecursive(a_model, a_model.nodes[a_node.children[i]], nodeMatrix, a_loadedMeshesToMeshId, true, false, cullMask);
+    LoadGLTFNodesRecursive(a_model, a_model.nodes[a_node.children[i]], nodeMatrix, a_loadedMeshesToMeshId, loadVehicle);
   }
 
   if(a_node.mesh > -1)
   {
     int meshMapId = a_node.mesh;
-    // if (loadVehicle)
-    // {
-    //   meshMapId += meshCounter;
-    // }
     if(!a_loadedMeshesToMeshId.count(meshMapId))
     {
       const tinygltf::Mesh mesh = a_model.meshes[a_node.mesh];

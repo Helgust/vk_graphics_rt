@@ -329,13 +329,17 @@ void SceneManager::LoadCommonGeoDataOnGPU()
 
 void SceneManager::LoadInstanceDataOnGPU()
 {
-  VkDeviceSize instMatBufSize = m_instanceMatrices.size() * sizeof(m_instanceMatrices[0]);
+  VkDeviceSize instMatBufSize = m_instanceMatrices.size() * sizeof(m_instanceMatrices[0]) + m_dynamicInstanceMatrices.size() * sizeof(m_dynamicInstanceMatrices[0]);
   VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
   m_instMatricesBuf = vk_utils::createBuffer(m_device, instMatBufSize, flags);
   m_instMemAlloc    = vk_utils::allocateAndBindWithPadding(m_device, m_physDevice, {m_instMatricesBuf});
-
-  m_pCopyHelper->UpdateBuffer(m_instMatricesBuf, 0, m_instanceMatrices.data(), instMatBufSize);
+  std::vector<LiteMath::float4x4> totalIntstanceMatrices = m_instanceMatrices;
+  
+  //totalIntstanceMatrices.insert(totalIntstanceMatrices.end(), m_instanceMatrices.begin(),  m_instanceMatrices.end());
+  //totalIntstanceMatrices.insert(totalIntstanceMatrices.end(), m_dynamicInstanceMatrices.begin(),  m_dynamicInstanceMatrices.end());
+  std::copy(m_dynamicInstanceMatrices.cbegin(), m_dynamicInstanceMatrices.cend(), std::back_inserter(totalIntstanceMatrices));
+  m_pCopyHelper->UpdateBuffer(m_instMatricesBuf, 0, totalIntstanceMatrices.data(), instMatBufSize);
 }
 
 vk_utils::VulkanImageMem SceneManager::LoadSpecialTexture()
@@ -820,7 +824,7 @@ void SceneManager::MoveCarZ(float a_time, bool teleport, LiteMath::float4x4 &a_m
       direction *= -1.0f;
       m_distanceTraveledZ = 0.0;
     }
-    float dist = m_velocity*a_time;
+    float dist = m_velocity * a_time;
     newPos.z += direction * dist;
     m_distanceTraveledZ += dist;
     a_mat.set_col(3, newPos);

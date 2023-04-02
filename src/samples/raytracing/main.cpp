@@ -48,7 +48,7 @@ int main()
   //app->LoadScene("../resources/scenes/043_cornell_normals/statex_00001.xml");
   //app->LoadScene("../resources/scenes/breakfast_room/statex_00001.xml");
   //app->LoadScene("../resources/scenes/conference/statex_00001.xml");
-  app->LoadScene("../resources/scenes/pillars/pillars.gltf");
+  //app->LoadScene("../resources/scenes/pillars/pillars.gltf");
   //app->LoadScene("../resources/scenes/buggy/Buggy.gltf");
   //app->LoadScene("../resources/scenes/powerplant/change_00000.xml");
   //app->LoadScene("../resources/scenes/RoadScenelib/statex_00001.xml");
@@ -58,7 +58,7 @@ int main()
   //app->LoadScene("../resources/scenes/box/Box.gltf");
   //app->LoadScene("../resources/scenes/canyon_landscape/scene.gltf");// big canyon
   //app->LoadScene("../resources/scenes/mars/scene.gltf");
-  //app->LoadScene("../resources/scenes/cityscape/scene.gltf"); // really good wihtout ATEST
+  app->LoadScene("../resources/scenes/cityscape/scene.gltf"); // really good wihtout ATEST
   //app->LoadScene("../resources/scenes/low_poly_city/scene.gltf"); // very big scene run with MATERAL::NONE
 
   bool showGUI = true;

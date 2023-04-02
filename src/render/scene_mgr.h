@@ -54,7 +54,7 @@ struct LoaderConfig
   bool build_acc_structs_while_loading_scene = false;
   bool instance_matrix_as_vertex_attribute = false;
   bool instance_matrix_as_storage_buffer = false;
-  bool debug_output = false;
+  bool debug_output = true;
   BVH_BUILDER_TYPE builder_type = BVH_BUILDER_TYPE::RTX;
   MATERIAL_FORMAT material_format = MATERIAL_FORMAT::METALLIC_ROUGHNESS;
 };
@@ -65,7 +65,9 @@ struct SceneManager
     std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config = {});
   ~SceneManager();
 
-  const std::string &modelPath = "../resources/models/van/scene.gltf";
+  //const std::string &modelPath = "../resources/models/cab/scene.gltf";
+  const std::string &modelPath = "../resources/models/van_solid/scene.gltf";
+  //const std::string &modelPath = "../resources/models/tank_solid/scene.gltf";
   bool LoadSceneXML(const std::string &scenePath, bool transpose = true);
   bool LoadSceneGLTF(const std::string &scenePath);
   bool LoadScene(const std::string &scenePath); // guess scene type by extension
@@ -148,7 +150,7 @@ private:
   void AddBLAS(uint32_t meshIdx);
 
   void LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const tinygltf::Node& a_node, const LiteMath::float4x4& a_parentMatrix,
-    std::unordered_map<int, uint32_t> &a_loadedMeshesToMeshId, bool loadVehicle,bool parentMesh, uint32_t cullMask = 1U);
+    std::unordered_map<int, uint32_t> &a_loadedMeshesToMeshId, bool loadVehicle);
 
   std::vector<MeshInfo> m_meshInfos = {};
   std::shared_ptr<IMeshData> m_pMeshData = nullptr;
