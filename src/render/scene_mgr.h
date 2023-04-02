@@ -54,7 +54,7 @@ struct LoaderConfig
   bool build_acc_structs_while_loading_scene = false;
   bool instance_matrix_as_vertex_attribute = false;
   bool instance_matrix_as_storage_buffer = false;
-  bool debug_output = true;
+  bool debug_output = false;
   BVH_BUILDER_TYPE builder_type = BVH_BUILDER_TYPE::RTX;
   MATERIAL_FORMAT material_format = MATERIAL_FORMAT::METALLIC_ROUGHNESS;
 };
@@ -86,7 +86,7 @@ struct SceneManager
 
   float deltaTime = 0;
   int meshCounter = 0;
-  uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender = true, uint32_t cullMask = 1U);
+  uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender = true, bool dynamicMesh = false);
   uint32_t InstanceVehicle(float3 pos, float scale, float size);
 
   void MarkInstance(uint32_t instId);
@@ -113,6 +113,7 @@ struct SceneManager
 
   uint32_t MeshesNum()    const {return m_meshInfos.size();}
   uint32_t InstancesNum() const {return m_instanceInfos.size();}
+  uint32_t DynamicInstancesNum() const {return m_dynamicInstanceInfos.size();}
 
   
   uint32_t GetVehicleMeshId() { return m_vehicleMesh;};
@@ -127,6 +128,8 @@ struct SceneManager
     assert(instId < m_currVehicleInstanceMatrices.size()); return GetVehicleInstanceMatrix(instId).get_col(3);}
 //  void DestroyAS();
 
+  InstanceInfo GetDynamicInstanceInfo(uint32_t instId) const {assert(instId < m_dynamicInstanceInfos.size()); return m_dynamicInstanceInfos[instId];}
+  LiteMath::float4x4 GetDynamicInstanceMatrix(uint32_t instId) const {assert(instId < m_dynamicInstanceMatrices.size()); return m_dynamicInstanceMatrices[instId];}
   VkAccelerationStructureKHR GetTLAS() const { return m_pBuilderV2->GetTLAS(); }
   void BuildAllBLAS();
   void BuildTLAS(bool need_update = false);
@@ -151,6 +154,8 @@ private:
 
   std::vector<InstanceInfo> m_instanceInfos = {};
   std::vector<LiteMath::float4x4> m_instanceMatrices = {};
+  std::vector<InstanceInfo> m_dynamicInstanceInfos = {};
+  std::vector<LiteMath::float4x4> m_dynamicInstanceMatrices = {};
   std::vector<LiteMath::float4x4> m_currVehicleInstanceMatrices = {};
   std::vector<LiteMath::float4x4> m_prevVehicleInstanceMatrices = {};
 

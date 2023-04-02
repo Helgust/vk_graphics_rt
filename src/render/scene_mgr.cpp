@@ -196,20 +196,32 @@ uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData, uint a_dynam
   return m_meshInfos.size() - 1;
 }
 
-uint32_t SceneManager::InstanceMesh(const uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender, uint32_t cullMask)
+uint32_t SceneManager::InstanceMesh(const uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender, bool dynamicMesh)
 {
   assert(meshId < m_meshInfos.size());
-
-  //@TODO: maybe move
-  m_instanceMatrices.push_back(matrix);
-
   InstanceInfo info;
-  info.inst_id       = m_instanceMatrices.size() - 1;
-  info.mesh_id       = meshId;
-  info.renderMark    = markForRender;
-  info.instBufOffset = (m_instanceMatrices.size() - 1) * sizeof(matrix);
-  info.cullMask = cullMask;
-  m_instanceInfos.push_back(info);
+  if (!dynamicMesh)
+  {
+    //@TODO: maybe move
+    m_instanceMatrices.push_back(matrix);
+    info.inst_id       = m_instanceMatrices.size() - 1;
+    info.mesh_id       = meshId;
+    info.renderMark    = markForRender;
+    info.instBufOffset = (m_instanceMatrices.size() - 1) * sizeof(matrix);
+    info.cullMask = 1U;
+    m_instanceInfos.push_back(info);
+  }
+  else
+  {
+    //fix matrices
+    m_dynamicInstanceMatrices.push_back(matrix);
+    info.inst_id       = m_dynamicInstanceMatrices.size() - 1;
+    info.mesh_id       = meshId;
+    info.renderMark    = markForRender;
+    info.instBufOffset = (m_dynamicInstanceMatrices.size() - 1) * sizeof(matrix);
+    info.cullMask = 1U << 2;
+    m_dynamicInstanceInfos.push_back(info);
+  }
 
   return info.inst_id;
 }
@@ -560,10 +572,11 @@ void SceneManager::BuildAllBLAS()
 
 void SceneManager::BuildTLAS(bool need_update)
 {
-  BuildAllBLAS(); //Do  this really need?
+  //BuildAllBLAS(); //Do  this really need?
 
   std::vector<VkAccelerationStructureInstanceKHR> geometryInstances;
-  geometryInstances.reserve(m_instanceInfos.size());
+  int geomInstanceSize = m_instanceInfos.size() + m_dynamicInstanceInfos.size();
+  geometryInstances.reserve(geomInstanceSize);
 
 #ifdef USE_MANY_HIT_SHADERS
   std::map<uint32_t, uint32_t> materialMap = { {0, LAMBERT_MTL}, {1, GGX_MTL}, {2, MIRROR_MTL}, {3, BLEND_MTL}, {4, MIRROR_MTL}, {5, EMISSION_MTL} };
@@ -572,6 +585,24 @@ void SceneManager::BuildTLAS(bool need_update)
   for(const auto& inst : m_instanceInfos)
   {
     auto transform = transformMatrixFromFloat4x4(m_instanceMatrices[inst.inst_id]);
+    VkAccelerationStructureInstanceKHR instance{};
+    instance.transform = transform;
+    instance.instanceCustomIndex = inst.mesh_id;
+    instance.mask = inst.cullMask;
+#ifdef USE_MANY_HIT_SHADERS
+    instance.instanceShaderBindingTableRecordOffset = materialMap[inst.mesh_id];
+#else
+    instance.instanceShaderBindingTableRecordOffset = 0;
+#endif
+    instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+    instance.accelerationStructureReference = m_pBuilderV2->GetBLASDeviceAddress(inst.mesh_id);//m_blas[inst.mesh_id].deviceAddress;
+
+    geometryInstances.push_back(instance);
+  }
+
+  for(const auto& inst : m_dynamicInstanceInfos)
+  {
+    auto transform = transformMatrixFromFloat4x4(m_dynamicInstanceMatrices[inst.inst_id]);
     VkAccelerationStructureInstanceKHR instance{};
     instance.transform = transform;
     instance.instanceCustomIndex = inst.mesh_id;

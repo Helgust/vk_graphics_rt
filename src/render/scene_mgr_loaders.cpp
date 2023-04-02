@@ -109,12 +109,12 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
     }
     
     //loadVehicleFromFile(modelPath);
-    LoadOneMeshOnGPU(m_vehicleMesh);
-    if(m_config.build_acc_structs)
-    {
-      AddBLAS(m_vehicleMesh);
-      InstanceMesh(m_vehicleMesh, m_currVehicleInstanceMatrices[0],true, (1U << 2));
-    }
+    //LoadOneMeshOnGPU(m_vehicleMesh);
+    // if(m_config.build_acc_structs)
+    // {
+    //   AddBLAS(m_vehicleMesh);
+    //   InstanceMesh(m_vehicleMesh, m_currVehicleInstanceMatrices[0],true, (1U << 2));
+    // }
   }
 
   for(auto cam : hscene_main->Cameras())
@@ -397,7 +397,7 @@ void SceneManager::LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const 
         m_vehicleMesh = a_loadedMeshesToMeshId[a_node.mesh];
         m_currVehicleInstanceMatrices[0] = nodeMatrix;
       }
-      InstanceMesh(a_loadedMeshesToMeshId[a_node.mesh], nodeMatrix, true, cullMask);
+      InstanceMesh(a_loadedMeshesToMeshId[a_node.mesh], nodeMatrix, true, true);
     }
     else
     {

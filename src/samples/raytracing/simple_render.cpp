@@ -1248,16 +1248,21 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
     }
 
-    // pushConst2M.model = m_pScnMgr->GetVehicleInstanceMatrix(0);
-    // pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
-    // pushConst2M.color = float4(1.f, 1.f, 0.f, 1.f);
-    // pushConst2M.dynamicBit = int2(1,0);
-    // vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
-    // auto meshSize = m_pScnMgr->MeshesNum();
-    // auto vehMeshId = m_pScnMgr->GetVehicleMeshId();
-    // auto mesh_info = m_pScnMgr->GetMeshInfo(vehMeshId);
-    // vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
+    //Here dynamic render
+    for (uint32_t i = 0; i < m_pScnMgr->DynamicInstancesNum()-1; ++i)
+    {
+      auto inst = m_pScnMgr->GetDynamicInstanceInfo(i);
 
+      pushConst2M.model = m_pScnMgr->GetDynamicInstanceMatrix(i);
+      pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
+      pushConst2M.color = float4(1.f, 1.f, 0.f, 1.f);
+      pushConst2M.dynamicBit = int2(1,0);
+      vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0,
+                         sizeof(pushConst2M), &pushConst2M);
+
+      auto mesh_info = m_pScnMgr->GetMeshInfo(inst.mesh_id);
+      vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
+    }
     vkCmdEndRenderPass(a_cmdBuff);
   }
 
