@@ -74,12 +74,13 @@ struct SceneManager
   bool InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh);
   void AddVechicleGenericMesh(float m_CubeSize);
   bool loadVehicleFromFile(const std::string &modelPath, tinygltf::Model &a_gltfVehModel);
-  void MoveCarX(float a_time, bool forceHistory);
-  void MoveCarY(float a_time, bool forceHistory);
-  void MoveCarZ(float a_time, bool forceHistory);
-  void RotCarX(float a_time, bool forceHistory);
-  void RotCarY(float a_time, bool forceHistory);
-  void RotCarZ(float a_time, bool forceHistory);
+  void MoveCarX(float a_time, bool forceHistory, LiteMath::float4x4 &mat);
+  void MoveCarY(float a_time, bool forceHistory, LiteMath::float4x4 &mat);
+  void MoveCarZ(float a_time, bool forceHistory, LiteMath::float4x4 &mat);
+  void RotCarX(float a_time, bool forceHistory, LiteMath::float4x4 &mat);
+  void RotCarY(float a_time, bool forceHistory, LiteMath::float4x4 &mat);
+  void RotCarZ(float a_time, bool forceHistory, LiteMath::float4x4 &mat);
+  void ApplyMovement(LiteMath::float4x4 &trans_mat);
   void MadeCubeMesh(cmesh::SimpleMesh& cube, float size);
   uint32_t AddMeshFromFile(const std::string& meshPath);
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData, uint dynamicBit = 0);
@@ -210,7 +211,7 @@ private:
   float m_distanceTraveledZ = 0.0f;
   float direction = 1.0f;
   bool rotFlag = false;
-  float m_velocity = 5.0f;
+  float m_velocity = 10.0f;
   std::vector<float> cubePos
   {
     -1.0f, -1.0f, +1.0f, +1.0f,

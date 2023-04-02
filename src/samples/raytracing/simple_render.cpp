@@ -1156,12 +1156,15 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
 // most uniforms are updated in GUI -> SetupGUIElements()
   m_uniforms.m_time_gbuffer_index = vec4(0, 0, a_time, gbuffer_index);
   m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
-  //m_pScnMgr->MoveCarX(a_time, teleport);
-  //m_pScnMgr->MoveCarY(a_time, teleport);
-  //m_pScnMgr->RotCarY(a_time, teleport);
-  //m_pScnMgr->RotCarX(a_time, teleport);
-  //m_pScnMgr->MoveCarZ(a_time, teleport);
-  //m_uniforms.PrevVecMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
+  auto transMat = LiteMath::float4x4();
+  //m_pScnMgr->MoveCarX(a_time, teleport, transMat);
+  m_pScnMgr->MoveCarZ(a_time, teleport, transMat);
+  //m_pScnMgr->MoveCarY(a_time, teleport, transMat);
+  //m_pScnMgr->RotCarY(a_time, teleport, transMat);
+  //m_pScnMgr->RotCarX(a_time, teleport, transMat);
+  //m_pScnMgr->MoveCarZ(a_time, teleport,transMat);
+  m_uniforms.PrevVecMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
+  m_pScnMgr->ApplyMovement(transMat);
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
 
@@ -1233,12 +1236,12 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       float4(1.f, 1.f, 1.f, 1.f)
     };
 
-    for (uint32_t i = 0; i < m_pScnMgr->InstancesNum()-1; ++i)
+    for (uint32_t i = 0; i < m_pScnMgr->InstancesNum(); ++i)
     {
       auto inst = m_pScnMgr->GetInstanceInfo(i);
 
       pushConst2M.model = m_pScnMgr->GetInstanceMatrix(i);
-      pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
+      pushConst2M.vehiclePos =  LiteMath::float4(0,0,0,0);
       pushConst2M.color = colors[i % 4];
       pushConst2M.dynamicBit = int2(0,0);
       vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0,
@@ -1249,7 +1252,7 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     }
 
     //Here dynamic render
-    for (uint32_t i = 0; i < m_pScnMgr->DynamicInstancesNum()-1; ++i)
+    for (uint32_t i = 0; i < m_pScnMgr->DynamicInstancesNum(); ++i)
     {
       auto inst = m_pScnMgr->GetDynamicInstanceInfo(i);
 

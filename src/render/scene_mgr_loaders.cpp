@@ -392,11 +392,6 @@ void SceneManager::LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const 
     }
     if (loadVehicle)
     {
-      if (parentMesh)
-      {
-        m_vehicleMesh = a_loadedMeshesToMeshId[a_node.mesh];
-        m_currVehicleInstanceMatrices[0] = nodeMatrix;
-      }
       InstanceMesh(a_loadedMeshesToMeshId[a_node.mesh], nodeMatrix, true, true);
     }
     else
