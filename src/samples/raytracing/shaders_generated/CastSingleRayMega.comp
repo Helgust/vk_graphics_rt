@@ -336,16 +336,16 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
     vec3 shadowDir = normalize(lightDir + diskPoint.x * lightTangent + diskPoint.y * lightBitangent);
     CRT_Hit hitShadow;
     if((kgenArgs.isStaticPass == 1U)) 
-     hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hitPoint, 0.15f), vec4(shadowDir, rayMax), 1U);
+     hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hitPoint + shadowDir * 0.15f, 0.0f), vec4(shadowDir, rayMax - 0.15f * 2.0), 1U);
     else
-     hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hitPoint, 0.15f), vec4(shadowDir, rayMax), (1U << 2));
+     hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hitPoint + shadowDir * 0.15f, 0.0f), vec4(shadowDir, rayMax - 0.15f * 2.0), (1U << 2));
     color.y = 0.0;
     color.z = 0.0;
     if ((hitShadow.primId != -1))// intersect
     {
       //uint dynamic = GetDynamic(hitShadow);
       total += 1;
-      float shade = max(dot(shadowDir, n), 0.0f);
+      float shade = max(dot(shadowDir, n), 0.1f);
       if((kgenArgs.isStaticPass == 1U))
       {
         color.x += shade;
