@@ -899,8 +899,11 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindBuffer(1, m_pScnMgr->GetMaterialsBuffer(), VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-  m_pBindings->BindBuffer(2, m_pScnMgr->GetMaterialPerVertexIDsBuffer(), VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-  m_pBindings->BindImageArray(3, m_pScnMgr->GetTextureViews(), m_pScnMgr->GetTextureSamplers());
+  m_pBindings->BindBuffer(2, m_pScnMgr->GetDynMaterialsBuffer(), VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+  m_pBindings->BindBuffer(3, m_pScnMgr->GetMaterialPerVertexIDsBuffer(), VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+  m_pBindings->BindBuffer(4, m_pScnMgr->GetDynMaterialPerVertexIDsBuffer(), VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+  m_pBindings->BindImageArray(5, m_pScnMgr->GetTextureViews(), m_pScnMgr->GetTextureSamplers());
+  m_pBindings->BindImageArray(6, m_pScnMgr->GetDynTextureViews(), m_pScnMgr->GetDynTextureSamplers());
   m_pBindings->BindEnd(&m_dSet, &m_dSetLayout);
 
 

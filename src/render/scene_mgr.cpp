@@ -272,6 +272,10 @@ void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum
   m_matPerVertIdsBuf = vk_utils::createBuffer(m_device, matPerVertIdsBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   all_buffers.push_back(m_matPerVertIdsBuf);
 
+  VkDeviceSize matDynPerVertIdsBufSize = a_totalVertNum * sizeof(uint32_t);
+  m_matDynPerVertIdsBuf = vk_utils::createBuffer(m_device, matDynPerVertIdsBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+  all_buffers.push_back(m_matDynPerVertIdsBuf);
+
   VkMemoryAllocateFlags allocFlags {};
   if(m_useRTX)
   {
@@ -281,7 +285,7 @@ void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum
   m_geoMemAlloc = vk_utils::allocateAndBindWithPadding(m_device, m_physDevice, all_buffers, allocFlags);
 }
 
-void SceneManager::LoadOneMeshOnGPU(uint32_t meshIdx)
+void SceneManager::LoadOneMeshOnGPU(uint32_t meshIdx, bool isLoadVehicle)
 {
   VkDeviceSize vertexBufSize = m_meshInfos[meshIdx].m_vertNum * m_pMeshData->SingleVertexSize();
   VkDeviceSize indexBufSize  = m_meshInfos[meshIdx].m_indNum  * m_pMeshData->SingleIndexSize();
@@ -302,8 +306,16 @@ void SceneManager::LoadOneMeshOnGPU(uint32_t meshIdx)
     last = m_matIDs[loadedPrims + i / 3];
   }
 
-  m_pCopyHelper->UpdateBuffer(m_matPerVertIdsBuf, m_loadedVertices * sizeof(uint32_t),
+  if(!isLoadVehicle)
+  {
+    m_pCopyHelper->UpdateBuffer(m_matPerVertIdsBuf, m_loadedVertices * sizeof(uint32_t),
     perVertMat.data(), (perVertMat.size()) * sizeof(perVertMat[0]));
+  }
+  else
+  {
+    m_pCopyHelper->UpdateBuffer(m_matDynPerVertIdsBuf, m_loadedVertices * sizeof(uint32_t),
+    perVertMat.data(), (perVertMat.size()) * sizeof(perVertMat[0]));
+  }
 //  if(meshIdx == 8)
 //  {
 //    std::ofstream file("tmp.txt");
@@ -376,6 +388,7 @@ vk_utils::VulkanImageMem SceneManager::LoadSpecialTexture()
 void SceneManager::LoadMaterialDataOnGPU()
 {
   VkDeviceSize materialBufSize = m_materials.size() * sizeof(m_materials[0]);
+  VkDeviceSize dynMaterialBufSize = m_dynMaterials.size() * sizeof(m_dynMaterials[0]);
 
   VkBufferUsageFlags matFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
@@ -383,6 +396,11 @@ void SceneManager::LoadMaterialDataOnGPU()
   m_matMemAlloc = vk_utils::allocateAndBindWithPadding(m_device, m_physDevice, {m_materialBuf});
 
   m_pCopyHelper->UpdateBuffer(m_materialBuf, 0, m_materials.data(), materialBufSize);
+
+  m_dynMaterialBuf = vk_utils::createBuffer(m_device, dynMaterialBufSize, matFlags);
+  m_dynMatMemAlloc = vk_utils::allocateAndBindWithPadding(m_device, m_physDevice, {m_dynMaterialBuf});
+
+  m_pCopyHelper->UpdateBuffer(m_dynMaterialBuf, 0, m_dynMaterials.data(), dynMaterialBufSize);
 
   if(m_config.load_materials == MATERIAL_LOAD_MODE::MATERIALS_AND_TEXTURES)
   {
@@ -401,6 +419,21 @@ void SceneManager::LoadMaterialDataOnGPU()
       }
     }
 
+    m_dynTextures.reserve(m_dynTextureInfos.size() + 1);
+    for(size_t idx = 0; idx < m_dynTextureInfos.size(); ++idx)
+    {
+      auto texInfo = m_dynTextureInfos[idx];
+      if(texInfo.is_ok)
+      {
+        auto textureUsage      = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        VkFormat textureFormat = formatFromImageInfo(texInfo);
+        auto mips              = vk_utils::calcMipLevelsCount(texInfo.width, texInfo.height);
+        m_dynTextures.push_back(vk_utils::createImg(m_device, texInfo.width, texInfo.height, textureFormat, textureUsage,
+          VK_IMAGE_ASPECT_COLOR_BIT, mips));
+        m_dynTexturesById.insert({idx, m_dynTextures.back()});
+      }
+    }
+
     // load special texture to indicate missing/corrupt textures in the scene
     // {
     //   m_textures.push_back(LoadSpecialTexture());
@@ -409,13 +442,19 @@ void SceneManager::LoadMaterialDataOnGPU()
     // }
 
     vk_utils::allocateImgsBindCreateView(m_device, m_physDevice, m_textures);
+    vk_utils::allocateImgsBindCreateView(m_device, m_physDevice, m_dynTextures);
     if(!m_textures.empty())
       m_texturesMemAlloc = m_textures[0].mem;
+    if(!m_dynTextures.empty())
+      m_dynTexturesMemAlloc = m_dynTextures[0].mem;
 
     VkSampler common_sampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT,
       VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
     m_samplers.reserve(m_textures.size());
     m_textureViews.reserve(m_textureInfos.size());
+    
+    m_dynSamplers.reserve(m_dynTextures.size());
+    m_dynTextureViews.reserve(m_dynTextureInfos.size());
 
     for(size_t idx = 0; idx < m_textureInfos.size(); ++idx)
     {
@@ -442,6 +481,33 @@ void SceneManager::LoadMaterialDataOnGPU()
         m_textureViews.push_back(m_textures.back().view);
       }
       m_samplers.push_back(common_sampler);
+    }
+
+    for(size_t idx = 0; idx < m_dynTextureInfos.size(); ++idx)
+    {
+      if(m_dynTexturesById.count(idx))
+      {
+        auto texInfo = m_dynTextureInfos[idx];
+        auto tex = m_dynTexturesById.at(idx);
+        auto tmp = loadImageLDR(texInfo);// @TODO: load hdr textures too
+        int bpp = texInfo.bytesPerChannel * texInfo.channels;
+        if(texInfo.channels == 3)
+          bpp = texInfo.bytesPerChannel * (texInfo.channels + 1);
+        m_pCopyHelper->UpdateImage(tex.image, tmp.data(), texInfo.width, texInfo.height, bpp, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+        if(tex.mipLvls > 1)
+        {
+          auto cmdBuf = vk_utils::createCommandBuffer(m_device, m_pool);
+          vk_utils::generateMipChainCmd(cmdBuf, tex.image, texInfo.width, texInfo.height, tex.mipLvls);
+          vk_utils::executeCommandBufferNow(cmdBuf, m_graphicsQ, m_device);
+        }
+        m_dynTextureViews.push_back(tex.view);
+      }
+      else
+      {
+        m_dynTextureViews.push_back(m_textures.back().view);
+      }
+      m_dynSamplers.push_back(common_sampler);
     }
   }
 }
@@ -493,6 +559,12 @@ void SceneManager::DestroyScene()
   {
     vkDestroyBuffer(m_device, m_matPerVertIdsBuf, nullptr);
     m_matPerVertIdsBuf = VK_NULL_HANDLE;
+  }
+
+  if(m_matDynPerVertIdsBuf != VK_NULL_HANDLE)
+  {
+    vkDestroyBuffer(m_device, m_matDynPerVertIdsBuf, nullptr);
+    m_matDynPerVertIdsBuf = VK_NULL_HANDLE;
   }
 
   if(m_geoMemAlloc != VK_NULL_HANDLE)
@@ -701,7 +773,7 @@ void SceneManager::AddVechicleGenericMesh(float size)
   m_vehicleMesh = AddMeshFromData(cube, 1U);
 }
 
-bool SceneManager::loadVehicleFromFile(const std::string &modelPath, tinygltf::Model &a_gltfVehModel)
+bool SceneManager::loadVehicleFromFile(const std::string &modelPath, tinygltf::Model &a_gltfVehModel, std::string &a_modelFolder)
 {
   tinygltf::Model gltfModel;
   tinygltf::TinyGLTF gltfContext;
@@ -715,7 +787,7 @@ bool SceneManager::loadVehicleFromFile(const std::string &modelPath, tinygltf::M
     modelFolder = "./";
 
   bool loaded = gltfContext.LoadASCIIFromFile(&gltfModel, &error, &warning, modelPath);
-
+  a_modelFolder = modelFolder;
   if(!loaded)
   {
     std::stringstream ss;

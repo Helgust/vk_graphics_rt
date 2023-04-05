@@ -12,7 +12,8 @@ layout(push_constant) uniform params_t
     mat4 lightMatrix;
     vec4 color;
     vec4 vehiclePos;
-    vec2 screenSize; 
+    vec2 screenSize;
+    ivec2 dynamicBit; 
 } params;
 
 layout (location = 0) out vec4 outPosition;
@@ -38,7 +39,9 @@ layout(binding = 0, set = 0) uniform AppData
 };
 
 layout(binding = 1, set = 0) buffer materialsBuf { MaterialData_pbrMR materials[]; };
-layout(binding = 3, set = 0) uniform sampler2D textures[];
+layout(binding = 2, set = 0) buffer dynMaterialsBuf { MaterialData_pbrMR dynMaterials[]; };
+layout(binding = 5, set = 0) uniform sampler2D textures[];
+layout(binding = 6, set = 0) uniform sampler2D dynTextures[];
 
 vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
 {
@@ -66,7 +69,15 @@ void main()
     vec4 albedo = vec4(surf.color,1);
     if (materials[uint(surf.materialId)].baseColorTexId != -1)
     {
-        albedo = texture(textures[materials[uint(surf.materialId)].baseColorTexId], surf.texCoord);
+        if(params.dynamicBit.x != 1)
+        {
+            albedo = texture(textures[materials[uint(surf.materialId)].baseColorTexId], surf.texCoord);
+        }
+        else
+        {
+            albedo = texture(dynTextures[dynMaterials[uint(surf.materialId)].baseColorTexId], surf.texCoord);
+        }
+        
     }
     if (albedo.a < 0.5)
         discard;

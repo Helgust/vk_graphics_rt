@@ -16,7 +16,9 @@ layout(binding = 0, set = 0) uniform AppData
     UniformParams UboParams;
 };
 layout(binding = 1, set = 0) buffer materialsBuf { MaterialData_pbrMR materials[]; };
-layout(binding = 2, set = 0) buffer materialIdsBuf { uint materialIds[]; };
+layout(binding = 2, set = 0) buffer dynMaterialsBuf { MaterialData_pbrMR dynMaterials[]; };
+layout(binding = 3, set = 0) buffer materialIdsBuf { uint materialIds[]; };
+layout(binding = 4, set = 0) buffer dynMaterialIdsBuf { uint dynMaterialIds[]; };
 
 layout(push_constant) uniform params_t
 {
@@ -62,13 +64,16 @@ void main(void)
     if (params.dynamicBit.x != 1)
     {
         vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
+        vOut.color = materials[materialIds[gl_BaseVertexARB]].baseColor.xyz;
+        vOut.materialId = materialIds[gl_BaseVertexARB];
     }
     else
     {
         vOut.prevClipSpacePos = UboParams.prevProjView * UboParams.PrevVecMat * vec4(vOut.wPos, 1.0);//Fixme
+        vOut.color = dynMaterials[dynMaterialIds[gl_BaseVertexARB]].baseColor.xyz;
+        vOut.materialId = dynMaterialIds[gl_BaseVertexARB];
         //vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
     }
-    vOut.color = materials[materialIds[gl_BaseVertexARB]].baseColor.xyz;
-    vOut.materialId = materialIds[gl_BaseVertexARB];
+    
     
 }

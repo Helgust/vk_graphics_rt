@@ -54,7 +54,7 @@ struct LoaderConfig
   bool build_acc_structs_while_loading_scene = false;
   bool instance_matrix_as_vertex_attribute = false;
   bool instance_matrix_as_storage_buffer = false;
-  bool debug_output = false;
+  bool debug_output = true;
   BVH_BUILDER_TYPE builder_type = BVH_BUILDER_TYPE::RTX;
   MATERIAL_FORMAT material_format = MATERIAL_FORMAT::METALLIC_ROUGHNESS;
 };
@@ -66,6 +66,7 @@ struct SceneManager
   ~SceneManager();
 
   //const std::string &modelPath = "../resources/models/cab/scene.gltf";
+  //const std::string &modelPath = "../resources/models/cab_solid/scene.gltf";
   const std::string &modelPath = "../resources/models/van_solid/scene.gltf";
   //const std::string &modelPath = "../resources/models/tank_solid/scene.gltf";
   bool LoadSceneXML(const std::string &scenePath, bool transpose = true);
@@ -75,7 +76,7 @@ struct SceneManager
 
   bool InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh);
   void AddVechicleGenericMesh(float m_CubeSize);
-  bool loadVehicleFromFile(const std::string &modelPath, tinygltf::Model &a_gltfVehModel);
+  bool loadVehicleFromFile(const std::string &modelPath, tinygltf::Model &a_gltfVehModel, std::string &a_modelFolder);
   void MoveCarX(float a_time, bool forceHistory, LiteMath::float4x4 &mat);
   void MoveCarY(float a_time, bool forceHistory, LiteMath::float4x4 &mat);
   void MoveCarZ(float a_time, bool forceHistory, LiteMath::float4x4 &mat);
@@ -106,12 +107,17 @@ struct SceneManager
   VkBuffer GetMeshInfoBuffer()     const { return m_meshInfoBuf; }
   VkBuffer GetInstanceMatBuffer()  const { return m_instMatricesBuf; }
   VkBuffer GetMaterialsBuffer()    const { return m_materialBuf; }
+  VkBuffer GetDynMaterialsBuffer()    const { return m_dynMaterialBuf; }
   VkBuffer GetMaterialIDsBuffer()  const { return m_matIdsBuf; }
   VkBuffer GetMaterialPerVertexIDsBuffer()  const { return m_matPerVertIdsBuf; }
+  VkBuffer GetDynMaterialPerVertexIDsBuffer()  const { return m_matDynPerVertIdsBuf; }
   std::shared_ptr<vk_utils::ICopyEngine> GetCopyHelper() { return  m_pCopyHelper; }
 
   std::vector<VkSampler> GetTextureSamplers() const { return m_samplers; }
   std::vector<VkImageView>  GetTextureViews() const { return m_textureViews; }
+
+  std::vector<VkSampler> GetDynTextureSamplers() const { return m_dynSamplers; }
+  std::vector<VkImageView>  GetDynTextureViews() const { return m_dynTextureViews; }
 
   std::shared_ptr<IMeshData> GetMeshData() {return m_pMeshData; }
 
@@ -143,7 +149,7 @@ private:
 
   vk_utils::VulkanImageMem LoadSpecialTexture();
   void InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum, uint32_t a_totalIndicesNum);
-  void LoadOneMeshOnGPU(uint32_t meshIdx);
+  void LoadOneMeshOnGPU(uint32_t meshIdx, bool isLoadVehicle = false);
   void LoadCommonGeoDataOnGPU();
   void LoadInstanceDataOnGPU();
   void LoadMaterialDataOnGPU();
@@ -174,7 +180,8 @@ private:
   VkBuffer m_geoIdxBuf         = VK_NULL_HANDLE;
   VkBuffer m_meshInfoBuf       = VK_NULL_HANDLE;
   VkBuffer m_matIdsBuf         = VK_NULL_HANDLE;
-  VkBuffer m_matPerVertIdsBuf         = VK_NULL_HANDLE;
+  VkBuffer m_matPerVertIdsBuf  = VK_NULL_HANDLE;
+  VkBuffer m_matDynPerVertIdsBuf  = VK_NULL_HANDLE;
   VkDeviceMemory m_geoMemAlloc = VK_NULL_HANDLE;
 
   VkBuffer m_instMatricesBuf    = VK_NULL_HANDLE;
@@ -194,6 +201,16 @@ private:
   VkDeviceMemory m_texturesMemAlloc = VK_NULL_HANDLE;
   std::vector<VkSampler> m_samplers;
   std::vector<VkImageView> m_textureViews;
+
+  std::vector<MaterialData_pbrMR> m_dynMaterials;
+  std::vector<ImageFileInfo> m_dynTextureInfos;
+  VkBuffer m_dynMaterialBuf  = VK_NULL_HANDLE;
+  VkDeviceMemory m_dynMatMemAlloc = VK_NULL_HANDLE;
+   std::vector<vk_utils::VulkanImageMem> m_dynTextures;
+  std::unordered_map<uint32_t, vk_utils::VulkanImageMem&> m_dynTexturesById;
+  VkDeviceMemory m_dynTexturesMemAlloc = VK_NULL_HANDLE;
+  std::vector<VkSampler> m_dynSamplers;
+  std::vector<VkImageView> m_dynTextureViews;
 
   VkDevice m_device = VK_NULL_HANDLE;
   VkPhysicalDevice m_physDevice = VK_NULL_HANDLE;

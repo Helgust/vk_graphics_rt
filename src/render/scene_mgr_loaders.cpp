@@ -188,6 +188,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
   std::string error, warning;
 
   std::string sceneFolder;
+  std::string vehicleFolder;
   auto found = scenePath.find_last_of('/');
   if(found != std::string::npos && found != scenePath.size())
     sceneFolder = scenePath.substr(0, found + 1);
@@ -251,7 +252,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
     maxVertexCountPerMesh    = std::max((uint32_t)8, maxVertexCountPerMesh);
     maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working 
 
-    loadVehicleFromFile(modelPath, gltfVehModel);
+    loadVehicleFromFile(modelPath, gltfVehModel, vehicleFolder);
 
     for(const auto& mesh : gltfVehModel.meshes)
     {
@@ -297,11 +298,18 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
 
   if(m_config.load_materials != MATERIAL_LOAD_MODE::NONE)
   {
-    m_materials.reserve(gltfModel.materials.size());
+    m_materials.reserve(m_materials.size());
     for(const tinygltf::Material &gltfMat : gltfModel.materials)
     {
       MaterialData_pbrMR mat = materialDataFromGLTF(gltfMat);
       m_materials.push_back(mat);
+    }
+
+    m_dynMaterials.reserve(gltfVehModel.materials.size());
+    for(const tinygltf::Material &gltfMat : gltfVehModel.materials)
+    {
+      MaterialData_pbrMR mat = materialDataFromGLTF(gltfMat);
+      m_dynMaterials.push_back(mat);
     }
   }
 
@@ -319,6 +327,19 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
         vk_utils::logWarning(ss.str());
       }
       m_textureInfos.push_back(texInfo);
+    }
+    m_dynTextureInfos.reserve(gltfVehModel.materials.size() * 4);
+    for (tinygltf::Image &image : gltfVehModel.images)
+    {
+      auto texturePath      = vehicleFolder + image.uri;
+      ImageFileInfo texInfo = getImageInfo(texturePath);
+      if(!texInfo.is_ok)
+      {
+        std::stringstream ss;
+        ss << "Texture at \"" << texturePath << "\" is absent or corrupted." ;
+        vk_utils::logWarning(ss.str());
+      }
+      m_dynTextureInfos.push_back(texInfo);
     }
   }
   
@@ -378,7 +399,7 @@ void SceneManager::LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const 
         if(m_config.debug_output)
           std::cout << "Loading mesh # " << meshId << "Name " << mesh.name << std::endl;
 
-        LoadOneMeshOnGPU(meshId);
+        LoadOneMeshOnGPU(meshId, loadVehicle);
 
         if(m_config.build_acc_structs)
         {
