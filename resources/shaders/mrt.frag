@@ -1,6 +1,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_nonuniform_qualifier : require
 
 #include "common.h"
 
@@ -27,12 +28,17 @@ layout (location = 0 ) in VS_OUT
     vec2 texCoord;
     vec4 currPos;
     vec4 prevPos;
+    vec3 color;
+    flat uint materialId;
 } surf;
 
 layout(binding = 0, set = 0) uniform AppData
 {
     UniformParams UboParams;
 };
+
+layout(binding = 1, set = 0) buffer materialsBuf { MaterialData_pbrMR materials[]; };
+layout(binding = 3, set = 0) uniform sampler2D textures[];
 
 vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
 {
@@ -57,7 +63,14 @@ vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
 
 void main()
 {
-    outAlbedo = params.color;
+    vec4 albedo = vec4(surf.color,1);
+    if (materials[uint(surf.materialId)].baseColorTexId != -1)
+    {
+        albedo = texture(textures[materials[uint(surf.materialId)].baseColorTexId], surf.texCoord);
+    }
+    if (albedo.a < 0.5)
+        discard;
+    outAlbedo = albedo;
     outNormal = vec4(surf.wNorm, 1.0f);
     outPosition = vec4(surf.wPos, 1.0f);
     //outVelocity = vec4(CalcVelocity(surf.currPos, surf.prevPos), 0.0f, 1.0f);

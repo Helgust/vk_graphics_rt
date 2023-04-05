@@ -54,7 +54,7 @@ struct LoaderConfig
   bool build_acc_structs_while_loading_scene = false;
   bool instance_matrix_as_vertex_attribute = false;
   bool instance_matrix_as_storage_buffer = false;
-  bool debug_output = true;
+  bool debug_output = false;
   BVH_BUILDER_TYPE builder_type = BVH_BUILDER_TYPE::RTX;
   MATERIAL_FORMAT material_format = MATERIAL_FORMAT::METALLIC_ROUGHNESS;
 };
@@ -107,6 +107,7 @@ struct SceneManager
   VkBuffer GetInstanceMatBuffer()  const { return m_instMatricesBuf; }
   VkBuffer GetMaterialsBuffer()    const { return m_materialBuf; }
   VkBuffer GetMaterialIDsBuffer()  const { return m_matIdsBuf; }
+  VkBuffer GetMaterialPerVertexIDsBuffer()  const { return m_matPerVertIdsBuf; }
   std::shared_ptr<vk_utils::ICopyEngine> GetCopyHelper() { return  m_pCopyHelper; }
 
   std::vector<VkSampler> GetTextureSamplers() const { return m_samplers; }
@@ -138,7 +139,7 @@ struct SceneManager
   void BuildTLAS(bool need_update = false);
 
 private:
-  const std::string missingTextureImgPath = "../resources/data/missing_texture.png";
+  const std::string missingTextureImgPath = "../../resources/data/missing_texture.png";
 
   vk_utils::VulkanImageMem LoadSpecialTexture();
   void InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum, uint32_t a_totalIndicesNum);
@@ -173,6 +174,7 @@ private:
   VkBuffer m_geoIdxBuf         = VK_NULL_HANDLE;
   VkBuffer m_meshInfoBuf       = VK_NULL_HANDLE;
   VkBuffer m_matIdsBuf         = VK_NULL_HANDLE;
+  VkBuffer m_matPerVertIdsBuf         = VK_NULL_HANDLE;
   VkDeviceMemory m_geoMemAlloc = VK_NULL_HANDLE;
 
   VkBuffer m_instMatricesBuf    = VK_NULL_HANDLE;

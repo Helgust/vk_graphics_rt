@@ -1,6 +1,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : require
+#extension GL_ARB_shader_draw_parameters  : enable
 //#extension GL_EXT_debug_printf : enable
 
 #include "unpack_attributes.h"
@@ -14,6 +15,8 @@ layout(binding = 0, set = 0) uniform AppData
 {
     UniformParams UboParams;
 };
+layout(binding = 1, set = 0) buffer materialsBuf { MaterialData_pbrMR materials[]; };
+layout(binding = 2, set = 0) buffer materialIdsBuf { uint materialIds[]; };
 
 layout(push_constant) uniform params_t
 {
@@ -35,6 +38,8 @@ layout (location = 0 ) out VS_OUT
     vec2 texCoord;
     vec4 currClipSpacePos;
     vec4 prevClipSpacePos;
+    vec3 color;
+    flat uint materialId;
 
 } vOut;
 
@@ -63,6 +68,7 @@ void main(void)
         vOut.prevClipSpacePos = UboParams.prevProjView * UboParams.PrevVecMat * vec4(vOut.wPos, 1.0);//Fixme
         //vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
     }
-
+    vOut.color = materials[materialIds[gl_BaseVertexARB]].baseColor.xyz;
+    vOut.materialId = materialIds[gl_BaseVertexARB];
     
 }

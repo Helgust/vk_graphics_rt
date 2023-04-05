@@ -268,6 +268,10 @@ void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum
   m_matIdsBuf = vk_utils::createBuffer(m_device, matIdsBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   all_buffers.push_back(m_matIdsBuf);
 
+  VkDeviceSize matPerVertIdsBufSize = a_totalVertNum * sizeof(uint32_t);
+  m_matPerVertIdsBuf = vk_utils::createBuffer(m_device, matPerVertIdsBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+  all_buffers.push_back(m_matPerVertIdsBuf);
+
   VkMemoryAllocateFlags allocFlags {};
   if(m_useRTX)
   {
@@ -289,7 +293,17 @@ void SceneManager::LoadOneMeshOnGPU(uint32_t meshIdx)
   m_pCopyHelper->UpdateBuffer(m_geoIdxBuf, m_loadedIndices * m_pMeshData->SingleIndexSize(), indSrc, indexBufSize);
   m_pCopyHelper->UpdateBuffer(m_matIdsBuf,  loadedPrims * sizeof(uint32_t),
     m_matIDs.data() + loadedPrims, (m_meshInfos[meshIdx].m_indNum / 3) * sizeof(m_matIDs[0]));
+  std::vector<uint> perVertMat(m_meshInfos[meshIdx].m_vertNum);
+  int last = -1;
+  for (uint32_t i = 0; i < m_meshInfos[meshIdx].m_indNum; ++i)
+  {
+    perVertMat[indSrc[i]] = m_matIDs[loadedPrims + i / 3];
+    assert(last == -1 || last == m_matIDs[loadedPrims + i / 3]);
+    last = m_matIDs[loadedPrims + i / 3];
+  }
 
+  m_pCopyHelper->UpdateBuffer(m_matPerVertIdsBuf, m_loadedVertices * sizeof(uint32_t),
+    perVertMat.data(), (perVertMat.size()) * sizeof(perVertMat[0]));
 //  if(meshIdx == 8)
 //  {
 //    std::ofstream file("tmp.txt");
@@ -473,6 +487,12 @@ void SceneManager::DestroyScene()
   {
     vkDestroyBuffer(m_device, m_matIdsBuf, nullptr);
     m_matIdsBuf = VK_NULL_HANDLE;
+  }
+  
+  if(m_matPerVertIdsBuf != VK_NULL_HANDLE)
+  {
+    vkDestroyBuffer(m_device, m_matPerVertIdsBuf, nullptr);
+    m_matPerVertIdsBuf = VK_NULL_HANDLE;
   }
 
   if(m_geoMemAlloc != VK_NULL_HANDLE)
