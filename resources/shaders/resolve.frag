@@ -42,6 +42,7 @@ void main()
     vec3 fragPos = texture(samplerPosition, uv).rgb;
 	vec3 normal = texture(samplerNormal, uv).rgb;
 	vec4 albedo = texture(samplerAlbedo, uv);
+    float depth = texture(samplerDepth, uv).x;
 
     float softShadow = texture(samplerSoftRtImage, uv).x;
 
@@ -75,7 +76,7 @@ void main()
         outFragcolor = albedo;
         break;
     case 4:
-        outFragcolor = vec4(100.0f/255.0f, 0.0f, 0.0f, 1.0f);
+        outFragcolor = vec4(depth, 0.0f, 0.0f, 1.0f);
         break;
     case 5:
         outFragcolor = vec4(texture(samplerVelocity, uv).xy + 0.5f, 0.0f, 1.0f);

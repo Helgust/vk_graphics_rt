@@ -57,9 +57,9 @@ const float rayMax = 1000.0f;
 bool soft_shadow = true;
 bool first_run = true;
 bool debug_light_pos = false;
-int depth_steps = 10;
-float step_size = 0.1f;
-float depth_eps = 0.01f;
+int depth_steps = 100;
+float step_size = 0.01f;
+float depth_eps = 0.0001f;
 struct MaterialData_pbrMR
 {
   vec4 baseColor;

@@ -356,7 +356,7 @@ protected:
 
   uint32_t m_framesInFlight  = 2u;
   uint32_t m_needUpdate = 1U;
-  bool m_needUpdateSlider = true;
+  bool m_needUpdateSlider = false;
   bool m_vsync = false;
   const int HALTON_COUNT = 8;
   const vec2 HALTON_SEQUENCE[8] = {

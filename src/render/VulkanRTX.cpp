@@ -27,7 +27,7 @@ VulkanRTX::VulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t 
 {
   LoaderConfig conf = {};
   conf.load_geometry = true;
-  conf.load_materials = MATERIAL_LOAD_MODE::NONE;
+  conf.load_materials = MATERIAL_LOAD_MODE::MATERIALS_AND_TEXTURES;
   conf.build_acc_structs = true;
   conf.build_acc_structs_while_loading_scene = build_as_add;
   conf.builder_type = BVH_BUILDER_TYPE::RTX;

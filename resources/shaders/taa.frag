@@ -49,7 +49,7 @@ void main()
     // Clamp previous color to min/max bounding box
     vec3 previousColorClamped = clamp(prevFrame, minColor, maxColor);
     weight *= max(1.0 - length(velocityUV) / 10.0, 0.0) ;
-    if (reprojectedUV.x < 0.0 || reprojectedUV.y < 0.0 || reprojectedUV.x > 1 || reprojectedUV.y > 1 || abs(currentDepth - prevDepth) < 0.001) {
+    if (reprojectedUV.x < 0.0 || reprojectedUV.y < 0.0 || reprojectedUV.x > 1 || reprojectedUV.y > 1 || abs(currentDepth - prevDepth) < 0.0001) {
         weight = 0.0;
     }
     vec3 c = mix(currentFrame, previousColorClamped, weight);

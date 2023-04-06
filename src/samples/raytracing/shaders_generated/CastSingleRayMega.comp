@@ -1,7 +1,7 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 #extension GL_ARB_separate_shader_objects : enable
-//#extension GL_EXT_debug_printf : enable
+#extension GL_EXT_debug_printf : enable
 #extension GL_EXT_ray_query : require
 
 #include "common_generated.h"
@@ -285,10 +285,12 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
         vec3 currNormal = texture(sampler2D(gBufferNormal, colorSampler), prevUV).xyz;
         vec3 prevNormal = texture(sampler2D(prevNormal, prevColor_sampler), prevUV).xyz;
         const bool  outOfView = (prevUV.x < 0.00001f || prevUV.x > 0.999999f || prevUV.y < 0.00001f || prevUV.y > 0.99999f);
-        if ((prevColor.x == 0.0f) && (prevColor.y == 1.0f) && !outOfView 
-          && abs(currDepth - prevDepth) < 0.001)
+        float depthDiff = abs(currDepth - prevDepth);
+        float dotCurPrev = dot(currNormal, prevNormal);
+        debugPrintfEXT("depthDiff %1.5f", depthDiff);
+        if ((prevColor.x == 0.0f) && (prevColor.y == 1.0f) && !outOfView)
         {
-            imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 1.0f, 0.5f, 1.0f));
+          imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 1.0f, 0.0f, 1.0f));
           return;
         }
         // else

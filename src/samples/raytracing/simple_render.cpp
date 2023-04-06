@@ -1163,8 +1163,8 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   m_uniforms.m_time_gbuffer_index = vec4(0, 0, a_time, gbuffer_index);
   m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
   auto transMat = LiteMath::float4x4();
-  //m_pScnMgr->MoveCarX(a_time, teleport, transMat);
-  m_pScnMgr->MoveCarZ(a_time, teleport, transMat);
+  m_pScnMgr->MoveCarX(a_time, teleport, transMat);
+  //m_pScnMgr->MoveCarZ(a_time, teleport, transMat);
   //m_pScnMgr->MoveCarY(a_time, teleport, transMat);
   //m_pScnMgr->RotCarY(a_time, teleport, transMat);
   //m_pScnMgr->RotCarX(a_time, teleport, transMat);
@@ -2061,8 +2061,8 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
-  //m_pScnMgr->InstanceVehicle(float3(40.0, 10.0, -20.0), 1.0f, 1.0f);
-  m_pScnMgr->InstanceVehicle(float3(0.0, 50.0, -1.0), 1.0f, 1.0f);
+  m_pScnMgr->InstanceVehicle(float3(40.0, 10.0, -20.0), 1.0f, 1.0f);
+  //m_pScnMgr->InstanceVehicle(float3(0.0, 2.0, 0.0), 1.0f, 1.0f);
   m_pScnMgr->LoadScene(path);
 
   if(ENABLE_HARDWARE_RT)

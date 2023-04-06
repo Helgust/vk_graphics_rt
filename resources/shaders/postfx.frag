@@ -60,10 +60,6 @@ void main()
   vec2 texCoord  = gl_FragCoord.xy / texSize;
   vec4 result_color =  texture(colorTexture, texCoord);
 
-<<<<<<< HEAD
-  out_color = vec4(UnchartedMain(result_color.xyz),result_color.w);
-=======
   out_color = vec4(uncharted2(result_color.xyz),result_color.w);
->>>>>>> 09c9198 (Add tone mapping)
 
 }
