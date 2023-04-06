@@ -33,28 +33,23 @@ vec3 sharpness_filter()
   return color;
 }
 
-vec3 Uncharted2Tonemap(vec3 x)
-{
-    float A = 0.15;
-    float B = 0.50;
-    float C = 0.10;
-    float D = 0.20;
-    float E = 0.02;
-    float F = 0.30;
-    float W = 11.2;
-
-    return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;
+vec3 uncharted2Tonemap(vec3 x) {
+  float A = 0.15;
+  float B = 0.50;
+  float C = 0.10;
+  float D = 0.20;
+  float E = 0.02;
+  float F = 0.30;
+  float W = 11.2;
+  return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
 }
 
-
-vec3 UnchartedMain( vec3 texColor )
-{
-    float ExposureBias = 1.0f;
-    vec3 curr = Uncharted2Tonemap(ExposureBias*texColor);
-    vec3 W = vec3(2);
-    vec3 whiteScale = 1.0f/Uncharted2Tonemap(W);
-    vec3 color = curr*whiteScale;
-    return rgb_to_srgb(color);
+vec3 uncharted2(vec3 color) {
+  const float W = 11.2;
+  float exposureBias = 2.0;
+  vec3 curr = uncharted2Tonemap(exposureBias * color);
+  vec3 whiteScale = 1.0 / uncharted2Tonemap(vec3(W));
+  return rgb_to_srgb(curr * whiteScale);
 }
 
 void main()
@@ -65,6 +60,10 @@ void main()
   vec2 texCoord  = gl_FragCoord.xy / texSize;
   vec4 result_color =  texture(colorTexture, texCoord);
 
+<<<<<<< HEAD
   out_color = vec4(UnchartedMain(result_color.xyz),result_color.w);
+=======
+  out_color = vec4(uncharted2(result_color.xyz),result_color.w);
+>>>>>>> 09c9198 (Add tone mapping)
 
 }

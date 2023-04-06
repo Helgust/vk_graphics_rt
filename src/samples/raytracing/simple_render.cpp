@@ -2061,7 +2061,8 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
-  m_pScnMgr->InstanceVehicle(float3(40.0, 10.0, -20.0), 1.0f, 1.0f);
+  //m_pScnMgr->InstanceVehicle(float3(40.0, 10.0, -20.0), 1.0f, 1.0f);
+  m_pScnMgr->InstanceVehicle(float3(0.0, 50.0, -1.0), 1.0f, 1.0f);
   m_pScnMgr->LoadScene(path);
 
   if(ENABLE_HARDWARE_RT)

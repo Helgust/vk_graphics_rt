@@ -44,6 +44,8 @@ bool SceneManager::LoadScene(const std::string &scenePath)
 
 bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
 {
+  tinygltf::Model gltfVehModel;
+  std::string vehicleFolder;
   auto hscene_main = std::make_shared<hydra_xml::HydraScene>();
   auto res         = hscene_main->LoadState(scenePath);
 
@@ -73,9 +75,23 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
       totalMeshes++;
     }
 
-    totalMeshes++;
-    totalVerticesCount += 8;
-    totalPrimitiveCount += 12;
+    loadVehicleFromFile(modelPath, gltfVehModel, vehicleFolder);
+
+    maxVertexCountPerMesh    = std::max((uint32_t)8, maxVertexCountPerMesh);
+    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working 
+
+    for(const auto& mesh : gltfVehModel.meshes)
+    {
+      uint32_t vertNum = 0;
+      uint32_t indexNum = 0;
+      getNumVerticesAndIndicesFromGLTFMesh(gltfVehModel, mesh, vertNum, indexNum);
+      maxVertexCountPerMesh    = std::max(vertNum, maxVertexCountPerMesh);
+      maxPrimitiveCountPerMesh = std::max(indexNum / 3, maxPrimitiveCountPerMesh);
+      totalVerticesCount      += vertNum;
+      totalPrimitiveCount     += indexNum / 3;
+      totalMeshes++;
+    }
+
     maxVertexCountPerMesh    = std::max((uint32_t)8, maxVertexCountPerMesh);
     maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working 
 
@@ -107,14 +123,17 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
           InstanceMesh(meshId, instances[j]);
       }
     }
-    
-    //loadVehicleFromFile(modelPath);
-    //LoadOneMeshOnGPU(m_vehicleMesh);
-    // if(m_config.build_acc_structs)
-    // {
-    //   AddBLAS(m_vehicleMesh);
-    //   InstanceMesh(m_vehicleMesh, m_currVehicleInstanceMatrices[0],true, (1U << 2));
-    // }
+
+    //load vehicle here
+    //meshCounter = loaded_meshes_to_meshId.size();
+    std::unordered_map<int, uint32_t> vehloaded_meshes_to_meshId;
+    const tinygltf::Scene& scene = gltfVehModel.scenes[0];
+    for(size_t i = 0; i < scene.nodes.size(); ++i)
+    {
+      const tinygltf::Node node = gltfVehModel.nodes[scene.nodes[0]];
+      auto identity = m_currVehicleInstanceMatrices[0];
+      LoadGLTFNodesRecursive(gltfVehModel, node, identity, vehloaded_meshes_to_meshId, true);
+    }
   }
 
   for(auto cam : hscene_main->Cameras())
@@ -142,6 +161,13 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
       mat.metallicRoughnessTexId = gltfMat.metRoughnessData.metallicRoughnessTexId;
       m_materials.push_back(mat);
     }
+
+    m_dynMaterials.reserve(gltfVehModel.materials.size());
+    for(const tinygltf::Material &gltfMat : gltfVehModel.materials)
+    {
+      MaterialData_pbrMR mat = materialDataFromGLTF(gltfMat);
+      m_dynMaterials.push_back(mat);
+    }
   }
 
   if(m_config.load_materials == MATERIAL_LOAD_MODE::MATERIALS_AND_TEXTURES)
@@ -157,6 +183,20 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
         vk_utils::logWarning(ss.str());
       }
       m_textureInfos.push_back(texInfo);
+    }
+
+    m_dynTextureInfos.reserve(gltfVehModel.materials.size() * 4);
+    for (tinygltf::Image &image : gltfVehModel.images)
+    {
+      auto texturePath      = vehicleFolder + image.uri;
+      ImageFileInfo texInfo = getImageInfo(texturePath);
+      if(!texInfo.is_ok)
+      {
+        std::stringstream ss;
+        ss << "Texture at \"" << texturePath << "\" is absent or corrupted." ;
+        vk_utils::logWarning(ss.str());
+      }
+      m_dynTextureInfos.push_back(texInfo);
     }
   }
 
