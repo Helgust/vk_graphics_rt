@@ -92,7 +92,7 @@ void SimpleRender::SetupGbuffer() {
     if (i == 3)
     {
       attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-      attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+      attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
     }
     else
     {
@@ -116,7 +116,7 @@ void SimpleRender::SetupGbuffer() {
 
   VkAttachmentReference depthReference = {};
   depthReference.attachment = 3;
-  depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+  depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
 
   VkSubpassDescription subpass = {};
   subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -521,7 +521,7 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
   descriptorImageInfos[5].imageView = a_rtImageDynamic.view;
 
   descriptorImageInfos[6].sampler = nullptr;
-  descriptorImageInfos[6].imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+  descriptorImageInfos[6].imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
   descriptorImageInfos[6].imageView = a_gbuffer.depth.view;
 
   descriptorImageInfos[7].sampler = nullptr;
@@ -922,7 +922,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindImage(1, m_gBuffer.position.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(2, m_gBuffer.normal.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(3, m_gBuffer.albedo.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-  m_pBindings->BindImage(4, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
+  m_pBindings->BindImage(4, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL);
   //m_pBindings->BindImage(5, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(6, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(7, softRtFrame.view, m_pSoftRTImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -936,7 +936,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindImage(1, curentFrame.view, m_pResolveImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(2, m_prevFrameImage.view, m_prevFrameImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-  m_pBindings->BindImage(3, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
+  m_pBindings->BindImage(3, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(4, m_prevDepthImage.view, m_prevDepthImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
   m_pBindings->BindImage(5, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dTAASet, &m_dTAASetLayout);
@@ -1533,7 +1533,7 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     SimpleRender::CopyImage(a_cmdBuff, m_gBuffer.depth.image, m_prevDepthImage.image, 
     VK_IMAGE_ASPECT_DEPTH_BIT, 
     VK_IMAGE_ASPECT_DEPTH_BIT,
-    VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL,
     VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
 
     //copy to normal to prev
