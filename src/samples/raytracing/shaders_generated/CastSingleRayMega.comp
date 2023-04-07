@@ -214,7 +214,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
     if (ubo.needUpdate != 1U)
     {
       vec4 prevScreenPos= (ubo.m_prevProjView) * vec4(hitPoint,1.0f);
-      vec2 velocityUV = texture(sampler2D(gBufferVelocity, colorSampler), screenPos,0).xy;
+      vec2 velocityUV = texture(sampler2D(gBufferVelocity, colorSampler), screenPos).xy;
       vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
       vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
       //prevUV += velocityUV;
