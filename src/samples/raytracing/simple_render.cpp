@@ -2040,7 +2040,7 @@ void SimpleRender::UpdateView()
   }
   m_prevProjViewMatrix = m_uniforms.prevProjView; 
   m_inverseProjViewMatrix = LiteMath::inverse4x4(mWorldViewProj);
-  m_projectionMatrix = mWorldViewProj;
+  m_inversePrevProjViewMatrix = LiteMath::inverse4x4(m_prevProjViewMatrix);
   LiteMath::float4x4 curVehMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
   LiteMath::float4x4 prevVehMat = m_pScnMgr->GetVehiclePrevInstanceMatrix(0);     
   curVehMat.set_col(0, curVehMat.get_col(0) - prevVehMat.get_col(0));

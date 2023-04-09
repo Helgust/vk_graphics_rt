@@ -68,6 +68,7 @@ void RayTracer_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngi
   m_uboData.m_invProjView = m_invProjView;
   m_uboData.m_currProjView = m_currProjView;
   m_uboData.m_prevProjView = m_prevProjView;
+  m_uboData.m_invPrevProjView = m_invPrevProjView;
   m_uboData.m_invTransMat = m_invTransMat;
   m_uboData.m_camPos = m_camPos;
   m_uboData.m_height = m_height;

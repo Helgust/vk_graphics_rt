@@ -155,7 +155,7 @@ vec3 GetPosFromDepth(vec2 screenPos){
 vec3 GetPosFromPrevDepth(vec2 screenPos){
   float depth = texture(sampler2D(prevDepth, prevDepth_sampler), screenPos).x;
   vec4 clipPos = vec4( screenPos * 2.0f - 1.0f, depth, 1.0f);
-  vec4 pixelPos = ubo.m_invProjView * clipPos; 
+  vec4 pixelPos = ubo.m_invPrevProjView * clipPos; 
   return (pixelPos.xyz/pixelPos.w);
 }
 
@@ -258,21 +258,24 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
       // {
         //put matrix here, not vehicle postion
         vec4 prevHitPoint = vec4(hitPoint, 1.0f) + ubo.m_invTransMat[3];
-        bool needDepthTrace = false;
         vec3 diffVec = prevHitPoint.xyz - hitPoint;
         vec3 HitPointProj = lightDir * dot(lightDir,hitPoint.xyz);
         vec3 PrevHitPointProj = lightDir * dot(lightDir,prevHitPoint.xyz);
         int directionOfDepthTrace = length(HitPointProj) > length(PrevHitPointProj)  ? -1 : 1; //rework to distance between points
-        needDepthTrace = true;
         vec3 initPos = prevHitPoint.xyz;
-        for(int i = 0; i < depth_steps; i++)
+        bool intersectFind = false;
+        for (int i = 0; i < depth_steps; i++)
         {
           vec4 tracePos = vec4(initPos + lightDir * directionOfDepthTrace * step_size * i, 1.0f);
           vec4 currentPos = (ubo.m_prevProjView) * tracePos;
           vec3 newPosition = GetPosFromPrevDepth(GetPrevUV(currentPos));
-          if(length(tracePos.xyz - newPosition) < depth_eps)
+          //debugPrintfEXT("prevHitPoint:%1.5v3f newPosition:%1.5v3f diff:%1.5v3f\n", initPos, newPosition, length(initPos - newPosition));
+          //debugPrintfEXT("tracePosDiff %1.2f", length(tracePos.xyz - newPosition));
+          if (length(initPos - newPosition) < depth_eps)
           {
             prevHitPoint = vec4(newPosition, 1.0f);
+            intersectFind = true;
+            break;
           }
         }
         vec4 prevScreenPos= (ubo.m_prevProjView) * prevHitPoint;
@@ -287,10 +290,9 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
         const bool  outOfView = (prevUV.x < 0.00001f || prevUV.x > 0.999999f || prevUV.y < 0.00001f || prevUV.y > 0.99999f);
         float depthDiff = abs(currDepth - prevDepth);
         float dotCurPrev = dot(currNormal, prevNormal);
-        debugPrintfEXT("depthDiff %1.5f", depthDiff);
-        if ((prevColor.x == 0.0f) && (prevColor.y == 1.0f) && !outOfView)
+        if ((prevColor.x == 0.0f) && (prevColor.y == 1.0f) && !outOfView && intersectFind)
         {
-          imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 1.0f, 0.0f, 1.0f));
+          imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 1.0f, 0.5f, 1.0f));
           return;
         }
         // else

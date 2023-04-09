@@ -54,7 +54,7 @@ struct LoaderConfig
   bool build_acc_structs_while_loading_scene = false;
   bool instance_matrix_as_vertex_attribute = false;
   bool instance_matrix_as_storage_buffer = false;
-  bool debug_output = true;
+  bool debug_output = false;
   BVH_BUILDER_TYPE builder_type = BVH_BUILDER_TYPE::RTX;
   MATERIAL_FORMAT material_format = MATERIAL_FORMAT::METALLIC_ROUGHNESS;
 };
@@ -67,7 +67,7 @@ struct SceneManager
 
   //const std::string &modelPath = "../resources/models/cab/scene.gltf";
   //const std::string &modelPath = "../resources/models/cab_solid/scene.gltf";
-  const std::string &modelPath = "../resources/models/van_solid/scene.gltf";
+  const std::string &modelPath = "../resources/models/van/scene.gltf";
   //const std::string &modelPath = "../resources/models/tank_solid/scene.gltf";
   bool LoadSceneXML(const std::string &scenePath, bool transpose = true);
   bool LoadSceneGLTF(const std::string &scenePath);
@@ -85,7 +85,7 @@ struct SceneManager
   void RotCarZ(float a_time, bool forceHistory, LiteMath::float4x4 &mat);
   void ApplyMovement(LiteMath::float4x4 &trans_mat);
   void MadeCubeMesh(cmesh::SimpleMesh& cube, float size);
-  uint32_t AddMeshFromFile(const std::string&~ meshPath);
+  uint32_t AddMeshFromFile(const std::string& meshPath);
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData, uint dynamicBit = 0);
 
   float deltaTime = 0;

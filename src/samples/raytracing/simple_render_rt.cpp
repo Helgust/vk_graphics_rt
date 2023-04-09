@@ -338,7 +338,7 @@ void SimpleRender::RayTraceCPU()
     m_pRayTracerCPU->SetScene(m_pAccelStruct);
   }
 
-  m_pRayTracerCPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix, m_prevProjViewMatrix, m_inverseTransMatrix, m_projectionMatrix);
+  m_pRayTracerCPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix, m_prevProjViewMatrix, m_inverseTransMatrix, m_projectionMatrix, m_inversePrevProjViewMatrix);
 #pragma omp parallel for default(none)
   for (int64_t j = 0; j < m_height; ++j)
   {
@@ -382,7 +382,7 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, uint
     m_pRayTracerGPU->UpdateAll(m_pCopyHelper, a_time, m_uniforms.lights[0], a_needUpdate);
   }
 
-  m_pRayTracerGPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix, m_prevProjViewMatrix, m_inverseTransMatrix, m_projectionMatrix);
+  m_pRayTracerGPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix, m_prevProjViewMatrix, m_inverseTransMatrix, m_projectionMatrix, m_inversePrevProjViewMatrix);
   m_pRayTracerGPU->UpdatePlainMembers(m_pCopyHelper, a_time, m_uniforms.lights[0], a_needUpdate);
   // if (a_needUpdate == 1U)
   // {

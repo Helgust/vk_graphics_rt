@@ -433,7 +433,7 @@ void SceneManager::LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const 
 
       if(simpleMesh.VerticesNum() > 0)
       {
-        auto meshId                         = AddMeshFromData(simpleMesh);
+        auto meshId                         = AddMeshFromData(simpleMesh, loadVehicle);
         a_loadedMeshesToMeshId[meshMapId] = meshId;
 
         if(m_config.debug_output)
