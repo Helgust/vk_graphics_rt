@@ -165,7 +165,7 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
     m_dynMaterials.reserve(gltfVehModel.materials.size());
     for(const tinygltf::Material &gltfMat : gltfVehModel.materials)
     {
-      MaterialData_pbrMR mat = materialDataFromGLTF(gltfMat);
+      MaterialData_pbrMR mat = materialDataFromGLTF(gltfMat, gltfVehModel.textures);
       m_dynMaterials.push_back(mat);
     }
   }
@@ -338,17 +338,17 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
 
   if(m_config.load_materials != MATERIAL_LOAD_MODE::NONE)
   {
-    m_materials.reserve(m_materials.size());
+    m_materials.reserve(gltfModel.materials.size());
     for(const tinygltf::Material &gltfMat : gltfModel.materials)
     {
-      MaterialData_pbrMR mat = materialDataFromGLTF(gltfMat);
+      MaterialData_pbrMR mat = materialDataFromGLTF(gltfMat, gltfModel.textures);
       m_materials.push_back(mat);
     }
 
     m_dynMaterials.reserve(gltfVehModel.materials.size());
     for(const tinygltf::Material &gltfMat : gltfVehModel.materials)
     {
-      MaterialData_pbrMR mat = materialDataFromGLTF(gltfMat);
+      MaterialData_pbrMR mat = materialDataFromGLTF(gltfMat, gltfVehModel.textures);
       m_dynMaterials.push_back(mat);
     }
   }
@@ -368,7 +368,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
       }
       m_textureInfos.push_back(texInfo);
     }
-    m_dynTextureInfos.reserve(gltfVehModel.materials.size() * 4);
+    m_dynTextureInfos.reserve(m_dynMaterials.size() * 4);
     for (tinygltf::Image &image : gltfVehModel.images)
     {
       auto texturePath      = vehicleFolder + image.uri;
