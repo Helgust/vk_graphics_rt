@@ -195,7 +195,8 @@ protected:
     LiteMath::float4 color;
     LiteMath::float4 vehiclePos;
     LiteMath::float2 screenSize;
-    LiteMath::int2 dynamicBit;
+    uint dynamicBit;
+    uint meshID;
   } pushConst2M;
 
  FrameBuffer m_gBuffer, m_omniShadowBuffer;

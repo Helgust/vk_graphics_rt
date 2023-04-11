@@ -1,7 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : require
-#extension GL_ARB_shader_draw_parameters  : enable
 //#extension GL_EXT_debug_printf : enable
 
 #include "unpack_attributes.h"
@@ -19,6 +18,8 @@ layout(binding = 1, set = 0) buffer materialsBuf { MaterialData_pbrMR materials[
 layout(binding = 2, set = 0) buffer dynMaterialsBuf { MaterialData_pbrMR dynMaterials[]; };
 layout(binding = 3, set = 0) buffer materialIdsBuf { uint materialIds[]; };
 layout(binding = 4, set = 0) buffer dynMaterialIdsBuf { uint dynMaterialIds[]; };
+layout(binding = 7, set = 0) buffer MeshInfos { uvec2 o[]; } infos;
+layout(binding = 8, set = 0) buffer MaterialsID { uint matID[]; };
 
 layout(push_constant) uniform params_t
 {
@@ -28,7 +29,8 @@ layout(push_constant) uniform params_t
     vec4 color;
     vec4 vehiclePos;
     vec2 screenSize;
-    ivec2 dynamicBit; 
+    uint dynamicBit;
+    uint instanceID;
 } params;
 
 
@@ -45,7 +47,7 @@ layout (location = 0 ) out VS_OUT
 
 } vOut;
 
-out gl_PerVertex { vec4 gl_Position; };
+// out gl_PerVertex { vec4 gl_Position; };
 void main(void)
 {
     const vec4 wNorm = vec4(DecodeNormal(floatBitsToInt(vPosNorm.w)),         0.0f);
@@ -60,18 +62,17 @@ void main(void)
     //clipSpacePos += vec4(UboParams.m_jitter_time_gbuffer_index.xy * clipSpacePos.w, 0, 0);
     vOut.currClipSpacePos = clipSpacePos;
     gl_Position = clipSpacePos;
-
     if (params.dynamicBit.x != 1)
     {
         vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
-        vOut.color = materials[materialIds[gl_BaseVertexARB]].baseColor.xyz;
-        vOut.materialId = materialIds[gl_BaseVertexARB];
+        // vOut.color = materials[matIdx].baseColor.xyz;
+        // vOut.materialId = matIdx;
     }
     else
     {
         vOut.prevClipSpacePos = UboParams.prevProjView * UboParams.PrevVecMat * vec4(vOut.wPos, 1.0);//Fixme
-        vOut.color = dynMaterials[dynMaterialIds[gl_BaseVertexARB]].baseColor.xyz;
-        vOut.materialId = dynMaterialIds[gl_BaseVertexARB];
+        // vOut.color = dynMaterials[matIdx].baseColor.xyz;
+        // vOut.materialId = matIdx;
         //vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
     }
     

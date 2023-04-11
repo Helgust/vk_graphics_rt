@@ -41,7 +41,7 @@ int main()
 
   initVulkanGLFW(app, window, VULKAN_DEVICE_ID);
 
-  app->LoadScene("../resources/scenes/01_simple_scenes/instanced_objects.xml");
+  //app->LoadScene("../resources/scenes/01_simple_scenes/instanced_objects.xml");
   //app->LoadScene("../resources/scenes/01_sponza/statex_00001.xml");
   //app->LoadScene("../resources/scenes/02_cry_sponza/statex_00001.xml");
   //app->LoadScene("../resources/scenes/03_san_miguel/statex_00001.xml");
@@ -59,7 +59,7 @@ int main()
   //app->LoadScene("../resources/scenes/canyon_landscape/scene.gltf");// big canyon
   //app->LoadScene("../resources/scenes/mars/scene.gltf");
   //app->LoadScene("../resources/scenes/cityscape/scene.gltf"); // really good wihtout ATEST
-  //app->LoadScene("../resources/scenes/sponza_gltf/Sponza.gltf"); // sponza gltf
+  app->LoadScene("../resources/scenes/sponza_gltf/Sponza.gltf"); // sponza gltf
   //app->LoadScene("../resources/scenes/low_poly_city/scene.gltf"); // very big scene run with MATERAL::NONE
 
   bool showGUI = true;

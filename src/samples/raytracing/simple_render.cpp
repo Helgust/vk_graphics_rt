@@ -904,6 +904,8 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindBuffer(4, m_pScnMgr->GetDynMaterialPerVertexIDsBuffer(), VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
   m_pBindings->BindImageArray(5, m_pScnMgr->GetTextureViews(), m_pScnMgr->GetTextureSamplers());
   m_pBindings->BindImageArray(6, m_pScnMgr->GetDynTextureViews(), m_pScnMgr->GetDynTextureSamplers());
+  m_pBindings->BindBuffer(7, m_pScnMgr->GetMeshInfoBuffer());
+  m_pBindings->BindBuffer(8, m_pScnMgr->GetMaterialIDsBuffer());
   m_pBindings->BindEnd(&m_dSet, &m_dSetLayout);
 
 
@@ -1245,11 +1247,11 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     for (uint32_t i = 0; i < m_pScnMgr->InstancesNum(); ++i)
     {
       auto inst = m_pScnMgr->GetInstanceInfo(i);
-
+      pushConst2M.meshID = inst.mesh_id;
       pushConst2M.model = m_pScnMgr->GetInstanceMatrix(i);
       pushConst2M.vehiclePos =  LiteMath::float4(0,0,0,0);
       pushConst2M.color = colors[i % 4];
-      pushConst2M.dynamicBit = int2(0,0);
+      pushConst2M.dynamicBit = 0;
       vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0,
                          sizeof(pushConst2M), &pushConst2M);
 
@@ -1261,11 +1263,11 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     for (uint32_t i = 0; i < m_pScnMgr->DynamicInstancesNum(); ++i)
     {
       auto inst = m_pScnMgr->GetDynamicInstanceInfo(i);
-
+      pushConst2M.meshID = inst.mesh_id + m_pScnMgr->InstancesNum();
       pushConst2M.model = m_pScnMgr->GetDynamicInstanceMatrix(i);
       pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
       pushConst2M.color = float4(1.f, 1.f, 0.f, 1.f);
-      pushConst2M.dynamicBit = int2(1,0);
+      pushConst2M.dynamicBit = 1;
       vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0,
                          sizeof(pushConst2M), &pushConst2M);
 

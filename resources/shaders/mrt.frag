@@ -13,7 +13,8 @@ layout(push_constant) uniform params_t
     vec4 color;
     vec4 vehiclePos;
     vec2 screenSize;
-    ivec2 dynamicBit; 
+    uint dynamicBit;
+    uint instanceID; 
 } params;
 
 layout (location = 0) out vec4 outPosition;
@@ -42,6 +43,8 @@ layout(binding = 1, set = 0) buffer materialsBuf { MaterialData_pbrMR materials[
 layout(binding = 2, set = 0) buffer dynMaterialsBuf { MaterialData_pbrMR dynMaterials[]; };
 layout(binding = 5, set = 0) uniform sampler2D textures[];
 layout(binding = 6, set = 0) uniform sampler2D dynTextures[];
+layout(binding = 7, set = 0) buffer MeshInfos { uvec2 o[]; } infos;
+layout(binding = 8, set = 0) buffer MaterialsID { uint matID[]; };
 
 vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
 {
@@ -66,19 +69,21 @@ vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
 
 void main()
 {
+    const uint offset = infos.o[params.instanceID].x;
+    const uint matIdx = matID[(offset / 3) + gl_PrimitiveID];
     vec4 albedo = vec4(surf.color,1);
-    if (materials[uint(surf.materialId)].baseColorTexId != -1)
+
+    if(params.dynamicBit != 1)
     {
-        if(params.dynamicBit.x != 1)
-        {
-            albedo = texture(textures[materials[uint(surf.materialId)].baseColorTexId], surf.texCoord);
-        }
-        else
-        {
-            albedo = texture(dynTextures[dynMaterials[uint(surf.materialId)].baseColorTexId], surf.texCoord);
-        }
-        
+        MaterialData_pbrMR material = materials[matIdx];
+        albedo = texture(textures[material.baseColorTexId], surf.texCoord);
     }
+    else
+    {
+        MaterialData_pbrMR dynMaterial = dynMaterials[matIdx];
+        albedo = texture(dynTextures[dynMaterial.baseColorTexId], surf.texCoord);
+    }
+        
     if (albedo.a < 0.5)
         discard;
     outAlbedo = albedo;
