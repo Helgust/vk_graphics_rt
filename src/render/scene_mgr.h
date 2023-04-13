@@ -67,8 +67,8 @@ struct SceneManager
 
   //const std::string &modelPath = "../resources/models/cab/scene.gltf";
   //const std::string &modelPath = "../resources/models/cab_solid/scene.gltf";
-  const std::string &modelPath = "../resources/models/van_changed/scene.gltf";
-  //const std::string &modelPath = "../resources/models/tank_solid/scene.gltf";
+  //const std::string &modelPath = "../resources/models/van_changed/scene.gltf";
+  const std::string &modelPath = "../resources/models/tank_solid/scene.gltf";
   bool LoadSceneXML(const std::string &scenePath, bool transpose = true);
   bool LoadSceneGLTF(const std::string &scenePath);
   bool LoadScene(const std::string &scenePath); // guess scene type by extension
@@ -136,6 +136,7 @@ struct SceneManager
   LiteMath::float4x4 GetVehiclePrevInstanceMatrix(uint32_t instId) const {assert(instId < m_prevVehicleInstanceMatrices.size()); return m_prevVehicleInstanceMatrices[instId];}
   LiteMath::float4 GetVehicleInstancePos(uint32_t instId) const {
     assert(instId < m_currVehicleInstanceMatrices.size()); return GetVehicleInstanceMatrix(instId).get_col(3);}
+  LiteMath::float3 GetVehicleDeltaRotationAngels() const {return m_deltaRotations;};
 //  void DestroyAS();
 
   InstanceInfo GetDynamicInstanceInfo(uint32_t instId) const {assert(instId < m_dynamicInstanceInfos.size()); return m_dynamicInstanceInfos[instId];}
@@ -172,7 +173,7 @@ private:
   std::vector<hydra_xml::Camera> m_sceneCameras = {};
 
   uint32_t m_vehicleMesh;
-
+  LiteMath::float3  m_deltaRotations;
   uint32_t m_totalVertices = 0u;
   uint32_t m_totalIndices  = 0u;
 

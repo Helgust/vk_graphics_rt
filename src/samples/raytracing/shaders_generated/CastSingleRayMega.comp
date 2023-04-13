@@ -194,6 +194,15 @@ vec2 random2(vec2 p) {
     return vec2(r1, r2);
 }
 
+mat4 GetRotationFromMat4(mat4 matrix) {
+  mat4 rotation = matrix;
+  rotation[0][3] = 0;
+  rotation[1][3] = 0;
+  rotation[2][3] = 0;
+  rotation[3][3] = 1;
+  return rotation;
+}
+
 ///////////////////////////////////////////////////////////////// subkernels here
 void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset) 
 {
@@ -258,10 +267,14 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
       // {
         //put matrix here, not vehicle postion
         vec4 prevHitPoint = vec4(hitPoint, 1.0f) + ubo.m_invTransMat[3];
-        vec3 diffVec = prevHitPoint.xyz - hitPoint;
+        //debugPrintfEXT("m_invTransMat[3] %1.3v3f\n", ubo.m_invTransMat[3]);
+        // vec3 jopa = length(vec3(40, 10, -20) - prevHitPoint.xyz) * normalize(lightDir);
+        // //apply rotation
+        // vec3 rotPoint = prevHitPoint.xyz - jopa;
+        // prevHitPoint = (vec4(rotPoint,1) * GetRotationFromMat4(ubo.m_invTransMat)) + vec4(jopa, 0);
         vec3 HitPointProj = lightDir * dot(lightDir,hitPoint.xyz);
         vec3 PrevHitPointProj = lightDir * dot(lightDir,prevHitPoint.xyz);
-        int directionOfDepthTrace = length(HitPointProj) > length(PrevHitPointProj)  ? -1 : 1; //rework to distance between points
+        int directionOfDepthTrace = dot(HitPointProj,HitPointProj) > dot(PrevHitPointProj,PrevHitPointProj)  ? -1 : 1; //rework to distance between points
         vec3 initPos = prevHitPoint.xyz;
         bool intersectFind = false;
         for (int i = 0; i < depth_steps; i++)

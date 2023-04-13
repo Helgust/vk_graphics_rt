@@ -1171,8 +1171,20 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   //m_pScnMgr->RotCarY(a_time, teleport, transMat);
   //m_pScnMgr->RotCarX(a_time, teleport, transMat);
   //m_pScnMgr->MoveCarZ(a_time, teleport,transMat);
-  m_uniforms.PrevVecMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
   m_pScnMgr->ApplyMovement(transMat);
+  LiteMath::float4x4 curVehMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
+  LiteMath::float4x4 prevVehMat = m_pScnMgr->GetVehiclePrevInstanceMatrix(0);
+  m_uniforms.PrevVecMat = prevVehMat;
+  LiteMath::float3 deltaRot = m_pScnMgr->GetVehicleDeltaRotationAngels();
+  LiteMath::float4x4 transMatrix = rotate4x4X(-deltaRot[0])  * rotate4x4Y(-deltaRot[1]) * rotate4x4Z(-deltaRot[2]);
+  transMatrix = transpose(transMatrix);
+  transMatrix.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
+  //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
+  if (!forceHistory)
+  {
+    m_inverseTransMatrix = transMatrix;
+    //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
+  }
   memcpy(m_uboMappedMem, &m_uniforms, sizeof(m_uniforms));
 }
 
@@ -2043,18 +2055,6 @@ void SimpleRender::UpdateView()
   m_prevProjViewMatrix = m_uniforms.prevProjView; 
   m_inverseProjViewMatrix = LiteMath::inverse4x4(mWorldViewProj);
   m_inversePrevProjViewMatrix = LiteMath::inverse4x4(m_prevProjViewMatrix);
-  LiteMath::float4x4 curVehMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
-  LiteMath::float4x4 prevVehMat = m_pScnMgr->GetVehiclePrevInstanceMatrix(0);     
-  curVehMat.set_col(0, curVehMat.get_col(0) - prevVehMat.get_col(0));
-  curVehMat.set_col(1, curVehMat.get_col(1) - prevVehMat.get_col(1));
-  curVehMat.set_col(2, curVehMat.get_col(2) - prevVehMat.get_col(2));
-  curVehMat.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
-  //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
-  if (!forceHistory)
-  {
-    m_inverseTransMatrix = curVehMat;
-    //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
-  }
   pushConst2M.projView = mWorldViewProj;
   pushConst2M.lightView = LiteMath::float4x4();
   m_uniforms.invProjView = m_inverseProjViewMatrix;
@@ -2063,7 +2063,7 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
-  m_pScnMgr->InstanceVehicle(float3(40.0, 10.0, -20.0), 1.0f, 1.0f);
+  m_pScnMgr->InstanceVehicle(float3(40.0, 2.0, -20.0), 1.0f, 1.0f);
   //m_pScnMgr->InstanceVehicle(float3(0.0, 2.0, 0.0), 1.0f, 1.0f);
   m_pScnMgr->LoadScene(path);
 

@@ -59,7 +59,7 @@ bool first_run = true;
 bool debug_light_pos = false;
 int depth_steps = 100;
 float step_size = 0.01f;
-float depth_eps = 0.0015f;
+float depth_eps = 0.005f;
 struct MaterialData_pbrMR
 {
   vec4 baseColor;

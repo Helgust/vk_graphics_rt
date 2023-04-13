@@ -833,7 +833,6 @@ void SceneManager::MoveCarX(float a_time, bool teleport, LiteMath::float4x4 &a_m
   }
   else
   {
-    m_prevVehicleInstanceMatrices[0] = m_dynamicInstanceMatrices[0];
     deltaTime = 0;
     if ( m_distanceTraveledX > 50.f)
     {
@@ -944,6 +943,7 @@ void SceneManager::RotCarY(float a_time, bool teleport, LiteMath::float4x4 &a_ma
     if (rotFlag)
     {
       a_mat = a_mat * rotate4x4Y(45.0f * direction);
+      m_deltaRotations[1] = 45.0f * direction;
       rotFlag = false;
     }
        
@@ -952,6 +952,7 @@ void SceneManager::RotCarY(float a_time, bool teleport, LiteMath::float4x4 &a_ma
   else
   {    
     a_mat = a_mat * rotate4x4Y(1.0f*a_time);
+    m_deltaRotations[1] = 1.0f*a_time;
   }
 }
 
@@ -973,13 +974,17 @@ void SceneManager::RotCarX(float a_time, bool teleport, LiteMath::float4x4 &a_ma
     }
     
     if (direction < 0)
+    {
       a_mat = a_mat * rotate4x4X(45.0f * direction);
+      m_deltaRotations[0] = 45.0f * direction;
+    }
     
     a_mat.set_col(3, newPos);
   }
   else
   {    
     a_mat = a_mat * rotate4x4X(1.0f*a_time);
+    m_deltaRotations[0] = 1.0f*a_time;
   }
 }
 
@@ -1001,13 +1006,17 @@ void SceneManager::RotCarZ(float a_time, bool teleport, LiteMath::float4x4 &a_ma
     }
     
     if (direction < 0)
+    {
       a_mat = a_mat * rotate4x4Z(45.0f * direction);
+      m_deltaRotations[2] = 45.0f * direction;
+    }
     
     a_mat.set_col(3, newPos);
   }
   else
   {    
     a_mat = a_mat * rotate4x4Z(1.0f*a_time);
+    m_deltaRotations[2] = 1.0f*a_time;
   }
 }
 
@@ -1017,11 +1026,6 @@ void SceneManager::ApplyMovement(LiteMath::float4x4 &a_mat)
   for (auto &vehMat : m_dynamicInstanceMatrices)
   {
     vehMat = vehMat * a_mat;
-
-    // curVehMat.set_col(0, curVehMat.get_col(0) - prevVehMat.get_col(0));
-    // curVehMat.set_col(1, curVehMat.get_col(1) - prevVehMat.get_col(1));
-    // curVehMat.set_col(2, curVehMat.get_col(2) - prevVehMat.get_col(2));
-    // curVehMat.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
   }
   m_currVehicleInstanceMatrices[0]= m_currVehicleInstanceMatrices[0] * a_mat;
 }
