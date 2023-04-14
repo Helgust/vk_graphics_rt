@@ -67,8 +67,8 @@ struct SceneManager
 
   //const std::string &modelPath = "../resources/models/cab/scene.gltf";
   //const std::string &modelPath = "../resources/models/cab_solid/scene.gltf";
-  //const std::string &modelPath = "../resources/models/van_changed/scene.gltf";
-  const std::string &modelPath = "../resources/models/tank_solid/scene.gltf";
+  const std::string &modelPath = "../resources/models/van_changed/scene.gltf";
+  //const std::string &modelPath = "../resources/models/tank_solid/scene.gltf";
   bool LoadSceneXML(const std::string &scenePath, bool transpose = true);
   bool LoadSceneGLTF(const std::string &scenePath);
   bool LoadScene(const std::string &scenePath); // guess scene type by extension

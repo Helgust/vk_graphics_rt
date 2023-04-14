@@ -1168,7 +1168,7 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   m_pScnMgr->MoveCarX(a_time, teleport, transMat);
   //m_pScnMgr->MoveCarZ(a_time, teleport, transMat);
   //m_pScnMgr->MoveCarY(a_time, teleport, transMat);
-  //m_pScnMgr->RotCarY(a_time, teleport, transMat);
+  m_pScnMgr->RotCarY(a_time, teleport, transMat);
   //m_pScnMgr->RotCarX(a_time, teleport, transMat);
   //m_pScnMgr->MoveCarZ(a_time, teleport,transMat);
   m_pScnMgr->ApplyMovement(transMat);
@@ -2063,7 +2063,7 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
-  m_pScnMgr->InstanceVehicle(float3(40.0, 2.0, -20.0), 1.0f, 1.0f);
+  m_pScnMgr->InstanceVehicle(float3(40.0, 5.0, -20.0), 1.0f, 1.0f);
   //m_pScnMgr->InstanceVehicle(float3(0.0, 2.0, 0.0), 1.0f, 1.0f);
   m_pScnMgr->LoadScene(path);
 

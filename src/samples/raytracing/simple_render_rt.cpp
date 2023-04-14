@@ -379,11 +379,11 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, uint
       m_prevNormalImage, m_prevColorImageSampler);
     //m_pRayTracerGPU->InitDescriptors(m_pScnMgr);
     
-    m_pRayTracerGPU->UpdateAll(m_pCopyHelper, a_time, m_uniforms.lights[0], a_needUpdate);
+    m_pRayTracerGPU->UpdateAll(m_pCopyHelper, a_time, m_uniforms.lights[0], a_needUpdate, m_pScnMgr->GetVehicleInstancePos(0));
   }
 
   m_pRayTracerGPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix, m_prevProjViewMatrix, m_inverseTransMatrix, m_projectionMatrix, m_inversePrevProjViewMatrix);
-  m_pRayTracerGPU->UpdatePlainMembers(m_pCopyHelper, a_time, m_uniforms.lights[0], a_needUpdate);
+  m_pRayTracerGPU->UpdatePlainMembers(m_pCopyHelper, a_time, m_uniforms.lights[0], a_needUpdate, m_pScnMgr->GetVehicleInstancePos(0));
   // if (a_needUpdate == 1U)
   // {
   //   a_needUpdate = 0U;

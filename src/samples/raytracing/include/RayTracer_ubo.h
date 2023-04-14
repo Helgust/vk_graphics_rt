@@ -24,7 +24,8 @@ struct RayTracer_UBO_Data
   mat4 m_prevProjView;
   mat4 m_invPrevProjView;
   mat4 m_invTransMat;   
-  vec4 m_camPos; 
+  vec4 m_camPos;
+  vec4 m_vehPos; 
   uint m_height; 
   uint m_width; 
   uint m_pAccelStruct_capacity; 

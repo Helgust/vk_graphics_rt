@@ -161,7 +161,7 @@ vec3 GetPosFromPrevDepth(vec2 screenPos){
 
 vec2 GetPrevUV(vec4 pos)
 {
-  vec4 prevScreenPos= (ubo.m_currProjView) * pos;
+  vec4 prevScreenPos= (ubo.m_prevProjView) * pos;
   vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
   vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
   return prevUV;
@@ -222,10 +222,8 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
   {
     if (ubo.needUpdate != 1U)
     {
-      vec4 prevScreenPos= (ubo.m_prevProjView) * vec4(hitPoint,1.0f);
       vec2 velocityUV = texture(sampler2D(gBufferVelocity, colorSampler), screenPos).xy;
-      vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
-      vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
+      vec2 prevUV = GetPrevUV(vec4(hitPoint,1.0f));
       //prevUV += velocityUV;
       //need to think about it, do we need it?
       const bool  outOfView = (prevUV.x < 0.00001f || prevUV.x > 0.999999f || prevUV.y < 0.00001f || prevUV.y > 0.99999f);
@@ -267,11 +265,10 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
       // {
         //put matrix here, not vehicle postion
         vec4 prevHitPoint = vec4(hitPoint, 1.0f) + ubo.m_invTransMat[3];
-        //debugPrintfEXT("m_invTransMat[3] %1.3v3f\n", ubo.m_invTransMat[3]);
-        // vec3 jopa = length(vec3(40, 10, -20) - prevHitPoint.xyz) * normalize(lightDir);
+        //vec3 jopa = length(ubo.m_vehPos.xyz - prevHitPoint.xyz) * normalize(lightDir);
         // //apply rotation
-        // vec3 rotPoint = prevHitPoint.xyz - jopa;
-        // prevHitPoint = (vec4(rotPoint,1) * GetRotationFromMat4(ubo.m_invTransMat)) + vec4(jopa, 0);
+        vec3 rotPoint = prevHitPoint.xyz - ubo.m_vehPos.xyz;
+        prevHitPoint = (vec4(rotPoint,1) * GetRotationFromMat4(ubo.m_invTransMat)) + vec4(ubo.m_vehPos.xyz,0);
         vec3 HitPointProj = lightDir * dot(lightDir,hitPoint.xyz);
         vec3 PrevHitPointProj = lightDir * dot(lightDir,prevHitPoint.xyz);
         int directionOfDepthTrace = dot(HitPointProj,HitPointProj) > dot(PrevHitPointProj,PrevHitPointProj)  ? -1 : 1; //rework to distance between points
@@ -280,20 +277,17 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
         for (int i = 0; i < depth_steps; i++)
         {
           vec4 tracePos = vec4(initPos + lightDir * directionOfDepthTrace * step_size * i, 1.0f);
-          vec4 currentPos = (ubo.m_prevProjView) * tracePos;
-          vec3 newPosition = GetPosFromPrevDepth(GetPrevUV(currentPos));
+          vec3 newPosition = GetPosFromPrevDepth(GetPrevUV(tracePos));
           //debugPrintfEXT("prevHitPoint:%1.5v3f newPosition:%1.5v3f diff:%1.5v3f\n", initPos, newPosition, length(initPos - newPosition));
           //debugPrintfEXT("tracePosDiff %1.2f", length(tracePos.xyz - newPosition));
-          if (length(initPos - newPosition) < depth_eps)
+          if (length(tracePos.xyz - newPosition) < depth_eps)
           {
             prevHitPoint = vec4(newPosition, 1.0f);
             intersectFind = true;
             break;
           }
         }
-        vec4 prevScreenPos= (ubo.m_prevProjView) * prevHitPoint;
-        vec3 prevScreenPosNDC = prevScreenPos.xyz/prevScreenPos.w;
-        vec2 prevUV = prevScreenPosNDC.xy * 0.5f + vec2(0.5f, 0.5f);
+        vec2 prevUV = GetPrevUV(prevHitPoint);
         //find distance for prevHitPoint
         vec3 prevColor = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
         float prevDepth = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
@@ -305,7 +299,10 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
         float dotCurPrev = dot(currNormal, prevNormal);
         if ((prevColor.x == 0.0f) && (prevColor.y == 1.0f) && !outOfView && intersectFind)
         {
-          imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 1.0f, 0.5f, 1.0f));
+          // if (gl_GlobalInvocationID[0]/2 == gl_GlobalInvocationID[1]/2)
+          //   debugPrintfEXT("length_left %1.3f, length_right %1.3f\n", length(prevHitPoint.xyz - hitPoint.xyz), (length(ubo.m_invTransMat[3])+point_eps));
+          //if (length(prevHitPoint.xyz - hitPoint.xyz) < (length(ubo.m_invTransMat[3]) + +point_eps))
+            imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 1.0f, 0.5f, 1.0f));
           return;
         }
         // else
