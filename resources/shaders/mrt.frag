@@ -21,6 +21,7 @@ layout (location = 0) out vec4 outPosition;
 layout (location = 1) out vec4 outNormal;
 layout (location = 2) out vec4 outAlbedo;
 layout (location = 3) out vec2 outVelocity;
+layout (location = 4) out vec2 outMetRough;
 
 layout (location = 0 ) in VS_OUT
 {
@@ -72,16 +73,18 @@ void main()
     const uint offset = infos.o[params.instanceID].x;
     const uint matIdx = matID[(offset / 3) + gl_PrimitiveID];
     vec4 albedo = vec4(surf.color,1);
-
+    vec4 metRough;
     if(params.dynamicBit != 1)
     {
         MaterialData_pbrMR material = materials[matIdx];
         albedo = texture(textures[material.baseColorTexId], surf.texCoord);
+        metRough = texture(textures[material.metallicRoughnessTexId], surf.texCoord);
     }
     else
     {
         MaterialData_pbrMR dynMaterial = dynMaterials[matIdx];
         albedo = texture(dynTextures[dynMaterial.baseColorTexId], surf.texCoord);
+        metRough = texture(dynTextures[dynMaterial.metallicRoughnessTexId], surf.texCoord);
     }
         
     if (albedo.a < 0.5)
@@ -91,4 +94,5 @@ void main()
     outPosition = vec4(surf.wPos, 1.0f);
     //outVelocity = vec4(CalcVelocity(surf.currPos, surf.prevPos), 0.0f, 1.0f);
     outVelocity = CalcVelocity(surf.currPos, surf.prevPos);
+    outMetRough = metRough.yz;
 }

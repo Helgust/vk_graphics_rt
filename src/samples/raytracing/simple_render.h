@@ -43,7 +43,7 @@ struct FrameBufferAttachment {
 struct FrameBuffer {
   int32_t width, height;
   VkFramebuffer frameBuffer;
-  FrameBufferAttachment position, normal, albedo;
+  FrameBufferAttachment position, normal, albedo, metallicRroughness;
   FrameBufferAttachment velocity;
   FrameBufferAttachment depth;
   VkRenderPass renderPass;

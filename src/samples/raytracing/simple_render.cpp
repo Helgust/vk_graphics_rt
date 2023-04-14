@@ -68,6 +68,13 @@ void SimpleRender::SetupGbuffer() {
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     &m_gBuffer.velocity, m_gBuffer.width, m_gBuffer.height);
+  
+  // MetallicRroughness (color)
+  CreateAttachment(
+    VK_FORMAT_R8G8_UNORM,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    &m_gBuffer.metallicRroughness, m_gBuffer.width, m_gBuffer.height);
 
   // Depth attachment
 
@@ -79,10 +86,10 @@ void SimpleRender::SetupGbuffer() {
     &m_gBuffer.depth, m_gBuffer.width, m_gBuffer.height);
 
   // Set up separate renderpass with references to the color and depth attachments
-  std::array<VkAttachmentDescription, 5> attachmentDescs = {};
+  std::array<VkAttachmentDescription, 6> attachmentDescs = {};
 
   // Init attachment properties
-  for (uint32_t i = 0; i < 5; ++i)
+  for (uint32_t i = 0; i < 6; ++i)
   {
     attachmentDescs[i].samples = VK_SAMPLE_COUNT_1_BIT;
     attachmentDescs[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -107,12 +114,14 @@ void SimpleRender::SetupGbuffer() {
   attachmentDescs[2].format = m_gBuffer.albedo.format;
   attachmentDescs[3].format = m_gBuffer.depth.format;
   attachmentDescs[4].format = m_gBuffer.velocity.format;
+  attachmentDescs[5].format = m_gBuffer.metallicRroughness.format;
 
   std::vector<VkAttachmentReference> colorReferences;
   colorReferences.push_back({ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
   colorReferences.push_back({ 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
   colorReferences.push_back({ 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
   colorReferences.push_back({ 4, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
+  colorReferences.push_back({ 5, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
 
   VkAttachmentReference depthReference = {};
   depthReference.attachment = 3;
@@ -154,12 +163,13 @@ void SimpleRender::SetupGbuffer() {
 
   VK_CHECK_RESULT(vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_gBuffer.renderPass));
   setObjectName(m_gBuffer.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "gbuffer_renderpass");
-  std::array<VkImageView,5> attachments;
+  std::array<VkImageView,6> attachments;
   attachments[0] = m_gBuffer.position.view;
   attachments[1] = m_gBuffer.normal.view;
   attachments[2] = m_gBuffer.albedo.view;
   attachments[3] = m_gBuffer.depth.view;
   attachments[4] = m_gBuffer.velocity.view;
+  attachments[5] = m_gBuffer.metallicRroughness.view;
 
   VkFramebufferCreateInfo fbufCreateInfo = {};
   fbufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -925,6 +935,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindImage(2, m_gBuffer.normal.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(3, m_gBuffer.albedo.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(4, m_gBuffer.depth.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(5, m_gBuffer.metallicRroughness.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   //m_pBindings->BindImage(5, m_omniShadowImage.view, m_omniShadowImageSampler,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(6, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(7, softRtFrame.view, m_pSoftRTImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -1001,7 +1012,8 @@ void SimpleRender::SetupSimplePipeline()
   setObjectName(m_gBufferPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "gbuffer_pipeline_layout");
   maker.SetDefaultState(m_width, m_height);
 
-  std::array<VkPipelineColorBlendAttachmentState, 4> blendAttachmentStates = {
+  std::array<VkPipelineColorBlendAttachmentState, 5> blendAttachmentStates = {
+    pipelineColorBlendAttachmentState(0xf, VK_FALSE),
     pipelineColorBlendAttachmentState(0xf, VK_FALSE),
     pipelineColorBlendAttachmentState(0xf, VK_FALSE),
     pipelineColorBlendAttachmentState(0xf, VK_FALSE),
@@ -1223,13 +1235,14 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     renderPassInfo.renderArea.extent.width = m_gBuffer.width;
 		renderPassInfo.renderArea.extent.height = m_gBuffer.height;
 
-    VkClearValue clearValues[5] = {};
+    VkClearValue clearValues[6] = {};
 		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clearValues[1].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clearValues[2].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clearValues[3].depthStencil = { 1.0f, 0 };
     clearValues[4].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-    renderPassInfo.clearValueCount = 5;
+    clearValues[5].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+    renderPassInfo.clearValueCount = 6;
     renderPassInfo.pClearValues = &clearValues[0];
 
     vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -2531,14 +2544,17 @@ void SimpleRender::ClearBuffer(FrameBuffer buffer)
   vkDestroyImage(m_device, buffer.normal.image, nullptr);
   vkDestroyImage(m_device, buffer.depth.image, nullptr);
   vkDestroyImage(m_device, buffer.velocity.image, nullptr);
+  vkDestroyImage(m_device, buffer.metallicRroughness.image, nullptr);
   vkDestroyImageView(m_device, buffer.albedo.view, nullptr);
   vkDestroyImageView(m_device, buffer.position.view, nullptr);
   vkDestroyImageView(m_device, buffer.normal.view, nullptr);
   vkDestroyImageView(m_device, buffer.depth.view, nullptr);
   vkDestroyImageView(m_device, buffer.velocity.view, nullptr);
+  vkDestroyImageView(m_device, buffer.metallicRroughness.view, nullptr);
   vkFreeMemory(m_device, buffer.albedo.mem, nullptr);
   vkFreeMemory(m_device, buffer.position.mem, nullptr);
   vkFreeMemory(m_device, buffer.normal.mem, nullptr);
   vkFreeMemory(m_device, buffer.depth.mem, nullptr);
   vkFreeMemory(m_device, buffer.velocity.mem, nullptr);
+  vkFreeMemory(m_device, buffer.metallicRroughness.mem, nullptr);
 }
