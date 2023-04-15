@@ -42,6 +42,12 @@ layout (location = 0) out vec4 outFragcolor;
 
 const float M_PI = 3.141592653589793;
 
+vec3 GetPosFromDepth(vec2 screenPos){
+  float depth = texture(samplerDepth, screenPos).x;
+  vec4 clipPos = vec4( screenPos * 2.0f - 1.0f, depth, 1.0f);
+  vec4 pixelPos = inverse(params.mProjView) * clipPos; 
+  return (pixelPos.xyz/pixelPos.w);
+}
 float sq(float x) { return x*x; }
 
 vec2 rotate(vec2 v, float a) {
@@ -172,7 +178,7 @@ vec3 BRDF(PBRData d, float shadow_visibility)
 void main() 
 {
     vec2 uv = gl_FragCoord.xy / params.screenSize;
-    vec3 fragPos = texture(samplerPosition, uv).rgb;
+    vec3 fragPos = GetPosFromDepth(uv);
 	vec3 normal = texture(samplerNormal, uv).rgb;
 	vec4 albedo = texture(samplerAlbedo, uv);
     float depth = texture(samplerDepth, uv).x;
@@ -185,12 +191,12 @@ void main()
     mat4 mViewInv = inverse(UboParams.View);
     pbrData.V = normalize((mViewInv * vec4(0., 0., 0., 1.)).xyz - fragPos);    
     //spmething about sky
-    // if (screenSpacePos.z == 1.) {
-    //     out_fragColor = textureLod(prefilteredMap, toSky(pbrData.V * vec3(-1, 1, -1)), 0);
-    //     if ((Params.debugFlags & 4) == 0)
-    //         out_fragColor = vec4(tonemapLottes(out_fragColor.xyz * UboParams.exposure), 1.);
-    //     return;
-    // }
+    if (depth == 1.) {
+        outFragcolor = textureLod(prefilteredMap, pbrData.V, 0);
+        // if ((Params.debugFlags & 4) == 0)
+        //     out_fragColor = vec4(tonemapLottes(out_fragColor.xyz * UboParams.exposure), 1.);
+        return;
+    }
 
     pbrData.N = normal;
     // Normal mapping is missing here
@@ -198,7 +204,7 @@ void main()
     pbrData.metallic = metRough.x;
     pbrData.roughness = metRough.y;
     
-    pbrData.N = normalize(transpose(mat3(UboParams.View)) * pbrData.N);
+    // pbrData.N = normalize(transpose(mat3(UboParams.View)) * pbrData.N);
     pbrData.L = UboParams.lights[0].dir.xyz;
 
     // Precalculate vectors and dot products
@@ -218,11 +224,6 @@ void main()
         break;
     case 1:
         outFragcolor = vec4(fragPos.xyz,1.0f);
-        // mat4 mInvProjView = inverse(params.mProjView); 
-        // vec4 screenSpacePos = vec4( 2.0f * uv - 1.0f, texture(samplerDepth, uv).x, 1.0f);
-        // vec4 camSpacePos  = mInvProjView * screenSpacePos;
-        // vec3 position = camSpacePos.xyz / camSpacePos.w;
-        // outFragcolor = vec4(position, 1.0);
         break;
     case 2:
         outFragcolor = vec4(normal.xyz,1.0f);

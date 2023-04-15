@@ -2053,6 +2053,7 @@ void SimpleRender::UpdateView()
   auto mProjFix        = OpenglToVulkanProjectionMatrixFix();
   auto mProj           = projectionMatrix(m_cam.fov, aspect, 0.1f, 1000.0f);
   auto mLookAt         = LiteMath::lookAt(m_cam.pos, m_cam.lookAt, m_cam.up);
+  m_uniforms.View = mLookAt;
   auto mWorldViewProj = LiteMath::float4x4();
   if (m_uniforms.settings.x)
   { 
@@ -2080,7 +2081,6 @@ void SimpleRender::UpdateView()
   pushConst2M.projView = mWorldViewProj;
   pushConst2M.lightView = LiteMath::float4x4();
   m_uniforms.invProjView = m_inverseProjViewMatrix;
-  m_uniforms.View = mLookAt;
   //m_inverseProjViewMatrix = mWorldViewProj;
 }
 
@@ -3371,7 +3371,7 @@ void SimpleRender::loadEnvMap(const std::string& filename,
   int mipLvls = 1 + (int) floor(log2(info.height));
 
   m_env_map = allocateColorTextureFromDataLDR(m_device, m_physicalDevice, reinterpret_cast<unsigned char*>(image_data.data()), info.width, info.height, mipLvls,
-    VK_FORMAT_R32G32B32A32_SFLOAT, m_pScnMgr->GetCopyHelper());
+    VK_FORMAT_R32G32B32A32_SFLOAT, m_pScnMgr->GetCopyHelper(), 16);
 
   auto cmdBuf = vk_utils::createCommandBuffer(m_device, m_commandPool);
   vk_utils::generateMipChainCmd(cmdBuf, m_env_map.image, info.width, info.height, mipLvls);

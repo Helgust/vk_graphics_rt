@@ -134,8 +134,7 @@ std::vector<float> loadImageHDR(const ImageFileInfo& info)
 
   float* pixels = stbi_loadf(info.path.c_str(), &w, &h, &channels, req_channels);
 
-  std::vector<float> result(w * h * req_channels);
-  memcpy(result.data(), pixels, result.size());
+  std::vector<float> result(pixels, pixels + w * h * req_channels);
 
   stbi_image_free(pixels);
 
