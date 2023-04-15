@@ -112,6 +112,11 @@ public:
 
   void LoadScene(const char *path) override;
   void DrawFrame(float a_time, DrawMode a_mode) override;
+
+  void generateBRDFLUT();
+  void generateCubemaps();
+  void loadEnvMap(const std::string& filename, VkFormat format, VkImageUsageFlags imageUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT,
+    VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -295,6 +300,19 @@ protected:
 
   vk_utils::VulkanImageMem m_resImage;
   VkSampler                m_resImageSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_prefiltered_map;
+  VkSampler                m_prefiltered_mapSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_irradiance_map;
+  VkSampler                m_irradiance_mapSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_env_map;
+  VkSampler                m_env_mapSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_brdf_lut;
+  VkSampler                m_brdf_lutSampler = VK_NULL_HANDLE;
+
   pipeline_data_t m_quadPipeline;
   VkRenderPass m_quadRenderPass = VK_NULL_HANDLE; 
   VkRenderPass m_resolveRenderPass = VK_NULL_HANDLE; 

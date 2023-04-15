@@ -33,6 +33,11 @@ struct UniformParams
   mat4 prevProjView;
   mat4 invPrevProjView;
   mat4 PrevVecMat;
+  mat4 View;
+  float prefilteredCubeMipLevels;
+  float exposure;
+  float IBLShadowedRatio;
+  float envMapRotation;
   ivec4 settings;// x taa y softShadow zw dummy
 };
 
