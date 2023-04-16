@@ -80,7 +80,17 @@ void main()
         albedo = texture(textures[material.baseColorTexId], surf.texCoord);
         metRough = vec2(material.metallic, material.roughness);
         if (material.metallicRoughnessTexId >= 0)
-         metRough = texture(textures[material.metallicRoughnessTexId], surf.texCoord).bg;
+            metRough = texture(textures[material.metallicRoughnessTexId], surf.texCoord).bg;
+        
+        if (material.baseColorTexId >= 0) {
+            float alpha = texture(textures[material.baseColorTexId], surf.texCoord).a;
+
+            if (material.alphaMode == 1) {
+                if (alpha < material.alphaCutoff) {
+                    discard;
+                }
+            }
+        }
     }
     else
     {
@@ -89,11 +99,18 @@ void main()
         metRough = vec2(dynMaterial.metallic, dynMaterial.roughness);
         if (dynMaterial.metallicRoughnessTexId >= 0)
             metRough = texture(dynTextures[dynMaterial.metallicRoughnessTexId], surf.texCoord).bg;
-        
+
+        if (dynMaterial.baseColorTexId >= 0) {
+            float alpha = texture(dynTextures[dynMaterial.baseColorTexId], surf.texCoord).a;
+
+            if (dynMaterial.alphaMode == 1) {
+                if (alpha < dynMaterial.alphaCutoff) {
+                    discard;
+                }
+            }
+        }
     }
-        
-    if (albedo.a < 0.5)
-        discard;
+
     outAlbedo = albedo;
     outNormal = vec4(surf.wNorm, 1.0f);
     outPosition = vec4(surf.wPos, 1.0f);
