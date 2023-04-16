@@ -680,6 +680,12 @@ void SimpleRender::InitVulkan(const char** a_instanceExtensions, uint32_t a_inst
   m_cmdBuffersDrawMain = vk_utils::createCommandBuffers(m_device, m_commandPool, m_framesInFlight);
   m_cmdBuffersGbuffer = vk_utils::createCommandBuffers(m_device, m_commandPool, m_framesInFlight);
   m_cmdBuffersRT = vk_utils::createCommandBuffers(m_device, m_commandPool, m_framesInFlight);
+  setObjectName(m_cmdBuffersDrawMain[0], VK_OBJECT_TYPE_COMMAND_BUFFER, "m_cmdBuffersDrawMain_0_buffer");
+  setObjectName(m_cmdBuffersDrawMain[1], VK_OBJECT_TYPE_COMMAND_BUFFER, "m_cmdBuffersDrawMain_1_buffer");
+  setObjectName(m_cmdBuffersGbuffer[0], VK_OBJECT_TYPE_COMMAND_BUFFER, "m_cmdBuffersGbuffer_0_buffer");
+  setObjectName(m_cmdBuffersGbuffer[1], VK_OBJECT_TYPE_COMMAND_BUFFER, "m_cmdBuffersGbuffer_1_buffer");
+  setObjectName(m_cmdBuffersRT[0], VK_OBJECT_TYPE_COMMAND_BUFFER, "m_cmdBuffersRT_0_buffer");
+  setObjectName(m_cmdBuffersRT[1], VK_OBJECT_TYPE_COMMAND_BUFFER, "m_cmdBuffersRT_1_buffer");
 
   m_frameFences.resize(m_framesInFlight);
   VkFenceCreateInfo fenceInfo = {};
@@ -1174,7 +1180,7 @@ void SimpleRender::CreateUniformBuffer()
   //m_uniforms.m_camPos = to_float4(m_cam.pos, 1.0f);
   //m_uniforms.m_invProjView = m_inverseProjViewMatrix;
   m_uniforms.exposure = 1.f;
-  m_uniforms.IBLShadowedRatio = 1.f;
+  m_uniforms.IBLShadowedRatio = 0.1f;
   m_uniforms.envMapRotation = 0.f;
 
   UpdateUniformBuffer(0.0f);
@@ -1245,12 +1251,12 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 		renderPassInfo.renderArea.extent.height = m_gBuffer.height;
 
     VkClearValue clearValues[6] = {};
-		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-		clearValues[1].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-		clearValues[2].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearValues[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearValues[2].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 		clearValues[3].depthStencil = { 1.0f, 0 };
-    clearValues[4].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-    clearValues[5].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+    clearValues[4].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+    clearValues[5].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
     renderPassInfo.clearValueCount = 6;
     renderPassInfo.pClearValues = &clearValues[0];
 
@@ -1968,6 +1974,8 @@ void SimpleRender::RecreateSwapChain()
   }
 
   m_cmdBuffersDrawMain = vk_utils::createCommandBuffers(m_device, m_commandPool, m_framesInFlight);
+  setObjectName(m_cmdBuffersDrawMain[0], VK_OBJECT_TYPE_COMMAND_BUFFER, "m_cmdBuffersDrawMain_0_buffer");
+  setObjectName(m_cmdBuffersDrawMain[1], VK_OBJECT_TYPE_COMMAND_BUFFER, "m_cmdBuffersDrawMain_1_buffer");
   for (uint32_t i = 0; i < m_swapchain.GetImageCount(); ++i)
   {
     // setObjectName(m_cmdBuffersOmniShadow[i], VK_OBJECT_TYPE_COMMAND_BUFFER, "Build omniShadow Recreate");
@@ -2778,6 +2786,7 @@ void SimpleRender::generateCubemaps()
       VK_CHECK_RESULT(vkCreateFramebuffer(m_device, &framebufferCI, nullptr, &offscreen.framebuffer));
 
       VkCommandBuffer layoutCmd = vk_utils::createCommandBuffer(m_device, m_commandPool);
+      setObjectName(layoutCmd, VK_OBJECT_TYPE_COMMAND_BUFFER, "cubemap_cmdBuf");
 
       VkCommandBufferBeginInfo commandBufferBI{};
       commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -2920,6 +2929,7 @@ void SimpleRender::generateCubemaps()
     };
 
     VkCommandBuffer cmdBuf = vk_utils::createCommandBuffer(m_device, m_commandPool);
+    setObjectName(cmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "cubemap_cmdBuf_2");
 
     VkViewport viewport{};
     viewport.width = (float)dim;
@@ -3090,6 +3100,8 @@ void SimpleRender::generateCubemaps()
     auto tEnd = std::chrono::high_resolution_clock::now();
     auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
     std::cout << "Generating cube map with " << numMips << " mip levels took " << tDiff << " ms" << std::endl;
+    //setObjectName(m_irradiance_map.image, VK_OBJECT_TYPE_IMAGE, "m_irradiance_map_Image");
+    //setObjectName(m_prefiltered_map.image, VK_OBJECT_TYPE_IMAGE, "m_prefiltered_map_Image");
   }
 }
 
@@ -3253,6 +3265,7 @@ void SimpleRender::generateBRDFLUT()
   renderPassBeginInfo.framebuffer = framebuffer;
 
   VkCommandBuffer cmdBuf = vk_utils::createCommandBuffer(m_device, m_commandPool);
+  setObjectName(cmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "brdf_cmdBuf");
   VkCommandBufferBeginInfo commandBufferBI{};
   commandBufferBI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   VK_CHECK_RESULT(vkBeginCommandBuffer(cmdBuf, &commandBufferBI));
@@ -3313,6 +3326,7 @@ void SimpleRender::generateBRDFLUT()
   auto tEnd = std::chrono::high_resolution_clock::now();
   auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
   std::cout << "Generating BRDF LUT took " << tDiff << " ms" << std::endl;
+  setObjectName(m_brdf_lut.image, VK_OBJECT_TYPE_IMAGE, "m_brdf_lut_Image");
 }
 
 void SimpleRender::loadEnvMap(const std::string& filename,
@@ -3322,58 +3336,13 @@ void SimpleRender::loadEnvMap(const std::string& filename,
 {
   auto info = getImageInfo(filename);
   std::vector<float> image_data = loadImageHDR(info);
-  if (false) {
-
-    // Image
-    VkImageCreateInfo imageCI{};
-    imageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageCI.imageType = VK_IMAGE_TYPE_2D;
-    imageCI.format = format;
-    imageCI.extent.width = info.width;
-    imageCI.extent.height = info.height;
-    imageCI.extent.depth = 1;
-    imageCI.mipLevels = 1;
-    imageCI.arrayLayers = 1;
-    imageCI.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imageCI.usage = imageUsageFlags | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
-    // View
-    VkImageViewCreateInfo viewCI{};
-    viewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewCI.format = format;
-    viewCI.subresourceRange = {};
-    viewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    viewCI.subresourceRange.levelCount = 1;
-    viewCI.subresourceRange.layerCount = 1;
-
-    vk_utils::createImgAllocAndBind(m_device, m_physicalDevice, info.width, info.height, format, imageCI.usage, &m_env_map, &imageCI, &viewCI);
-
-    // Sampler
-    VkSamplerCreateInfo samplerCI{};
-    samplerCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerCI.magFilter = VK_FILTER_LINEAR;
-    samplerCI.minFilter = VK_FILTER_LINEAR;
-    samplerCI.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerCI.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerCI.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerCI.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerCI.minLod = 0.0f;
-    samplerCI.maxLod = static_cast<float>(1);
-    samplerCI.maxAnisotropy = 1.0f;
-    samplerCI.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    VK_CHECK_RESULT(vkCreateSampler(m_device, &samplerCI, nullptr, &m_env_mapSampler))
-
-    m_pScnMgr->GetCopyHelper()->UpdateImage(m_env_map.image, image_data.data(), info.width, info.height, 4, imageLayout);
-  }
-
   int mipLvls = 1 + (int) floor(log2(info.height));
 
   m_env_map = allocateColorTextureFromDataLDR(m_device, m_physicalDevice, reinterpret_cast<unsigned char*>(image_data.data()), info.width, info.height, mipLvls,
     VK_FORMAT_R32G32B32A32_SFLOAT, m_pScnMgr->GetCopyHelper(), 16);
 
   auto cmdBuf = vk_utils::createCommandBuffer(m_device, m_commandPool);
+  setObjectName(cmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "env_probe_cmdBuf");
   vk_utils::generateMipChainCmd(cmdBuf, m_env_map.image, info.width, info.height, mipLvls);
   vk_utils::executeCommandBufferNow(cmdBuf, m_graphicsQueue, m_device);
   vkFreeCommandBuffers(m_device, m_commandPool, 1, &cmdBuf);

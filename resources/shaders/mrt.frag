@@ -78,13 +78,16 @@ void main()
     {
         MaterialData_pbrMR material = materials[matIdx];
         albedo = texture(textures[material.baseColorTexId], surf.texCoord);
-        metRough = texture(textures[material.metallicRoughnessTexId], surf.texCoord);
+        if (material.metallicRoughnessTexId >= 0)
+         metRough = texture(textures[material.metallicRoughnessTexId], surf.texCoord);
     }
     else
     {
         MaterialData_pbrMR dynMaterial = dynMaterials[matIdx];
         albedo = texture(dynTextures[dynMaterial.baseColorTexId], surf.texCoord);
-        metRough = texture(dynTextures[dynMaterial.metallicRoughnessTexId], surf.texCoord);
+        if (dynMaterial.metallicRoughnessTexId >= 0)
+            metRough = texture(dynTextures[dynMaterial.metallicRoughnessTexId], surf.texCoord);
+        
     }
         
     if (albedo.a < 0.5)

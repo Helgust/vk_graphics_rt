@@ -215,12 +215,14 @@ void main()
     pbrData.dotNH = clamp(dot(pbrData.N, H), 0.0, 1.0);
 
     // Specular contribution
-    vec3 color = BRDF(pbrData, softShadow);
+    float shadow_visibility = 1.0f;
+    if(UboParams.settings.y == 1)
+        shadow_visibility = softShadow;
+    vec3 color = BRDF(pbrData, shadow_visibility);
 
     switch (int(UboParams.m_time_gbuffer_index.w)) {
     case 0:
-        if(UboParams.settings.y == 1)
-            outFragcolor = vec4(color,1.0f);
+        outFragcolor = vec4(color,1.0f);
         break;
     case 1:
         outFragcolor = vec4(fragPos.xyz,1.0f);
