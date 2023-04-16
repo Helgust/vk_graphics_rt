@@ -59,7 +59,7 @@ int main()
   //app->LoadScene("../resources/scenes/canyon_landscape/scene.gltf");// big canyon
   //app->LoadScene("../resources/scenes/mars/scene.gltf");
   //app->LoadScene("../resources/scenes/cityscape/scene.gltf"); // really good wihtout ATEST
-  app->LoadScene("../resources/scenes/sponza_gltf/Sponza.gltf"); // sponza gltf
+  //app->LoadScene("../resources/scenes/sponza_gltf/Sponza.gltf"); // sponza gltf
   //app->LoadScene("../resources/scenes/low_poly_city/scene.gltf"); // very big scene run with MATERAL::NONE
   //app->LoadScene("../resources/scenes/bistro_gltf/scene.gltf");
 
