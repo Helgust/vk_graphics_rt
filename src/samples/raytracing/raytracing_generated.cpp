@@ -3,6 +3,7 @@
 #include <limits>
 #include <cassert>
 #include <chrono>
+#include <time.h>
 
 #include "vk_copy.h"
 #include "vk_context.h"
@@ -77,6 +78,11 @@ void RayTracer_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngi
   m_uboData.lights[0] = a_light;
   m_uboData.needUpdate = a_needUpdate;
   m_uboData.m_vehPos = a_vehPos;
+  srand((unsigned) time(NULL));
+  for (int i = 0; i < 4; i++) 
+  {
+    m_uboData.randomVal[i] = rand()%256;
+  }
   a_pCopyEngine->UpdateBuffer(m_classDataBuffer, 0, &m_uboData, sizeof(m_uboData));
 }
 
@@ -89,7 +95,7 @@ void RayTracer_Generated::UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyEn
 { 
 }
 
-void RayTracer_Generated::CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uint32_t* out_color, uint32_t a_IsStaticPass)
+void RayTracer_Generated::CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uint32_t* out_color, uint32_t a_IsStaticPass, uint32_t a_isAO)
 {
   uint32_t blockSizeX = 256;
   uint32_t blockSizeY = 1;
@@ -102,6 +108,7 @@ void RayTracer_Generated::CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uin
     uint32_t m_sizeZ;
     uint32_t m_tFlags;
     uint32_t m_tIsStaticPass;
+    uint32_t m_isAO;
   } pcData;
   
   uint32_t sizeX  = uint32_t(tidX);
@@ -113,6 +120,7 @@ void RayTracer_Generated::CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uin
   pcData.m_sizeZ  = 1;
   pcData.m_tFlags = m_currThreadFlags;
   pcData.m_tIsStaticPass = a_IsStaticPass;
+  pcData.m_isAO = a_isAO;
 
   vkCmdPushConstants(m_currCmdBuffer, CastSingleRayMegaLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(KernelArgsPC), &pcData);
   
@@ -202,7 +210,7 @@ void RayTracer_Generated::BarriersForSeveralBuffers(VkBuffer* a_inBuffers, VkBuf
 }
 
 void RayTracer_Generated::CastSingleRayCmd(VkCommandBuffer a_commandBuffer, 
- uint32_t tidX, uint32_t tidY, uint32_t* out_color, VkImage a_image, uint32_t a_isStaticPass)
+ uint32_t tidX, uint32_t tidY, uint32_t* out_color, VkImage a_image, uint32_t a_isStaticPass, uint32_t a_isAO)
 {
   m_currCmdBuffer = a_commandBuffer;
   VkMemoryBarrier memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT }; 
@@ -225,7 +233,7 @@ void RayTracer_Generated::CastSingleRayCmd(VkCommandBuffer a_commandBuffer,
   // imageBarrier.subresourceRange.levelCount     = 1;
 
   vkCmdBindDescriptorSets(a_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, CastSingleRayMegaLayout, 0, 1, &m_allGeneratedDS[0], 0, nullptr);
-  CastSingleRayMegaCmd(tidX, tidY, out_color, a_isStaticPass);
+  CastSingleRayMegaCmd(tidX, tidY, out_color, a_isStaticPass, a_isAO);
 }
 
 

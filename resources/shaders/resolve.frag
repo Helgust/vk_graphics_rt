@@ -22,6 +22,7 @@ layout (binding = 9) uniform sampler2D samplerRtImageStatic;
 layout (binding = 10) uniform samplerCube samplerIrradiance;
 layout (binding = 11) uniform samplerCube prefilteredMap;
 layout (binding = 12) uniform sampler2D samplerBRDFLUT;
+layout (binding = 13) uniform sampler2D samplerRTAO;
 
 layout(push_constant) uniform params_t
 {
@@ -136,7 +137,7 @@ vec3 getIBLContribution(
 
 // Specular BRDF composition --------------------------------------------
 
-vec3 BRDF(PBRData d, float shadow_visibility)
+vec3 BRDF(PBRData d, float shadow_visibility, float ao)
 {
     vec3 f0 = vec3(0.04);
 
@@ -164,7 +165,7 @@ vec3 BRDF(PBRData d, float shadow_visibility)
         vec3 diffuseContrib = (1.0 - F) * diffuseColor;// / PI;
         vec3 spec = D * F * G / (4.0 * d.dotNL * d.dotNV);
 
-        color += UboParams.lights[0].radius_lightDist_dummies.z * (diffuseContrib + spec) * d.dotNL * lightColor * shadow_visibility;
+        color += UboParams.lights[0].radius_lightDist_dummies.z * (diffuseContrib + spec) * d.dotNL * lightColor * shadow_visibility * ao;
     }
 
     vec3 reflection = -normalize(reflect(d.V, d.N));
@@ -185,6 +186,7 @@ void main()
     vec2 metRough = texture(samplerMetallicRroughness, uv).xy;
 
     float softShadow = texture(samplerSoftRtImage, uv).x;
+    float rtAO = texture(samplerRTAO, uv).x;
 
     // Specular contribution
     PBRData pbrData;
@@ -216,9 +218,14 @@ void main()
 
     // Specular contribution
     float shadow_visibility = 1.0f;
+    float ao_vis = 1.0f;
     if(UboParams.settings.y == 1)
+    {
         shadow_visibility = softShadow;
-    vec3 color = BRDF(pbrData, shadow_visibility);
+        ao_vis = rtAO;
+    }
+        
+    vec3 color = BRDF(pbrData, shadow_visibility, ao_vis);
 
     switch (int(UboParams.m_time_gbuffer_index.w)) {
     case 0:
@@ -241,7 +248,7 @@ void main()
         outFragcolor = vec4(texture(samplerVelocity, uv).xy + 0.5f, 0.0f, 1.0f);
         break;
     case 6:
-        outFragcolor = vec4(texture(samplerRtImageStatic, uv).x);
+        outFragcolor = vec4(texture(samplerRTAO, uv).x);
         break;
     case 7:
         outFragcolor = vec4(texture(samplerRtImageStatic, uv));

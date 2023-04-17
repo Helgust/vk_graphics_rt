@@ -53,11 +53,11 @@ public:
   virtual void UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);
   
   virtual void CastSingleRayCmd(VkCommandBuffer a_commandBuffer, uint32_t tidX, uint32_t tidY, uint32_t* out_color,
-   VkImage a_image, uint32_t isStaticPass);
+   VkImage a_image, uint32_t isStaticPass, uint32_t isAO = 0);
 
   virtual void copyKernelFloatCmd(uint32_t length);
   
-  virtual void CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uint32_t* out_color, uint32_t isStaticPass);
+  virtual void CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uint32_t* out_color, uint32_t isStaticPass, uint32_t isAO);
   VkImageMemoryBarrier BarrierForSingleImage(VkImage a_buffer, uint32_t srcFlag, uint32_t dstFlag, 
     VkImageLayout oldImagelayout = VK_IMAGE_LAYOUT_GENERAL,
     VkImageLayout newImagelayout = VK_IMAGE_LAYOUT_GENERAL,

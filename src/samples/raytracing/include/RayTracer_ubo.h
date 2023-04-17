@@ -8,6 +8,7 @@ typedef LiteMath::float4x4 mat4;
 typedef LiteMath::float2   vec2;
 typedef LiteMath::float3   vec3;
 typedef LiteMath::float4   vec4;
+typedef LiteMath::int4   ivec4;
 typedef unsigned uint;
 #else
 #define MAXFLOAT 1e37f
@@ -25,7 +26,8 @@ struct RayTracer_UBO_Data
   mat4 m_invPrevProjView;
   mat4 m_invTransMat;   
   vec4 m_camPos;
-  vec4 m_vehPos; 
+  vec4 m_vehPos;
+  ivec4 randomVal; 
   uint m_height; 
   uint m_width; 
   uint m_pAccelStruct_capacity; 

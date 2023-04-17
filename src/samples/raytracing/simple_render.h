@@ -57,10 +57,11 @@ public:
   void InitDescriptors(std::shared_ptr<SceneManager> sceneManager, 
     vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, FrameBuffer a_gbuffer, VkSampler colorSampler,
     vk_utils::VulkanImageMem prevRT, VkSampler a_prevRTimage_sampler,
-    vk_utils::VulkanImageMem a_rtImage,  VkSampler a_RtImageSampler,
+    vk_utils::VulkanImageMem a_rtImage,  VkSampler a_rtImageSampler,
     vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_rtImageDynamicSampler,
     vk_utils::VulkanImageMem a_prevDepth,  VkSampler a_prevDepthSampler,
-    vk_utils::VulkanImageMem a_prevNormal,  VkSampler a_prevColorSampler);
+    vk_utils::VulkanImageMem a_prevNormal,  VkSampler a_prevColorSampler,
+    vk_utils::VulkanImageMem a_rtImageAO,  VkSampler a_rtImageAOSampler);
   //void InitDescriptors(std::shared_ptr<SceneManager> sceneManager);
 };
 
@@ -86,6 +87,8 @@ public:
   const std::string KUWAHARA_FRAGMENT_SHADER_PATH = "../resources/shaders/kuwahara.frag";
   const std::string SHARP_FRAGMENT_SHADER_PATH = "../resources/shaders/sharp.frag";
   const std::string POSTFX_FRAGMENT_SHADER_PATH = "../resources/shaders/postfx.frag";
+  const std::string SOFT_RT_AO_VERTEX_SHADER_PATH = "../resources/shaders/softRT.vert";
+  const std::string SOFT_RT_AO_FRAGMENT_SHADER_PATH = "../resources/shaders/softAO.frag";
 
   
 
@@ -234,6 +237,7 @@ protected:
   pipeline_data_t m_taaPipeline {};
   pipeline_data_t m_filterPipeline {};
   pipeline_data_t m_softShadowPipeline {};
+  pipeline_data_t m_softAOPipeline {};
 
   VkDescriptorSet m_dSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dSetLayout = VK_NULL_HANDLE;
@@ -245,6 +249,8 @@ protected:
   VkDescriptorSetLayout m_dTAASetLayout = VK_NULL_HANDLE;
   VkDescriptorSet m_dSoftRTSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dSoftRTSetLayout = VK_NULL_HANDLE;
+  VkDescriptorSet m_dSoftAOSet = VK_NULL_HANDLE;
+  VkDescriptorSetLayout m_dSoftAOSetLayout = VK_NULL_HANDLE;
   VkDescriptorSet m_dFilterSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dFilterSetLayout = VK_NULL_HANDLE;
   VkDescriptorSet m_dResultSet = VK_NULL_HANDLE;
@@ -277,6 +283,9 @@ protected:
   vk_utils::VulkanImageMem m_rtImageDynamic;
   VkSampler                m_rtImageDynamicSampler = VK_NULL_HANDLE;
 
+  vk_utils::VulkanImageMem m_rtImageAO;
+  VkSampler                m_rtImageAOSampler = VK_NULL_HANDLE;
+
   vk_utils::VulkanImageMem m_omniShadowImage;
   VkSampler                m_omniShadowImageSampler = VK_NULL_HANDLE;
 
@@ -294,6 +303,9 @@ protected:
 
   vk_utils::VulkanImageMem m_prevRTImage;
   VkSampler                m_prevRTImageSampler = VK_NULL_HANDLE;
+
+  vk_utils::VulkanImageMem m_prevAOImage;
+  VkSampler                m_prevAOImageSampler = VK_NULL_HANDLE;
 
   vk_utils::VulkanImageMem m_taaImage;
   VkSampler                m_taaImageSampler = VK_NULL_HANDLE;
@@ -341,6 +353,9 @@ protected:
 
   std::shared_ptr<vk_utils::RenderTarget>        m_pSoftRTImage;
   VkDeviceMemory        m_memSoftRTImage = VK_NULL_HANDLE;
+
+  std::shared_ptr<vk_utils::RenderTarget>        m_pSoftAOImage;
+  VkDeviceMemory        m_memSoftAOImage = VK_NULL_HANDLE;
   uint32_t m_taaImageId = 0;          
 
   void RayTraceCPU();

@@ -53,6 +53,7 @@ const float m_reflection[5] = { 0.1f, 0.75f, 0.0f, 0.0f, 0.0f };
 const int samples_cnt = 16;
 const int light_cnt = 1;
 const float rayMax = 1000.0f;
+const float rayAOMax = 10.0f;
 //const float light_dist = 20.0f;
 bool soft_shadow = true;
 bool first_run = true;
@@ -97,21 +98,6 @@ struct Vertex {
 /////////////////// local functions /////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
-// const float Q1 = 0.6180339887498948482;
-// const float P2 = 1.324717957244746;
-// const vec2 Q2 = vec2(1./P2, 1./P2/P2);
-// const vec2 Q22 = vec2(2./pow(P2,4.), 1./pow(P2,6.));
-// const vec2 Q23 = vec2(2./pow(P2,7.), 1./pow(P2,8.));
-// const vec2 Q24 = vec2(3./pow(P2,9.), 5./pow(P2,10.));
-// const vec2 Q25 = vec2(3./pow(P2,11.), 5./pow(P2,12.));
-
-vec2 Nth_weyl(vec2 p0, int n) {
-    
-    //return fract(p0 + float(n)*vec2(0.754877669, 0.569840296));
-    return floor(p0 + vec2(n*12664745, n*9560333)/exp2(24.));	// integer mul to avoid round-off
-}
-
-
 
 vec3 EyeRayDir(float x, float y, float w, float h, mat4 a_mViewProjInv) {
   vec4 pos = vec4(2.0f * (x + 0.5f) / w - 1.0f, 2.0f * (y + 0.5f) / h - 1.0f, 0.0f, 1.0f);
@@ -143,14 +129,14 @@ vec2 PointOnDisk(Light m_light, float st, vec2 samplePos)
   return result;
 }
 
-// Hash Functions for GPU Rendering, Jarzynski et al.
-// http://www.jcgt.org/published/0009/03/02/
-vec3 random_pcg3d(uvec3 v) {
-  v = v * 1664525u + 1013904223u;
-  v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
-  v ^= v >> 16u;
-  v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
-  return vec3(v) * (1.0/float(0xffffffffu));
+vec3 PointOnHemiSphere(float st1, float st2)
+{
+  float z = st1 * 2.0f -1.0f;
+  float theta = st2*2*M_PI;
+  float r = sqrt(1.0f - z * z);
+  float x = r * cos(theta);
+  float y = r * sin(theta);
+  return vec3(x, y, z);
 }
 
 const vec2 BlueNoiseInDisk[64] = vec2[64](

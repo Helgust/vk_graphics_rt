@@ -497,14 +497,15 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
  vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, 
  FrameBuffer a_gbuffer, VkSampler colorSampler, 
  vk_utils::VulkanImageMem a_prevRT,  VkSampler a_prevRTImageSampler,
- vk_utils::VulkanImageMem a_rtImage,  VkSampler a_RtImageSampler,
+ vk_utils::VulkanImageMem a_rtImage,  VkSampler a_rtImageSampler,
  vk_utils::VulkanImageMem a_rtImageDynamic,  VkSampler a_rtImageDynamicSampler,
  vk_utils::VulkanImageMem a_prevDepth,  VkSampler a_prevDepthSampler,
- vk_utils::VulkanImageMem a_prevNormal,  VkSampler a_prevColorSampler) 
+ vk_utils::VulkanImageMem a_prevNormal,  VkSampler a_prevColorSampler,
+ vk_utils::VulkanImageMem a_rtImageAO,  VkSampler a_rtImageAOSampler) 
 {
   std::array<VkDescriptorBufferInfo, 6> descriptorBufferInfo;
-  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(10);
-  std::vector<VkWriteDescriptorSet> writeDescriptorSet(21);
+  std::vector<VkDescriptorImageInfo>	descriptorImageInfos(11);
+  std::vector<VkWriteDescriptorSet> writeDescriptorSet(22);
 
 
   descriptorImageInfos[0].sampler = nullptr;
@@ -546,6 +547,10 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
   descriptorImageInfos[9].sampler = nullptr;
   descriptorImageInfos[9].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   descriptorImageInfos[9].imageView = a_prevNormal.view;
+
+  descriptorImageInfos[10].sampler = nullptr;
+  descriptorImageInfos[10].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  descriptorImageInfos[10].imageView = a_rtImageAO.view;
   
 
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[0], &descriptorBufferInfo[0], nullptr, sceneManager->GetVertexBuffer(), 3);
@@ -574,10 +579,10 @@ void RayTracer_GPU::InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[16], nullptr, &samplerInfo ,VK_NULL_HANDLE, 19);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[17], nullptr, &descriptorImageInfos[7] ,VK_NULL_HANDLE, 20);
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[18], nullptr, &descriptorImageInfos[8] ,VK_NULL_HANDLE, 21);//velocity
-  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[19], nullptr, &descriptorImageInfos[9] ,VK_NULL_HANDLE, 22);//velocity
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[19], nullptr, &descriptorImageInfos[9] ,VK_NULL_HANDLE, 22);//prevColor
   samplerInfo.sampler = a_prevColorSampler;
   fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[20], nullptr, &samplerInfo ,VK_NULL_HANDLE, 23);
-  
+  fillWriteDescriptorSetEntry(m_allGeneratedDS[0], writeDescriptorSet[21], nullptr, &descriptorImageInfos[10] ,VK_NULL_HANDLE, 24, true);//aoRt
 
   vkUpdateDescriptorSets(device, uint32_t(writeDescriptorSet.size()), writeDescriptorSet.data(), 0, NULL);
 }
@@ -854,13 +859,40 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
     allocateInfo.allocationSize  = memReqSoftRt.size;
     allocateInfo.memoryTypeIndex = vk_utils::findMemoryType(memReqSoftRt.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physicalDevice);
 
-    VK_CHECK_RESULT(vkAllocateMemory(m_device, &allocateInfo, NULL, &m_memFilterImage));
+    VK_CHECK_RESULT(vkAllocateMemory(m_device, &allocateInfo, NULL, &m_memSoftRTImage));
   }
 
-  m_pSoftRTImage->CreateViewAndBindMemory(m_memFilterImage, {0});
+  m_pSoftRTImage->CreateViewAndBindMemory(m_memSoftRTImage, {0});
   m_pSoftRTImage->CreateDefaultSampler();
   m_pSoftRTImage->CreateDefaultRenderPass();
-  setObjectName(m_pSoftRTImage->m_attachments[0].image, VK_OBJECT_TYPE_IMAGE, "filterRt_Image");
+  setObjectName(m_pSoftRTImage->m_attachments[0].image, VK_OBJECT_TYPE_IMAGE, "SoftShadowRt_Image");
+
+  // create softAO
+  //
+  m_pSoftAOImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{1024, 1024});
+
+  vk_utils::AttachmentInfo infoSoftAO;
+  infoSoftAO.format           = VK_FORMAT_R8G8B8A8_UNORM;
+  infoSoftAO.usage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL | VK_IMAGE_USAGE_SAMPLED_BIT;
+  infoSoftAO.imageSampleCount = VK_SAMPLE_COUNT_1_BIT;
+  m_resolveImageId              = m_pSoftAOImage->CreateAttachment(infoSoftAO);
+  auto memReqSoftAO               = m_pSoftAOImage->GetMemoryRequirements()[0]; // we know that we have only one texture
+  
+  // memory for all shadowmaps (well, if you have them more than 1 ...)
+  {
+    VkMemoryAllocateInfo allocateInfo = {};
+    allocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.pNext           = nullptr;
+    allocateInfo.allocationSize  = memReqSoftRt.size;
+    allocateInfo.memoryTypeIndex = vk_utils::findMemoryType(memReqSoftRt.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physicalDevice);
+
+    VK_CHECK_RESULT(vkAllocateMemory(m_device, &allocateInfo, NULL, &m_memSoftAOImage));
+  }
+
+  m_pSoftAOImage->CreateViewAndBindMemory(m_memSoftAOImage, {0});
+  m_pSoftAOImage->CreateDefaultSampler();
+  m_pSoftAOImage->CreateDefaultRenderPass();
+  setObjectName(m_pSoftAOImage->m_attachments[0].image, VK_OBJECT_TYPE_IMAGE, "SoftAO_Image");
 }
 
 void SimpleRender::CreateInstance()
@@ -940,6 +972,15 @@ void SimpleRender::SetupSimplePipeline()
 
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+  m_pBindings->BindImage(1, m_rtImageAO.view, m_rtImageAOSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(2, m_prevAOImage.view, m_prevAOImageSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(3, m_gBuffer.velocity.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindEnd(&m_dSoftAOSet, &m_dSoftAOSetLayout);
+
+  auto softAOFrame = m_pSoftAOImage->m_attachments[0];
+
+  m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
+  m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindImage(1, m_gBuffer.position.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(2, m_gBuffer.normal.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(3, m_gBuffer.albedo.view, m_colorSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -953,6 +994,7 @@ void SimpleRender::SetupSimplePipeline()
   m_pBindings->BindImage(10, m_irradiance_map.view, m_irradiance_mapSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(11, m_prefiltered_map.view, m_prefiltered_mapSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindImage(12, m_brdf_lut.view, m_brdf_lutSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(13, softAOFrame.view, m_pSoftAOImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dResolveSet, &m_dResolveSetLayout);
 
   auto curentFrame = m_pResolveImage->m_attachments[m_resolveImageId];
@@ -1126,11 +1168,24 @@ void SimpleRender::SetupSimplePipeline()
   setObjectName(m_filterPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "filter_pipeline_layout");
   maker.SetDefaultState(m_width, m_height);
 
-
   m_filterPipeline.pipeline = maker.MakePipeline(m_device, vertexInputInfo,
                                             m_pFilterImage->m_renderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
-  setObjectName(m_filterPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "filter_pipeline");   
+  setObjectName(m_filterPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "filter_pipeline"); 
 
+  shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = SOFT_RT_SHADOWS_VERTEX_SHADER_PATH + ".spv";
+  shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = SOFT_RT_AO_FRAGMENT_SHADER_PATH + ".spv";
+  maker.LoadShaders(m_device, shader_paths);
+  maker.viewport.width  = float(m_width);
+  maker.viewport.height = float(m_height);
+  maker.scissor.extent  = VkExtent2D{ uint32_t(m_width), uint32_t(m_height) };
+  m_softAOPipeline.layout = maker.MakeLayout(m_device, {m_dSoftAOSetLayout}, sizeof(pushConst2M));
+  setObjectName(m_softAOPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "soft_AO_pipeline_layout");
+  maker.SetDefaultState(m_width, m_height);
+
+  m_softAOPipeline.pipeline = maker.MakePipeline(m_device, vertexInputInfo,
+                                            m_pSoftAOImage->m_renderPass, {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR});
+  setObjectName(m_softAOPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "softAO_pipeline"); 
+    
   shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = RESULT_VERTEX_SHADER_PATH + ".spv";
   shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = RESULT_FRAGMENT_SHADER_PATH + ".spv";
   maker.LoadShaders(m_device, shader_paths);
@@ -1166,7 +1221,7 @@ void SimpleRender::CreateUniformBuffer()
 
   vkMapMemory(m_device, m_uboAlloc, 0, sizeof(m_uniforms), 0, &m_uboMappedMem);
 
-  m_uniforms.lights[0].dir  = LiteMath::float4(0.0f, 1.4f, 1.0f, 1.0f);
+  m_uniforms.lights[0].dir  = LiteMath::float4(0.0f, 1.4f, 0.5f, 1.0f);
   m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 10.0f, 0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
   m_uniforms.lights[0].radius_lightDist_dummies  = LiteMath::float4(0.1f, 60.0f, 1.0f, 1.0f);
@@ -1421,6 +1476,20 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
+  vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_rtImageAO.image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+  vk_utils::setImageLayout(
+			a_cmdBuff,
+			m_prevAOImage.image,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
   vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
   vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
   //here mix prev and new rtShadow
@@ -1461,8 +1530,40 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   }
-  
+  //make rt ao soft
+  VkRenderPassBeginInfo softAORenderPassInfo = {};
+  softAORenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  softAORenderPassInfo.renderPass = m_pSoftAOImage->m_renderPass;
+  softAORenderPassInfo.framebuffer = m_pSoftAOImage->m_framebuffers[0];
+  softAORenderPassInfo.renderArea.offset = {0, 0};
+  softAORenderPassInfo.renderArea.extent.width = m_width;
+  softAORenderPassInfo.renderArea.extent.height = m_height;
 
+  VkClearValue softAOClearValues[3] = {};
+  softAOClearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+  softAOClearValues[1].depthStencil = { 1.0f, 0 };
+  softAORenderPassInfo.clearValueCount = 2;
+  softAORenderPassInfo.pClearValues = &softRTClearValues[0];
+
+  vkCmdBeginRenderPass(a_cmdBuff, &softAORenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+  {
+    vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_softAOPipeline.pipeline);
+
+    vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_softAOPipeline.layout, 0, 1,
+                            &m_dSoftAOSet, 0, VK_NULL_HANDLE);
+
+    VkShaderStageFlags stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+    vkCmdPushConstants(a_cmdBuff, m_softAOPipeline.layout, stageFlags, 0, sizeof(pushConst2M), &pushConst2M);
+    vkCmdDraw(a_cmdBuff, 4, 1, 0, 0);
+  }
+  vkCmdEndRenderPass(a_cmdBuff);
+  
+  // copy softAO to prev 
+    SimpleRender::CopyImage(a_cmdBuff, m_pSoftAOImage->m_attachments[0].image, m_prevAOImage.image, 
+      VK_IMAGE_ASPECT_COLOR_BIT, 
+      VK_IMAGE_ASPECT_COLOR_BIT,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   ///// draw final scene to scpecial image
   {
