@@ -62,7 +62,7 @@ void RayTracer_Generated::InitVulkanObjects(VkDevice a_device, VkPhysicalDevice 
                                                             [](ISceneObject *p) { DeleteSceneRT(p); } );
 }
 
-void RayTracer_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine, float a_time, Light a_light, uint32_t a_needUpdate, LiteMath::float4 a_vehPos)
+void RayTracer_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine, float a_time, Light a_light, LiteMath::uint4 a_needUpdate, LiteMath::float4 a_vehPos)
 {
   const size_t maxAllowedSize = std::numeric_limits<uint32_t>::max();
 

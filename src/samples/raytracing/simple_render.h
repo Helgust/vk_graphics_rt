@@ -359,7 +359,7 @@ protected:
   uint32_t m_taaImageId = 0;          
 
   void RayTraceCPU();
-  void RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, uint32_t &a_needUpdate);
+  void RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, LiteMath::uint4 &a_needUpdate);
 
   VkBuffer m_genColorBuffer = VK_NULL_HANDLE;
   VkDeviceMemory m_colorMem = VK_NULL_HANDLE;
@@ -390,8 +390,9 @@ protected:
   uint32_t m_shadowHeight = 1024u;
 
   uint32_t m_framesInFlight  = 2u;
-  uint32_t m_needUpdate = 1U;
-  bool m_needUpdateSlider = true;
+  bool m_shadowsUpdate = true;
+  bool m_litUpdate = true;
+  LiteMath::uint4 m_needUpdate = uint4(1, 1, 0, 0);
   bool m_vsync = false;
   const int HALTON_COUNT = 8;
   const vec2 HALTON_SEQUENCE[8] = {

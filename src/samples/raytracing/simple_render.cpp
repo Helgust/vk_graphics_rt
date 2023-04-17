@@ -1221,7 +1221,7 @@ void SimpleRender::CreateUniformBuffer()
 
   vkMapMemory(m_device, m_uboAlloc, 0, sizeof(m_uniforms), 0, &m_uboMappedMem);
 
-  m_uniforms.lights[0].dir  = LiteMath::float4(0.0f, 1.4f, 0.5f, 1.0f);
+  m_uniforms.lights[0].dir  = LiteMath::float4(0.0f, 1.4f, -0.05f, 1.0f);
   m_uniforms.lights[0].pos  = LiteMath::float4(0.0f, 10.0f, 0.0f, 1.0f);
   m_uniforms.lights[0].color  = LiteMath::float4(1.0f, 1.0f,  1.0f, 1.0f);
   m_uniforms.lights[0].radius_lightDist_dummies  = LiteMath::float4(0.1f, 60.0f, 1.0f, 1.0f);
@@ -1250,7 +1250,7 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   m_pScnMgr->MoveCarX(a_time, teleport, transMat);
   //m_pScnMgr->MoveCarZ(a_time, teleport, transMat);
   //m_pScnMgr->MoveCarY(a_time, teleport, transMat);
-  m_pScnMgr->RotCarY(a_time, teleport, transMat);
+  //m_pScnMgr->RotCarY(a_time, teleport, transMat);
   //m_pScnMgr->RotCarX(a_time, teleport, transMat);
   //m_pScnMgr->MoveCarZ(a_time, teleport,transMat);
   m_pScnMgr->ApplyMovement(transMat);
@@ -2195,8 +2195,8 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
-  m_pScnMgr->InstanceVehicle(float3(40.0, 5.0, -20.0), 1.0f, 1.0f);
-  //m_pScnMgr->InstanceVehicle(float3(0.0, 2.0, 0.0), 1.0f, 1.0f);
+  //m_pScnMgr->InstanceVehicle(float3(40.0, 5.0, -20.0), 1.0f, 1.0f);
+  m_pScnMgr->InstanceVehicle(float3(0.0, 2.0, 0.0), 1.0f, 1.0f);
   m_pScnMgr->LoadScene(path);
 
   if(ENABLE_HARDWARE_RT)
@@ -2545,7 +2545,8 @@ void SimpleRender::SetupGUIElements()
     ImGui::SliderInt("FaceIndex", &gbuffer_index, 0, 10); //0 no debug, 1 pos, 2 normal, 3 albedo, 4 shadow, 5 velocity
     ImGui::Checkbox("Taa", &taaFlag);
     ImGui::Checkbox("TurnOff", &softShadow);
-    ImGui::Checkbox("NeedUpdate", &m_needUpdateSlider);
+    ImGui::Checkbox("UpdateShadows", &m_shadowsUpdate);
+    ImGui::Checkbox("UpdateLit", &m_litUpdate);
     ImGui::Checkbox("ForceHistory ", &forceHistory);
     ImGui::Checkbox("teleport ", &teleport);
     
@@ -2612,7 +2613,8 @@ void SimpleRender::DrawFrameWithGUI(float a_time)
 
   VK_CHECK_RESULT(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, nullptr));
 
-  m_needUpdate = m_needUpdateSlider ? 1U : 0U;
+  m_needUpdate.x = m_shadowsUpdate ? 1U : 0U;
+  m_needUpdate.y = m_litUpdate ? 1U : 0U;
   RayTraceGPU(currentRTCmdBuf,a_time, m_needUpdate);
 
   waitSemaphores[0] = m_presentationResources.gbufferFinished;

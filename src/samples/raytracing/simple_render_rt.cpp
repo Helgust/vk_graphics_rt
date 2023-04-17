@@ -378,7 +378,7 @@ void SimpleRender::RayTraceCPU()
   m_pCopyHelper->UpdateImage(m_rtImage.image, m_raytracedImageData.data(), m_width, m_height, 4, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, uint32_t &a_needUpdate)
+void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, LiteMath::uint4 &a_needUpdate)
 {
   if(!m_pRayTracerGPU)
   {
