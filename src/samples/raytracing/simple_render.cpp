@@ -1508,7 +1508,7 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
   softRTClearValues[1].depthStencil = { 1.0f, 0 };
   softRTRenderPassInfo.clearValueCount = 2;
   softRTRenderPassInfo.pClearValues = &softRTClearValues[0];
-
+  setObjectName(softRTRenderPassInfo.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "Combined shadows");
   vkCmdBeginRenderPass(a_cmdBuff, &softRTRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   {
     vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_softShadowPipeline.pipeline);
@@ -1545,7 +1545,7 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
   softAOClearValues[1].depthStencil = { 1.0f, 0 };
   softAORenderPassInfo.clearValueCount = 2;
   softAORenderPassInfo.pClearValues = &softRTClearValues[0];
-
+  setObjectName(softAORenderPassInfo.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "Temporal Soft RTAO");
   vkCmdBeginRenderPass(a_cmdBuff, &softAORenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   {
     vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_softAOPipeline.pipeline);
@@ -1585,7 +1585,7 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 
     std::vector<VkClearValue> clear =  {clearValues[0], clearValues[1]};
     //VkRenderPassBeginInfo renderResolveToImage = m_pResolveImage->GetRenderPassBeginInfo(0, clear);
-  
+    setObjectName(renderResolveToImage.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "Resolve");
     vkCmdBeginRenderPass(a_cmdBuff, &renderResolveToImage, VK_SUBPASS_CONTENTS_INLINE);
     {
       vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_resolvePipeline.pipeline);
@@ -1627,7 +1627,7 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 		taaClearValues[1].depthStencil = { 1.0f, 0 };
     taaRenderPassInfo.clearValueCount = 2;
     taaRenderPassInfo.pClearValues = &taaClearValues[0];
-
+    setObjectName(taaRenderPassInfo.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "TAA");
     vkCmdBeginRenderPass(a_cmdBuff, &taaRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     {
       vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_taaPipeline.pipeline);
@@ -1657,7 +1657,7 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
 		filterClearValues[1].depthStencil = { 1.0f, 0 };
     filterRenderPassInfo.clearValueCount = 2;
     filterRenderPassInfo.pClearValues = &filterClearValues[0];
-
+    setObjectName(filterRenderPassInfo.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "PostFx");
     vkCmdBeginRenderPass(a_cmdBuff, &filterRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     {
       vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_filterPipeline.pipeline);
@@ -1710,7 +1710,7 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     clearValues[1].depthStencil = {1.0f, 0};
     screenRenderInfo.clearValueCount = 2;
     screenRenderInfo.pClearValues = &clearValues[0];
-
+    setObjectName(screenRenderInfo.renderPass, VK_OBJECT_TYPE_RENDER_PASS, "Present Image");
     vkCmdBeginRenderPass(a_cmdBuff, &screenRenderInfo, VK_SUBPASS_CONTENTS_INLINE);
     {
       vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_basicForwardPipeline.pipeline);
