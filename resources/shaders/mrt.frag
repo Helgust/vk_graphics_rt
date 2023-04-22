@@ -2,6 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_debug_printf : enable
 
 #include "common.h"
 
@@ -14,7 +15,7 @@ layout(push_constant) uniform params_t
     vec4 vehiclePos;
     vec2 screenSize;
     uint dynamicBit;
-    uint instanceID; 
+    uint meshID; 
 } params;
 
 layout (location = 0) out vec4 outPosition;
@@ -44,7 +45,7 @@ layout(binding = 1, set = 0) buffer materialsBuf { MaterialData_pbrMR materials[
 layout(binding = 2, set = 0) buffer dynMaterialsBuf { MaterialData_pbrMR dynMaterials[]; };
 layout(binding = 5, set = 0) uniform sampler2D textures[];
 layout(binding = 6, set = 0) uniform sampler2D dynTextures[];
-layout(binding = 7, set = 0) buffer MeshInfos { uvec2 o[]; } infos;
+layout(binding = 7, set = 0) buffer MeshInfos { uvec4 o[]; } infos;
 layout(binding = 8, set = 0) buffer MaterialsID { uint matID[]; };
 
 vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
@@ -70,8 +71,10 @@ vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
 
 void main()
 {
-    const uint offset = infos.o[params.instanceID].x;
+    const uint offset = infos.o[params.meshID].x;
     const uint matIdx = matID[(offset / 3) + gl_PrimitiveID];
+    //uint matIdx = surf.materialId;
+    //debugPrintfEXT("gl_PrimitiveID%d, matIdx%d, offset%d\n",gl_PrimitiveID, matIdx, offset);
     vec4 albedo = vec4(surf.color,1);
     vec2 metRough;
     if(params.dynamicBit != 1)
@@ -82,15 +85,17 @@ void main()
         if (material.metallicRoughnessTexId >= 0)
             metRough = texture(textures[material.metallicRoughnessTexId], surf.texCoord).bg;
         
-        if (material.baseColorTexId >= 0) {
-            float alpha = texture(textures[material.baseColorTexId], surf.texCoord).a;
+        // if (material.baseColorTexId >= 0) {
+        //     float alpha = texture(textures[material.baseColorTexId], surf.texCoord).a;
 
-            if (material.alphaMode == 1) {
-                if (alpha < material.alphaCutoff) {
-                    discard;
-                }
-            }
-        }
+        //     if (material.alphaMode == 1) {
+        //         if (alpha < material.alphaCutoff) {
+        //             discard;
+        //         }
+        //     }
+        // }
+        if(albedo.a < 0.5f)
+            discard;
     }
     else
     {
@@ -100,15 +105,17 @@ void main()
         if (dynMaterial.metallicRoughnessTexId >= 0)
             metRough = texture(dynTextures[dynMaterial.metallicRoughnessTexId], surf.texCoord).bg;
 
-        if (dynMaterial.baseColorTexId >= 0) {
-            float alpha = texture(dynTextures[dynMaterial.baseColorTexId], surf.texCoord).a;
+        // if (dynMaterial.baseColorTexId >= 0) {
+        //     float alpha = texture(dynTextures[dynMaterial.baseColorTexId], surf.texCoord).a;
 
-            if (dynMaterial.alphaMode == 1) {
-                if (alpha < dynMaterial.alphaCutoff) {
-                    discard;
-                }
-            }
-        }
+        //     if (dynMaterial.alphaMode == 1) {
+        //         if (alpha < dynMaterial.alphaCutoff) {
+        //             discard;
+        //         }
+        //     }
+        // }
+        if(albedo.a < 0.5f)
+            discard;
     }
 
     outAlbedo = albedo;
