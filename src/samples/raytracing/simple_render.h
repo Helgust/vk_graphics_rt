@@ -177,8 +177,6 @@ protected:
 
   vk_utils::QueueFID_T m_queueFamilyIDXs {UINT32_MAX, UINT32_MAX, UINT32_MAX};
 
-  RenderMode m_currentRenderMode = RenderMode::RASTERIZATION;
-
   struct
   {
     uint32_t    currentFrame      = 0u;

@@ -2136,16 +2136,6 @@ void SimpleRender::ProcessInput(const AppInput &input)
                            m_resolvePipeline.pipeline);
     }
   }
-
-  if(input.keyPressed[GLFW_KEY_1])
-  {
-    m_currentRenderMode = RenderMode::RASTERIZATION;
-  }
-  else if(input.keyPressed[GLFW_KEY_2])
-  {
-    m_currentRenderMode = RenderMode::RAYTRACING;
-  }
-
 }
 
 
