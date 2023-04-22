@@ -2255,7 +2255,16 @@ void SimpleRender::DrawFrameSimple(float a_time)
   vkResetFences(m_device, 1, &m_frameFences[m_presentationResources.currentFrame]);
 
   uint32_t imageIdx;
-  m_swapchain.AcquireNextImage(m_presentationResources.imageAvailable, &imageIdx);
+  auto result = m_swapchain.AcquireNextImage(m_presentationResources.imageAvailable, &imageIdx);
+  if (result == VK_ERROR_OUT_OF_DATE_KHR)
+  {
+    RecreateSwapChain();
+    return;
+  }
+  else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+  {
+    RUN_TIME_ERROR("Failed to acquire the next swapchain image!");
+  }
 
   auto currentResolveCmdBuf = m_cmdBuffersDrawMain[m_presentationResources.currentFrame];
   auto currentGbufferCmdBuf = m_cmdBuffersGbuffer[m_presentationResources.currentFrame];
@@ -2264,24 +2273,10 @@ void SimpleRender::DrawFrameSimple(float a_time)
   VkSemaphore waitSemaphores[] = {m_presentationResources.imageAvailable};
   VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
-  if(m_currentRenderMode == RenderMode::RASTERIZATION)
-  {
-    setObjectName(currentGbufferCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer DrawFrameSimple");
-    BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,
-    m_gBufferPipeline.pipeline);
-    
-    RayTraceGPU(currentRTCmdBuf, a_time, m_needUpdate);
-  }
-  // else if(m_currentRenderMode == RenderMode::RAYTRACING)
-  // {
-  //   if (ENABLE_HARDWARE_RT)
-  //     RayTraceGPU(currentRTCmdBuf, a_time);
-  //   else
-  //     RayTraceCPU();
 
-  //   //BuildCommandBufferQuad(currentResolveCmdBuf, m_swapchain.GetAttachment(imageIdx).view);
-  // }
-
+  setObjectName(currentGbufferCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build g-buffer DrawFrameWithGUI");
+  BuildGbufferCommandBuffer(currentGbufferCmdBuf, m_gBuffer.frameBuffer, m_swapchain.GetAttachment(imageIdx).view,
+  m_gBufferPipeline.pipeline);
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.waitSemaphoreCount = 1;
@@ -2296,20 +2291,37 @@ void SimpleRender::DrawFrameSimple(float a_time)
 
   VK_CHECK_RESULT(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, nullptr));
 
-  setObjectName(currentResolveCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build resolve DrawFrameSimple");
-  BuildResolveCommandBuffer(currentResolveCmdBuf, m_frameBuffers[imageIdx], m_swapchain.GetAttachment(imageIdx).view,
-                           m_resolvePipeline.pipeline);
+  m_needUpdate.x = m_shadowsUpdate ? 1U : 0U;
+  m_needUpdate.y = m_litUpdate ? 1U : 0U;
+  RayTraceGPU(currentRTCmdBuf,a_time, m_needUpdate);
 
   waitSemaphores[0] = m_presentationResources.gbufferFinished;
   submitInfo.pWaitSemaphores = waitSemaphores;
+  waitStages[0] = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+  submitInfo.pWaitDstStageMask = waitStages;
+  signalSemaphores[0] = m_presentationResources.rtFinished;
+  submitInfo.pSignalSemaphores = signalSemaphores;
+  submitInfo.pCommandBuffers = &currentRTCmdBuf;
+  VK_CHECK_RESULT(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, nullptr));
+
+  setObjectName(currentResolveCmdBuf, VK_OBJECT_TYPE_COMMAND_BUFFER, "Build resolve DrawFrameWithGUI");
+  BuildResolveCommandBuffer(currentResolveCmdBuf, m_frameBuffers[imageIdx], m_swapchain.GetAttachment(imageIdx).view,
+                           m_resolvePipeline.pipeline);
+
+  std::vector<VkCommandBuffer> submitCmdBufs = { currentResolveCmdBuf};
+
+  submitInfo.commandBufferCount = (uint32_t)submitCmdBufs.size();
+  submitInfo.pCommandBuffers = submitCmdBufs.data();
+
+  waitSemaphores[0] = m_presentationResources.rtFinished;
+  submitInfo.pWaitSemaphores = waitSemaphores;
   signalSemaphores[0] = m_presentationResources.renderingFinished;
   submitInfo.pSignalSemaphores = signalSemaphores;
-  submitInfo.pCommandBuffers = &currentResolveCmdBuf;
 
   VK_CHECK_RESULT(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_frameFences[m_presentationResources.currentFrame]));
 
   VkResult presentRes = m_swapchain.QueuePresent(m_presentationResources.queue, imageIdx,
-                                                 m_presentationResources.renderingFinished);
+    m_presentationResources.renderingFinished);
 
   if (presentRes == VK_ERROR_OUT_OF_DATE_KHR || presentRes == VK_SUBOPTIMAL_KHR)
   {
