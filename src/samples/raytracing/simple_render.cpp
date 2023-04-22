@@ -2111,16 +2111,16 @@ void SimpleRender::ProcessInput(const AppInput &input)
   // recreate pipeline to reload shaders
   if(input.keyPressed[GLFW_KEY_B])
   {
-#ifdef WIN32
-    std::system("cd ../resources/shaders && py compile_simple_render_shaders.py");
-    std::system("cd ../resources/shaders && py compile_quad_render_shaders.py");
-    std::system("cd ../../src/samples/raytracing/shaders_generated/ && py compile_rt_shaders.py");
-#else
-    std::system("cd ../resources/shaders && python3 compile_simple_render_shaders.py");
-    std::system("cd ../resources/shaders && python3 compile_quad_render_shaders.py");
-    std::system("cd ../../src/samples/raytracing/shaders_generated/ && py compile_rt_shaders.py");
-#endif
-
+// #ifdef WIN32
+//     std::system("cd ../resources/shaders && py compile_simple_render_shaders.py");
+//     std::system("cd ../resources/shaders && py compile_quad_render_shaders.py");
+//     std::system("cd ../../src/samples/raytracing/shaders_generated/ && py compile_rt_shaders.py");
+// #else
+//     std::system("cd ../resources/shaders && python3 compile_simple_render_shaders.py");
+//     std::system("cd ../resources/shaders && python3 compile_quad_render_shaders.py");
+//     std::system("cd ../../src/samples/raytracing/shaders_generated/ && py compile_rt_shaders.py");
+// #endif
+    std::cout << "Reload shaders... "<< std::endl;
     SetupSimplePipeline();
     m_pRayTracerGPU->InitKernel_External();
     m_pRayTracerGPU->SetVulkanInOutFor_CastSingleRay(m_genColorBuffer, 0);
