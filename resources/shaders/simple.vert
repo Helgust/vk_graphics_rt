@@ -1,6 +1,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : require
+#extension GL_ARB_shader_draw_parameters  : enable
 //#extension GL_EXT_debug_printf : enable
 
 #include "unpack_attributes.h"
@@ -16,9 +17,9 @@ layout(binding = 0, set = 0) uniform AppData
 };
 layout(binding = 1, set = 0) buffer materialsBuf { MaterialData_pbrMR materials[]; };
 layout(binding = 2, set = 0) buffer dynMaterialsBuf { MaterialData_pbrMR dynMaterials[]; };
-layout(binding = 3, set = 0) buffer materialIdsBuf { uint materialIds[]; };
-layout(binding = 4, set = 0) buffer dynMaterialIdsBuf { uint dynMaterialIds[]; };
-layout(binding = 7, set = 0) buffer MeshInfos { uvec2 o[]; } infos;
+layout(binding = 3, set = 0) buffer materialPerVertIdsBuf { uint materiaPerVertlIds[]; };
+layout(binding = 4, set = 0) buffer dynMaterialPerVertIdsBuf { uint dynMaterialPerVertIds[]; };
+layout(binding = 7, set = 0) buffer MeshInfos { uvec4 o[]; } infos;
 layout(binding = 8, set = 0) buffer MaterialsID { uint matID[]; };
 
 layout(push_constant) uniform params_t
@@ -30,7 +31,7 @@ layout(push_constant) uniform params_t
     vec4 vehiclePos;
     vec2 screenSize;
     uint dynamicBit;
-    uint instanceID;
+    uint meshID;
 } params;
 
 
@@ -66,14 +67,14 @@ void main(void)
     {
         vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
         // vOut.color = materials[matIdx].baseColor.xyz;
-        // vOut.materialId = matIdx;
+        //vOut.materialId = materiaPerVertlIds[gl_BaseVertexARB];
     }
     else
     {
         vOut.prevClipSpacePos = UboParams.prevProjView * UboParams.PrevVecMat * vec4(vOut.wPos, 1.0);//Fixme
         // vOut.color = dynMaterials[matIdx].baseColor.xyz;
-        // vOut.materialId = matIdx;
-        //vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
+        //vOut.materialId = dynMaterialPerVertIds[gl_BaseVertexARB];
+        vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
     }
     
     

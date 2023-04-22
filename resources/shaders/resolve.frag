@@ -1,6 +1,6 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
-//#extension GL_EXT_debug_printf : enable#extension GL_EXT_debug_printf : enable
+//#extension GL_EXT_debug_printf : enable
 
 #include "common.h"
 
@@ -148,7 +148,7 @@ vec3 BRDF(PBRData d, float shadow_visibility, float ao)
 
 
     // Light color fixed
-    const vec3 lightColor = vec3(1.f);
+    const vec3 lightColor = vec3(UboParams.lights[0].color.xyz);
 
     vec3 color = vec3(0.0);
 

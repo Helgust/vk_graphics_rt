@@ -62,6 +62,7 @@ int main()
   app->LoadScene("../resources/scenes/sponza_gltf/Sponza.gltf"); // sponza gltf
   //app->LoadScene("../resources/scenes/low_poly_city/scene.gltf"); // very big scene run with MATERAL::NONE
   //app->LoadScene("../resources/scenes/bistro_gltf/scene.gltf");
+  //app->LoadScene("../resources/scenes/bistro_small_gltf/untitled.gltf");
 
   bool showGUI = true;
   mainLoop(app, window, showGUI);

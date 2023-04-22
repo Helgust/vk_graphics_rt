@@ -302,7 +302,7 @@ void SceneManager::LoadOneMeshOnGPU(uint32_t meshIdx, bool isLoadVehicle)
   // for (uint32_t i = 0; i < m_meshInfos[meshIdx].m_indNum; ++i)
   // {
   //   perVertMat[indSrc[i]] = m_matIDs[loadedPrims + i / 3];
-  //   assert(last == -1 || last == m_matIDs[loadedPrims + i / 3]);
+  //   //assert(last == -1 || last == m_matIDs[loadedPrims + i / 3]);
   //   last = m_matIDs[loadedPrims + i / 3];
   // }
 
@@ -802,7 +802,7 @@ bool SceneManager::loadVehicleFromFile(const std::string &modelPath, tinygltf::M
 uint32_t SceneManager::InstanceVehicle(float3 pos, float scale, float size)
 {
   m_CubeSize = size;
-  LiteMath::float4x4 m = LiteMath::translate4x4(pos) * LiteMath::scale4x4(float3(scale));
+  LiteMath::float4x4 m = LiteMath::translate4x4(pos) * LiteMath::rotate4x4Y(90 * DEG_TO_RAD) * LiteMath::scale4x4(float3(scale));
   m_currVehicleInstanceMatrices.push_back(m);
   m_prevVehicleInstanceMatrices.push_back(m);
   return m_currVehicleInstanceMatrices.size() - 1;

@@ -1,9 +1,14 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : require
+#include "common.h"
 #include "colorSpaces.inc.glsl"
 layout(location = 0) out vec4 out_color;
 
+// layout(binding = 0, set = 0) uniform AppData
+// {
+//     UniformParams UboParams;
+// };
 layout (binding = 0) uniform sampler2D colorTexture;
 
 layout (location = 0 ) in VS_OUT
@@ -46,8 +51,7 @@ vec3 uncharted2Tonemap(vec3 x) {
 
 vec3 uncharted2(vec3 color) {
   const float W = 11.2;
-  float exposureBias = 2.0;
-  vec3 curr = uncharted2Tonemap(exposureBias * color);
+  vec3 curr = uncharted2Tonemap(1 * color);
   vec3 whiteScale = 1.0 / uncharted2Tonemap(vec3(W));
   return rgb_to_srgb(curr * whiteScale);
 }

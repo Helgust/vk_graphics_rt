@@ -719,7 +719,7 @@ void SimpleRender::InitVulkan(const char** a_instanceExtensions, uint32_t a_inst
 //  m_pScnMgr = std::make_shared<SceneManager>(m_device, m_physicalDevice, m_queueFamilyIDXs.transfer,
 //                                             m_queueFamilyIDXs.graphics, ENABLE_HARDWARE_RT);
   generateBRDFLUT();
-  loadEnvMap("../resources/textures/Arches_E_PineTree_3k.hdr", VK_FORMAT_R16G16B16A16_SFLOAT);
+  loadEnvMap("../resources/textures/san_giuseppe_bridge_4k.hdr", VK_FORMAT_R16G16B16A16_SFLOAT);
   generateCubemaps();
 }
 
@@ -1011,6 +1011,7 @@ void SimpleRender::SetupSimplePipeline()
   auto taaFrame = m_pTaaImage->m_attachments[0];
   
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
+  //m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
   m_pBindings->BindImage(0, taaFrame.view, m_pTaaImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dFilterSet, &m_dFilterSetLayout);
 
@@ -1247,8 +1248,8 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   m_uniforms.m_time_gbuffer_index = vec4(0, 0, a_time, gbuffer_index);
   m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
   auto transMat = LiteMath::float4x4();
-  m_pScnMgr->MoveCarX(a_time, teleport, transMat);
-  //m_pScnMgr->MoveCarZ(a_time, teleport, transMat);
+  //m_pScnMgr->MoveCarX(a_time, teleport, transMat);
+  m_pScnMgr->MoveCarZ(a_time, teleport, transMat);
   //m_pScnMgr->MoveCarY(a_time, teleport, transMat);
   //m_pScnMgr->RotCarY(a_time, teleport, transMat);
   //m_pScnMgr->RotCarX(a_time, teleport, transMat);
@@ -2196,7 +2197,7 @@ void SimpleRender::UpdateView()
 void SimpleRender::LoadScene(const char* path)
 {
   //m_pScnMgr->InstanceVehicle(float3(40.0, 5.0, -20.0), 1.0f, 1.0f);
-  m_pScnMgr->InstanceVehicle(float3(0.0, 2.0, 0.0), 1.0f, 1.0f);
+  m_pScnMgr->InstanceVehicle(float3(-3.0, 0.05, 0.0), 1.0f, 1.0f);
   m_pScnMgr->LoadScene(path);
 
   if(ENABLE_HARDWARE_RT)
@@ -2538,6 +2539,7 @@ void SimpleRender::SetupGUIElements()
     //ImGui::SliderFloat3("Light source 1 position", m_uniforms.lights[0].pos.M, -100.f, 100.f);
     ImGui::SliderFloat3("Light source 1 dir", m_uniforms.lights[0].dir.M, -1.0f, 1.0f);
     ImGui::SliderFloat("Light source 1 radius", &m_uniforms.lights[0].radius_lightDist_dummies.x, 0.0f, 2.0f);
+    ImGui::SliderFloat3("Light source 1 color", m_uniforms.lights[0].color.M, 0.0f, 1.0f);
     ImGui::DragFloat("Light intensity", &m_uniforms.lights[0].radius_lightDist_dummies.z, 0.1f, 0.f, FLT_MAX);
     ImGui::DragFloat("IBL in shadow", &m_uniforms.IBLShadowedRatio, 0.05f, 0.f, 1.f);
     ImGui::DragFloat("Envmap angle", &m_uniforms.envMapRotation, 1.f, -180.f, 180.f);
