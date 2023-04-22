@@ -64,7 +64,7 @@ int main()
   //app->LoadScene("../resources/scenes/bistro_gltf/scene.gltf");
   //app->LoadScene("../resources/scenes/bistro_small_gltf/untitled.gltf");
 
-  bool showGUI = false;
+  bool showGUI = true;
   mainLoop(app, window, showGUI);
 
   return 0;

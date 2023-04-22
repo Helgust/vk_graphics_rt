@@ -34,6 +34,11 @@ public:
     InitAllGeneratedDescriptorSets_CastSingleRay();
   }
 
+  void InitKernel_External()
+  {
+    InitKernel_CastSingleRayMega(".spv");
+  }
+
   virtual ~RayTracer_Generated();
 
 

@@ -2114,12 +2114,25 @@ void SimpleRender::ProcessInput(const AppInput &input)
 #ifdef WIN32
     std::system("cd ../resources/shaders && py compile_simple_render_shaders.py");
     std::system("cd ../resources/shaders && py compile_quad_render_shaders.py");
+    std::system("cd ../../src/samples/raytracing/shaders_generated/ && py compile_rt_shaders.py");
 #else
     std::system("cd ../resources/shaders && python3 compile_simple_render_shaders.py");
     std::system("cd ../resources/shaders && python3 compile_quad_render_shaders.py");
+    std::system("cd ../../src/samples/raytracing/shaders_generated/ && py compile_rt_shaders.py");
 #endif
 
     SetupSimplePipeline();
+    m_pRayTracerGPU->InitKernel_External();
+    m_pRayTracerGPU->SetVulkanInOutFor_CastSingleRay(m_genColorBuffer, 0);
+    m_pRayTracerGPU->InitDescriptors(m_pScnMgr,
+      m_NoiseMapTex, m_NoiseTexSampler,
+      m_gBuffer, m_colorSampler, 
+      m_prevRTImage, m_prevRTImageSampler,
+      m_rtImage, m_rtImageSampler,
+      m_rtImageDynamic, m_rtImageDynamicSampler,
+      m_prevDepthImage, m_prevDepthImageSampler,
+      m_prevNormalImage, m_prevColorImageSampler,
+      m_rtImageAO, m_rtImageAOSampler);
     //SetupQuadRenderer();
 
 
