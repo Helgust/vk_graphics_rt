@@ -3,13 +3,14 @@
 #extension GL_GOOGLE_include_directive : require
 #include "common.h"
 #include "colorSpaces.inc.glsl"
-layout(location = 0) out vec4 out_color;
 
-// layout(binding = 0, set = 0) uniform AppData
-// {
-//     UniformParams UboParams;
-// };
-layout (binding = 0) uniform sampler2D colorTexture;
+layout(binding = 0, set = 0) uniform AppData
+{
+    UniformParams UboParams;
+};
+layout (binding = 1) uniform sampler2D colorTexture;
+
+layout(location = 0) out vec4 out_color;
 
 layout (location = 0 ) in VS_OUT
 {
@@ -49,9 +50,9 @@ vec3 uncharted2Tonemap(vec3 x) {
   return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
 }
 
-vec3 uncharted2(vec3 color) {
+vec3 uncharted2(vec3 color, float exposure) {
   const float W = 11.2;
-  vec3 curr = uncharted2Tonemap(1 * color);
+  vec3 curr = uncharted2Tonemap(exposure * color);
   vec3 whiteScale = 1.0 / uncharted2Tonemap(vec3(W));
   return rgb_to_srgb(curr * whiteScale);
 }
@@ -64,6 +65,6 @@ void main()
   vec2 texCoord  = gl_FragCoord.xy / texSize;
   vec4 result_color =  texture(colorTexture, texCoord);
 
-  out_color = vec4(uncharted2(result_color.xyz),result_color.w);
+  out_color = vec4(uncharted2(result_color.xyz, UboParams.exposure),result_color.w);
 
 }

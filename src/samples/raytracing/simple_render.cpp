@@ -1011,8 +1011,8 @@ void SimpleRender::SetupSimplePipeline()
   auto taaFrame = m_pTaaImage->m_attachments[0];
   
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
-  //m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-  m_pBindings->BindImage(0, taaFrame.view, m_pTaaImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+  m_pBindings->BindImage(1, taaFrame.view, m_pTaaImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dFilterSet, &m_dFilterSetLayout);
 
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -1160,7 +1160,7 @@ void SimpleRender::SetupSimplePipeline()
   setObjectName(m_softShadowPipeline.pipeline, VK_OBJECT_TYPE_PIPELINE, "softRt_pipeline"); 
 
   shader_paths[VK_SHADER_STAGE_VERTEX_BIT]   = MEDIAN_VERTEX_SHADER_PATH + ".spv";
-  shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = SHARP_FRAGMENT_SHADER_PATH + ".spv";
+  shader_paths[VK_SHADER_STAGE_FRAGMENT_BIT] = POSTFX_FRAGMENT_SHADER_PATH + ".spv";
   maker.LoadShaders(m_device, shader_paths);
   maker.viewport.width  = float(m_width);
   maker.viewport.height = float(m_height);
@@ -2558,7 +2558,7 @@ void SimpleRender::SetupGUIElements()
     ImGui::DragFloat("Light intensity", &m_uniforms.lights[0].radius_lightDist_dummies.z, 0.1f, 0.f, FLT_MAX);
     ImGui::DragFloat("IBL in shadow", &m_uniforms.IBLShadowedRatio, 0.05f, 0.f, 1.f);
     ImGui::DragFloat("Envmap angle", &m_uniforms.envMapRotation, 1.f, -180.f, 180.f);
-    ImGui::DragFloat("Exposure", &m_uniforms.exposure, 0.1f);
+    ImGui::DragFloat("Exposure", &m_uniforms.exposure, 0.1f, 0.0f, 5.0f);
     ImGui::SliderInt("FaceIndex", &gbuffer_index, 0, 10); //0 no debug, 1 pos, 2 normal, 3 albedo, 4 shadow, 5 velocity
     ImGui::Checkbox("Taa", &taaFlag);
     ImGui::Checkbox("TurnOff", &softShadow);
