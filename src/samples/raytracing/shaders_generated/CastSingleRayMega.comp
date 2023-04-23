@@ -432,7 +432,7 @@ void kernel_RayTrace_out_AO(uint tidX, uint tidY, uint out_colorOffset)
   //HERE DO AO STAFF
   float total = 0.0f;
   ivec3 rnd = ubo.randomVal.xyz;
-  for (int u = 0; u < samples_cnt; u++)
+  for (int u = 0; u < ao_samples_cnt; u++)
   {
     uvec3 hash = pcg3d(uvec3(coordInit, rnd.x));
     float rngOffset = GetRandomFloat1(ivec3(coordInit, hash.x^floatBitsToUint(ubo.time)));
@@ -449,11 +449,7 @@ void kernel_RayTrace_out_AO(uint tidX, uint tidY, uint out_colorOffset)
     hitAO = m_pAccelStruct_RayQuery_NearestHit(vec4(hitPoint + n * 0.15f, 0.0f), vec4(AODir, rayMax - 0.15f * 2.0), (1U << 2) | 1U);
     color.y = 1.0;
     color.z = 1.0;
-    if ((hitAO.t >= rayMax))// intersect
-    {
-      color.x += 1.0f;
-    }
-    else
+    if ((hitAO.t < rayMax))// intersect
     {
       total += 1;
       float shade = min(hitAO.t / rayAOMax, 1.0f);
@@ -461,7 +457,7 @@ void kernel_RayTrace_out_AO(uint tidX, uint tidY, uint out_colorOffset)
     }
       
   }
-  color.x*=(total / (samples_cnt));
+  color.x*=(total / (ao_samples_cnt));
   imageStore(resultImageAO, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));  
 }
 void kernel_InitEyeRay(uint tidX, uint tidY, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar) 

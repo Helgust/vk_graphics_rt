@@ -85,17 +85,17 @@ void main()
         if (material.metallicRoughnessTexId >= 0)
             metRough = texture(textures[material.metallicRoughnessTexId], surf.texCoord).bg;
         
-        // if (material.baseColorTexId >= 0) {
-        //     float alpha = texture(textures[material.baseColorTexId], surf.texCoord).a;
+        if (material.baseColorTexId >= 0) {
+            float alpha = texture(textures[material.baseColorTexId], surf.texCoord).a;
 
-        //     if (material.alphaMode == 1) {
-        //         if (alpha < material.alphaCutoff) {
-        //             discard;
-        //         }
-        //     }
-        // }
-        if(albedo.a < 0.5f)
-            discard;
+            if (material.alphaMode == 1) {
+                if (alpha < material.alphaCutoff) {
+                    discard;
+                }
+            }
+        }
+        // if(albedo.a < 0.5f)
+        //     discard;
     }
     else
     {
@@ -105,17 +105,17 @@ void main()
         if (dynMaterial.metallicRoughnessTexId >= 0)
             metRough = texture(dynTextures[dynMaterial.metallicRoughnessTexId], surf.texCoord).bg;
 
-        // if (dynMaterial.baseColorTexId >= 0) {
-        //     float alpha = texture(dynTextures[dynMaterial.baseColorTexId], surf.texCoord).a;
+        if (dynMaterial.baseColorTexId >= 0) {
+            float alpha = texture(dynTextures[dynMaterial.baseColorTexId], surf.texCoord).a;
 
-        //     if (dynMaterial.alphaMode == 1) {
-        //         if (alpha < dynMaterial.alphaCutoff) {
-        //             discard;
-        //         }
-        //     }
-        // }
-        if(albedo.a < 0.5f)
-            discard;
+            if (dynMaterial.alphaMode == 1) {
+                if (alpha < dynMaterial.alphaCutoff) {
+                    discard;
+                }
+            }
+        }
+        // if(albedo.a < 0.5f)
+        //     discard;
     }
 
     outAlbedo = albedo;

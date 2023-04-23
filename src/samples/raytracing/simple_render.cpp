@@ -1688,7 +1688,7 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     
     // copy frame to prev
-    SimpleRender::CopyImage(a_cmdBuff, m_pFilterImage->m_attachments[0].image, m_prevFrameImage.image, 
+    SimpleRender::CopyImage(a_cmdBuff, m_pTaaImage->m_attachments[0].image, m_prevFrameImage.image, 
       VK_IMAGE_ASPECT_COLOR_BIT, 
       VK_IMAGE_ASPECT_COLOR_BIT,
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

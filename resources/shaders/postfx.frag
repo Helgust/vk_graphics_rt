@@ -64,7 +64,13 @@ void main()
   vec2 texSize   = textureSize(colorTexture, 0).xy;
   vec2 texCoord  = gl_FragCoord.xy / texSize;
   vec4 result_color =  texture(colorTexture, texCoord);
-
-  out_color = vec4(uncharted2(result_color.xyz, UboParams.exposure),result_color.w);
+  if(int(UboParams.m_time_gbuffer_index.w) != 0)
+  {
+    out_color = result_color;
+  }
+  else
+  {
+    out_color = vec4(uncharted2(result_color.xyz, UboParams.exposure),result_color.w);
+  }
 
 }

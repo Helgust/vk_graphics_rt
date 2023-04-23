@@ -171,7 +171,7 @@ vec3 BRDF(PBRData d, float shadow_visibility, float ao)
     vec3 reflection = -normalize(reflect(d.V, d.N));
     reflection.y *= -1.0f;
     color += getIBLContribution(diffuseColor, specularColor, d.dotNV, d.roughness, d.N, reflection)
-        * (1 - (1 - shadow_visibility) * (1 - UboParams.IBLShadowedRatio));
+        * (1 - (1 - shadow_visibility) * (1 - UboParams.IBLShadowedRatio))*lightColor;
 
     return color;
 }
