@@ -1012,7 +1012,7 @@ void SimpleRender::SetupSimplePipeline()
   
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT);
   m_pBindings->BindBuffer(0, m_ubo, VK_NULL_HANDLE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-  m_pBindings->BindImage(1, taaFrame.view, m_pTaaImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  m_pBindings->BindImage(1, taaFrame.view,  m_pTaaImage->m_sampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   m_pBindings->BindEnd(&m_dFilterSet, &m_dFilterSetLayout);
 
   m_pBindings->BindBegin(VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -2188,6 +2188,7 @@ void SimpleRender::UpdateView()
   {
     mWorldViewProj = mProjFix * mProj * mLookAt;
   }
+  m_projectionMatrix = mWorldViewProj;
   m_prevProjViewMatrix = m_uniforms.prevProjView; 
   m_inverseProjViewMatrix = LiteMath::inverse4x4(mWorldViewProj);
   m_inversePrevProjViewMatrix = LiteMath::inverse4x4(m_prevProjViewMatrix);
