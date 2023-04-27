@@ -236,11 +236,11 @@ float GetRandomFloat1(ivec3 random)
 void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset) 
 {
   uvec2 coordInit = uvec2(gl_GlobalInvocationID[0], gl_GlobalInvocationID[1]);
-  
+  ivec2 resCord = ivec2((gl_GlobalInvocationID.x), (gl_GlobalInvocationID.y));
   vec3 color = vec3(0.0f, 0.0f, 0.0f);
   
   uint hash = ((uint(coordInit.x) << 12) | uint(coordInit.y)) ^ floatBitsToUint(ubo.time);
-  vec2 screenPos = vec2(tidX/1024.0f, tidY/1024.0f);
+  vec2 screenPos = vec2(tidX, tidY)/1024;
   //CRT_Hit hit = m_pAccelStruct_RayQuery_NearestHit(rayPos, rayDir);
   //vec3 hitPoint = texture(sampler2D(gBufferPos, colorSampler), screenPos).xyz;
   vec3 hitPoint = GetPosFromDepth(screenPos);
@@ -258,7 +258,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
       const bool  outOfView = (prevUV.x < 0.00001f || prevUV.x > 0.999999f || prevUV.y < 0.00001f || prevUV.y > 0.99999f);
       if (outOfView)
       {
-        imageStore(resultImageStatic, ivec2(gl_GlobalInvocationID.xy), vec4(0.5f, 0.0f, 0.0f, 1.0));
+        imageStore(resultImageStatic, resCord, vec4(0.5f, 0.0f, 0.0f, 1.0));
         return;
       }
       vec3 prevShadow = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
@@ -271,13 +271,13 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
       if (prevShadow.x == 0.0f && prevShadow.z == 1.0f 
         && abs(currDepth - prevDepth) < 0.001)
       {
-        imageStore(resultImageStatic, ivec2(gl_GlobalInvocationID.xy), vec4(prevShadow, 1.0));
+        imageStore(resultImageStatic, resCord, vec4(prevShadow, 1.0));
         return;
       }
       if ((ubo.needUpdate.y != 1U) &&  prevShadow.x == 1.0f 
         && abs(currDepth - prevDepth) < 0.00001)
       {
-        imageStore(resultImageStatic, ivec2(gl_GlobalInvocationID.xy), vec4(1.0,0.5,1.0f, 1.0));
+        imageStore(resultImageStatic, resCord, vec4(1.0,0.5,1.0f, 1.0));
         return;
       }
     }
@@ -286,10 +286,10 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
   {
     if (ubo.needUpdate.x != 1U)
     {
-      // vec4 prevColor = imageLoad(resultImageStatic, ivec2(gl_GlobalInvocationID.xy)); 
+      // vec4 prevColor = imageLoad(resultImageStatic, resCord); 
       // if(prevColor.x == 0.0f && prevColor.z == 1.0f)
       // {
-      //   imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0f,0.0f,0.6f,1.0f));
+      //   imageStore(resultImageDynamic, resCord, vec4(0.0f,0.0f,0.6f,1.0f));
       //   return;
       // }
       // else // do a reprojection for dynamic
@@ -337,26 +337,26 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
           // if (gl_GlobalInvocationID[0]/2 == gl_GlobalInvocationID[1]/2)
           //   debugPrintfEXT("length_left %1.3f, length_right %1.3f\n", length(prevHitPoint.xyz - hitPoint.xyz), (length(ubo.m_invTransMat[3])+point_eps));
           if (length(prevHitPoint.xyz - hitPoint.xyz) < (length1 + point_eps))
-            imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 1.0f, 0.0f, 1.0f));
+            imageStore(resultImageDynamic, resCord, vec4(0.0, 1.0f, 0.0f, 1.0f));
           return;
         }
         if ((ubo.needUpdate.y != 1U) && (prevColorHitPoint.x == 1.0f) && abs(currDepth - prevDepthHitPoint) < 0.0001 && !outOfView)
         {
-          imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(1.0, 1.0f, 0.5f, 1.0f));
+          imageStore(resultImageDynamic, resCord, vec4(1.0, 1.0f, 0.5f, 1.0f));
           return;
         }
         // else
         // {
         //   // CRT_Hit curr_hit = m_pAccelStruct_RayQuery_NearestHit(vec4(prevHitPoint.xyz, 0.1f), vec4(lightDir, rayMax));
-        //   // float prevDist = imageLoad(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy)).z;
+        //   // float prevDist = imageLoad(resultImageDynamic, resCord).z;
         //   // //float currDist = texture(sampler2D(prevDepth, prevDepth_sampler), prevUV).x;
         //   // // float currDepth = texture(sampler2D(gBufferDepth, colorSampler), screenPos).x;
         //   // if (abs(prevDist- curr_hit.t) > 0.01f)
         //   // {
         //   //   vec3 prevColor = texture(sampler2D(prevRTImage, prevRTImage_sampler), prevUV).xyz;
-        //   //   //imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
+        //   //   //imageStore(resultImageDynamic, resCord, vec4(prevColor, 1.0f));
         //   //   prevColor = vec3(1.0f, 1.0f, 0.0f);
-        //   //   imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(prevColor, 1.0f));
+        //   //   imageStore(resultImageDynamic, resCord, vec4(prevColor, 1.0f));
         //   //   return;
         //   // }
         // }
@@ -409,11 +409,11 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
   //out_color[tidY * ubo.m_width + tidX + out_colorOffset] = ColorToInt(vec4(clamp(color, 0.0, 1.0), 1.0));
   if((kgenArgs.isStaticPass == 1U))
   {
-    imageStore(resultImageStatic, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));
+    imageStore(resultImageStatic, resCord, vec4(color, 1.0));
   }
   else
   {
-    imageStore(resultImageDynamic, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));
+    imageStore(resultImageDynamic, resCord, vec4(color, 1.0));
   }
   
 }
