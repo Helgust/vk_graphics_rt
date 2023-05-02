@@ -26,7 +26,7 @@ layout (location = 0 ) in VS_OUT
 vec2 iResolution = vec2(1024,1024);
 void main()
 {
-  if (UboParams.settings.x == 1)
+  if (UboParams.settings.x == 1) 
   {
     float weight = 0.97;
     vec3 minColor = vec3(9999.0), maxColor = vec3(-9999.0);
@@ -34,8 +34,6 @@ void main()
     vec2 reprojectedUV = surf.texCoord + velocityUV;
     vec3 currentFrame = textureLod(colorTex,surf.texCoord,0).xyz;
     vec3 prevFrame = textureLod(oldColorTex,reprojectedUV,0).xyz;
-    float currentDepth = textureLod(depthTex,surf.texCoord,0).x;
-    float prevDepth = textureLod(oldDepthTex,reprojectedUV,0).x;
     
     for(int x = -1; x <= 1; ++x)
     {
@@ -49,7 +47,7 @@ void main()
     // Clamp previous color to min/max bounding box
     vec3 previousColorClamped = clamp(prevFrame, minColor, maxColor);
     weight *= max(1.0 - length(velocityUV) / 10.0, 0.0) ;
-    if (reprojectedUV.x < 0.0 || reprojectedUV.y < 0.0 || reprojectedUV.x > 1 || reprojectedUV.y > 1 || abs(currentDepth - prevDepth) < 0.0001) {
+    if (reprojectedUV.x < 0.0 || reprojectedUV.y < 0.0 || reprojectedUV.x > 1 || reprojectedUV.y > 1) {
         weight = 0.0;
     }
     vec3 c = mix(currentFrame, previousColorClamped, weight);

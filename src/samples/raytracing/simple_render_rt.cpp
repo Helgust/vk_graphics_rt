@@ -132,7 +132,7 @@ void SimpleRender::SetupRTImage()
 
   if(m_rtImageSampler == VK_NULL_HANDLE)
   {
-    m_rtImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+    m_rtImageSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
   setObjectName(m_rtImage.image, VK_OBJECT_TYPE_IMAGE, "rtStatic_Image");
@@ -145,7 +145,7 @@ void SimpleRender::SetupRTImage()
 
   if(m_rtImageDynamicSampler == VK_NULL_HANDLE)
   {
-    m_rtImageDynamicSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+    m_rtImageDynamicSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
   setObjectName(m_rtImageDynamic.image, VK_OBJECT_TYPE_IMAGE, "rtDynamic_Image");
@@ -158,7 +158,7 @@ void SimpleRender::SetupRTImage()
 
   if(m_rtImageAOSampler == VK_NULL_HANDLE)
   {
-    m_rtImageAOSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+    m_rtImageAOSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
   setObjectName(m_rtImageAO.image, VK_OBJECT_TYPE_IMAGE, "rtAO_Image");
@@ -259,7 +259,7 @@ void SimpleRender::SetupHistoryImages()
 
   if(m_prevFrameImageSampler == VK_NULL_HANDLE)
   {
-    m_prevFrameImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+    m_prevFrameImageSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
   vk_utils::deleteImg(m_device, &m_prevDepthImage);  
@@ -271,7 +271,7 @@ void SimpleRender::SetupHistoryImages()
 
   if(m_prevDepthImageSampler == VK_NULL_HANDLE)
   {
-    m_prevDepthImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+    m_prevDepthImageSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
   vk_utils::deleteImg(m_device, &m_prevNormalImage);  
@@ -283,7 +283,7 @@ void SimpleRender::SetupHistoryImages()
 
   if(m_prevColorImageSampler == VK_NULL_HANDLE)
   {
-    m_prevColorImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+    m_prevColorImageSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
   vk_utils::deleteImg(m_device, &m_prevRTImage);  
@@ -295,7 +295,7 @@ void SimpleRender::SetupHistoryImages()
 
   if(m_prevRTImageSampler == VK_NULL_HANDLE)
   {
-    m_prevRTImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+    m_prevRTImageSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
   vk_utils::deleteImg(m_device, &m_prevAOImage);  
@@ -307,7 +307,7 @@ void SimpleRender::SetupHistoryImages()
 
   if(m_prevAOImageSampler == VK_NULL_HANDLE)
   {
-    m_prevAOImageSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
+    m_prevAOImageSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
   
   setObjectName(m_prevFrameImage.image, VK_OBJECT_TYPE_IMAGE, "prev_frame");
