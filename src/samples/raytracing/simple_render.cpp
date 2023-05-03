@@ -2175,7 +2175,7 @@ void SimpleRender::UpdateView()
     std::random_device dev;
     std::mt19937 rng(dev());
     std::uniform_int_distribution<std::mt19937::result_type> dist6(0,7);
-    vec2 jitter = ((HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT]) - 0.5f) * JITTER_SCALE / vec2(m_width, m_height);
+    vec2 jitter = (((HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT]) - 0.5f)/ vec2(m_width, m_height)) * JITTER_SCALE;
     float4x4 JitterMat = LiteMath::float4x4();
     JitterMat(0,3) = jitter.x;
     JitterMat(1,3) = jitter.y;
