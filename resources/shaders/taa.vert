@@ -11,12 +11,9 @@ layout(binding = 0, set = 0) uniform AppData
 
 layout(push_constant) uniform params_t
 {
-    mat4 mProjView;
     mat4 mModel;
-    mat4 lightMatrix;
-    vec4 color;
-    vec4 vehiclePos;
-    vec2 screenSize; 
+    uint dynamicBit;
+    uint meshID;
 } params;
 
 layout (location = 0 ) out VS_OUT

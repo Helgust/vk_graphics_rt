@@ -24,12 +24,7 @@ layout(binding = 8, set = 0) buffer MaterialsID { uint matID[]; };
 
 layout(push_constant) uniform params_t
 {
-    mat4 mProjView;
     mat4 mModel;
-    mat4 lightMatrix;
-    vec4 color;
-    vec4 vehiclePos;
-    vec2 screenSize;
     uint dynamicBit;
     uint meshID;
 } params;
@@ -59,7 +54,7 @@ void main(void)
     vOut.wTangent = normalize(mat3(transpose(inverse(params.mModel))) * wTang.xyz);
     vOut.texCoord = vTexCoordAndTang.xy;
 
-    vec4 clipSpacePos = params.mProjView * vec4(vOut.wPos, 1.0);
+    vec4 clipSpacePos = UboParams.projView * vec4(vOut.wPos, 1.0);
     //clipSpacePos += vec4(UboParams.m_jitter_time_gbuffer_index.xy * clipSpacePos.w, 0, 0);
     vOut.currClipSpacePos = clipSpacePos;
     gl_Position = clipSpacePos;

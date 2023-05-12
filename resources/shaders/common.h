@@ -29,6 +29,7 @@ struct UniformParams
   vec4  baseColor;
   vec4 m_time_gbuffer_index; // xy dummy z time w gbuffer_index
   vec4 m_cur_prev_jiiter; // xy curr jitter zw prev jitter
+  mat4 projView;
   mat4 invProjView;
   mat4 prevProjView;
   mat4 invPrevProjView;
@@ -38,7 +39,7 @@ struct UniformParams
   float exposure;
   float IBLShadowedRatio;
   float envMapRotation;
-  ivec4 settings;// x taa y softShadow zw dummy
+  ivec4 settings;// x taa y softShadow zw resolution
 };
 
 struct MaterialData_pbrMR

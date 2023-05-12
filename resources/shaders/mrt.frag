@@ -8,14 +8,9 @@
 
 layout(push_constant) uniform params_t
 {
-    mat4 mProjView;
     mat4 mModel;
-    mat4 lightMatrix;
-    vec4 color;
-    vec4 vehiclePos;
-    vec2 screenSize;
     uint dynamicBit;
-    uint meshID; 
+    uint meshID;
 } params;
 
 layout (location = 0) out vec4 outPosition;
@@ -64,8 +59,8 @@ vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
     newPosNDC.xy = (newPosNDC.xy * 0.5f + 0.5f);
     oldPosNDC.xy = (oldPosNDC.xy * 0.5f + 0.5f);
     vec2 velocity =  oldPosNDC.xy - newPosNDC.xy;
-    velocity -= (UboParams.m_cur_prev_jiiter.xy / params.screenSize.x);
-    velocity -= (UboParams.m_cur_prev_jiiter.zw / params.screenSize.x);
+    velocity -= (UboParams.m_cur_prev_jiiter.xy / UboParams.settings.zw);
+    velocity -= (UboParams.m_cur_prev_jiiter.zw / UboParams.settings.zw);
     return velocity;
 }
 

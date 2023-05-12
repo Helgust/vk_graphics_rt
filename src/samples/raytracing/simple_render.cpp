@@ -596,7 +596,6 @@ SimpleRender::SimpleRender(uint32_t a_width, uint32_t a_height) : m_width(a_widt
 #endif
 
   m_raytracedImageData.resize(m_width * m_height);
-  pushConst2M.screenSize = vec2(a_width, a_height);
 }
 
 void SimpleRender::SetupDeviceFeatures()
@@ -719,8 +718,9 @@ void SimpleRender::InitVulkan(const char** a_instanceExtensions, uint32_t a_inst
 //  m_pScnMgr = std::make_shared<SceneManager>(m_device, m_physicalDevice, m_queueFamilyIDXs.transfer,
 //                                             m_queueFamilyIDXs.graphics, ENABLE_HARDWARE_RT);
   generateBRDFLUT();
-  loadEnvMap("../resources/textures/san_giuseppe_bridge_4k.hdr", VK_FORMAT_R16G16B16A16_SFLOAT);
+  loadEnvMap("../resources/textures/Arches_E_PineTree_3k.hdr", VK_FORMAT_R16G16B16A16_SFLOAT);
   generateCubemaps();
+  std::cout<<"Preparing is done"<<std::endl;
 }
 
 void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
@@ -1246,7 +1246,7 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
 {
 // most uniforms are updated in GUI -> SetupGUIElements()
   m_uniforms.m_time_gbuffer_index = vec4(0, 0, a_time, gbuffer_index);
-  m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, 0, 0);
+  m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, m_width, m_height);
   auto transMat = LiteMath::float4x4();
   //m_pScnMgr->MoveCarX(a_time, teleport, transMat);
   m_pScnMgr->MoveCarZ(a_time, teleport, transMat);
@@ -1285,15 +1285,6 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
   vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
   vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
 
-  //AddCmdsShadowmapPass(a_cmdBuff, m_omniShadowBuffer.frameBuffer);
-  //omnishadow pass
-  if (onlyOneLoadOfShadows)
-    for (uint32_t face = 0; face < 6; face++) {
-      UpdateCubeFace(face, a_cmdBuff);
-    onlyOneLoadOfShadows = false;
-  }
-  //UpdateCubeFace(faceIndex, a_cmdBuff);
-  //UpdateCubeFace(0,a_cmdBuff);
   ///// draw final scene to screen
   {
     vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
@@ -1345,8 +1336,7 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       auto inst = m_pScnMgr->GetInstanceInfo(i);
       pushConst2M.meshID = inst.mesh_id;
       pushConst2M.model = m_pScnMgr->GetInstanceMatrix(i);
-      pushConst2M.vehiclePos =  LiteMath::float4(0,0,0,0);
-      pushConst2M.color = colors[i % 4];
+      //pushConst2M.vehiclePos =  LiteMath::float4(0,0,0,0);
       pushConst2M.dynamicBit = 0;
       vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0,
                          sizeof(pushConst2M), &pushConst2M);
@@ -1361,8 +1351,7 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
       auto inst = m_pScnMgr->GetDynamicInstanceInfo(i);
       pushConst2M.meshID = inst.mesh_id + m_pScnMgr->InstancesNum();
       pushConst2M.model = m_pScnMgr->GetDynamicInstanceMatrix(i);
-      pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
-      pushConst2M.color = float4(1.f, 1.f, 0.f, 1.f);
+      //pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
       pushConst2M.dynamicBit = 1;
       vkCmdPushConstants(a_cmdBuff, m_gBufferPipeline.layout, stageFlags, 0,
                          sizeof(pushConst2M), &pushConst2M);
@@ -1726,169 +1715,6 @@ void SimpleRender::BuildResolveCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
   VK_CHECK_RESULT(vkEndCommandBuffer(a_cmdBuff));
 }
 
-void SimpleRender::UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer a_cmdBuff)
-{
-  // vk_utils::setDefaultViewport(a_cmdBuff, static_cast<float>(m_width), static_cast<float>(m_height));
-  // vk_utils::setDefaultScissor(a_cmdBuff, m_width, m_height);
-  // VkCommandBufferBeginInfo beginInfo = {};
-  // beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  // beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-  VkClearValue clearValues[2];
-  clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-  clearValues[1].depthStencil = { 1.0f, 0 };
-
-  VkRenderPassBeginInfo renderPassInfo = {};
-  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass = m_omniShadowBuffer.renderPass;
-  renderPassInfo.framebuffer = m_omniShadowBuffer.frameBuffer;
-  renderPassInfo.renderArea.extent.width = m_omniShadowBuffer.width;
-	renderPassInfo.renderArea.extent.height = m_omniShadowBuffer.height;
-  renderPassInfo.clearValueCount = 2;
-  renderPassInfo.pClearValues = clearValues;
-
-  // Update view matrix via push constant
-  float4x4 viewMatrix =  float4x4(); 
-  viewMatrix.set_col(3, m_uniforms.lights[0].pos);
-  float light_radius = m_uniforms.lights[0].radius_lightDist_dummies.y;
-  //float4x4 mProj = ortoMatrix(-light_radius, +light_radius, -light_radius, +light_radius, 0.0f, 100.0f);
-  float4x4 mProj = perspectiveMatrix(90, 1.0f, 1.0f, light_radius);
-  float4x4 mProjFix = float4x4();
-  //float4x4 mProjFix = OpenglToVulkanProjectionMatrixFix();
-  float3 light_pos = float3(m_uniforms.lights[0].pos.x, m_uniforms.lights[0].pos.y, m_uniforms.lights[0].pos.z);
-		switch (faceIndex)
-		{
-		case 0: // POSITIVE_X
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(1.0f, 0.0f, 0.0f), float3(0, -1, 0));
-      // viewMatrix = rotate4x4Y(90 * DEG_TO_RAD) * viewMatrix;
-      // viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix;
-			break;
-		case 1:	// NEGATIVE_X
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(-1.0f, 0.0f, 0.0f), float3(0, -1, 0));
-			// viewMatrix = rotate4x4Y(-90 * DEG_TO_RAD) * viewMatrix;
-      // viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix;
-			break;
-		case 2:	// POSITIVE_Y
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 1.0f, 0.0f), float3(0, 0, 1));
-      //viewMatrix = rotate4x4X(-90 * DEG_TO_RAD) * viewMatrix;
-			break;
-		case 3:	// NEGATIVE_Y
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, -1.0f, 0.0f), float3(0, 0, -1));
-			//viewMatrix = rotate4x4X(90 * DEG_TO_RAD) * viewMatrix;
-			break;
-		case 4:	// POSITIVE_Z
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 0.0f, 1.0f), float3(0, -1, 0));
-			//viewMatrix = rotate4x4X(180 * DEG_TO_RAD) * viewMatrix ;
-			break;
-		case 5:	// NEGATIVE_Z
-      viewMatrix = LiteMath::lookAt(light_pos, light_pos + float3(0.0f, 0.0f, -1.0f), float3(0, -1, 0));
-			//viewMatrix = rotate4x4Z(180 * DEG_TO_RAD) * viewMatrix;
-			break;
-		}
-
-    float4x4 m_lightMatrix = mProjFix*mProj*viewMatrix;
-    pushConst2M.lightView = m_lightMatrix;
-  
-    vkCmdBeginRenderPass(a_cmdBuff, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    {
-      vkCmdBindPipeline(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_omniShadowPipeline.pipeline);
-
-      vkCmdBindDescriptorSets(a_cmdBuff, VK_PIPELINE_BIND_POINT_GRAPHICS, m_omniShadowPipeline.layout, 0, 1,
-                              &m_dSet, 0, VK_NULL_HANDLE);
-
-      VkShaderStageFlags stageFlags = (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-
-      VkDeviceSize zero_offset = 0u;
-      VkBuffer vertexBuf = m_pScnMgr->GetVertexBuffer();
-      setObjectName(vertexBuf, VK_OBJECT_TYPE_BUFFER, "vertex_bufffer_2");
-      VkBuffer indexBuf = m_pScnMgr->GetIndexBuffer();
-      setObjectName(indexBuf, VK_OBJECT_TYPE_BUFFER, "index_bufffer_2");
-
-      vkCmdBindVertexBuffers(a_cmdBuff, 0, 1, &vertexBuf, &zero_offset);
-      vkCmdBindIndexBuffer(a_cmdBuff, indexBuf, 0, VK_INDEX_TYPE_UINT32);
-
-      for (uint32_t i = 0; i < m_pScnMgr->InstancesNum(); ++i)
-      {
-        auto inst = m_pScnMgr->GetInstanceInfo(i);
-
-        pushConst2M.model = m_pScnMgr->GetInstanceMatrix(i);
-        vkCmdPushConstants(a_cmdBuff, m_omniShadowPipeline.layout, stageFlags, 0,
-                          sizeof(pushConst2M), &pushConst2M);
-
-        auto mesh_info = m_pScnMgr->GetMeshInfo(inst.mesh_id);
-        vkCmdDrawIndexed(a_cmdBuff, mesh_info.m_indNum, 1, mesh_info.m_indexOffset, mesh_info.m_vertexOffset, 0);
-      }
-    }
-    vkCmdEndRenderPass(a_cmdBuff);
-		// Make sure color writes to the framebuffer are finished before using it as transfer source
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_omniShadowBuffer.albedo.image,
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-		VkImageSubresourceRange cubeFaceSubresourceRange = {};
-		cubeFaceSubresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		cubeFaceSubresourceRange.baseMipLevel = 0;
-		cubeFaceSubresourceRange.levelCount = 1;
-		cubeFaceSubresourceRange.baseArrayLayer = faceIndex;
-		cubeFaceSubresourceRange.layerCount = 1;
-
-		// Change image layout of one cubemap face to transfer destination
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_omniShadowImage.image,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			cubeFaceSubresourceRange);
-
-		// Copy region for transfer from framebuffer to cube face
-		VkImageCopy copyRegion = {};
-
-		copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copyRegion.srcSubresource.baseArrayLayer = 0;
-		copyRegion.srcSubresource.mipLevel = 0;
-		copyRegion.srcSubresource.layerCount = 1;
-		copyRegion.srcOffset = { 0, 0, 0 };
-
-		copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copyRegion.dstSubresource.baseArrayLayer = faceIndex;
-		copyRegion.dstSubresource.mipLevel = 0;
-		copyRegion.dstSubresource.layerCount = 1;
-		copyRegion.dstOffset = { 0, 0, 0 };
-
-		copyRegion.extent.width = m_shadowWidth;
-		copyRegion.extent.height = m_shadowHeight;
-		copyRegion.extent.depth = 1;
-
-		// Put image copy into command buffer
-		vkCmdCopyImage(
-			a_cmdBuff,
-			m_omniShadowBuffer.albedo.image,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			m_omniShadowImage.image,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1,
-			&copyRegion);
-
-		// Transform framebuffer color attachment back
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_omniShadowBuffer.albedo.image,
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-		// Change image layout of copied face to shader read
-		vk_utils::setImageLayout(
-			a_cmdBuff,
-			m_omniShadowImage.image,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			cubeFaceSubresourceRange);
-}
-
 void SimpleRender::BuildCommandBufferQuad(VkCommandBuffer a_cmdBuff, VkImageView a_targetImageView)
 {
   vkResetCommandBuffer(a_cmdBuff, 0);
@@ -2161,7 +1987,7 @@ void SimpleRender::UpdateCamera(const Camera* cams, uint32_t a_camsCount)
 
 void SimpleRender::UpdateView()
 {
-  m_uniforms.prevProjView = pushConst2M.projView; // set here a prevProjView matrix
+  m_uniforms.prevProjView = m_uniforms.projView; // set here a prevProjView matrix
   const float aspect   = float(m_width) / float(m_height);
   auto mProjFix        = OpenglToVulkanProjectionMatrixFix();
   auto mProj           = projectionMatrix(m_cam.fov, aspect, 0.1f, 1000.0f);
@@ -2192,10 +2018,8 @@ void SimpleRender::UpdateView()
   m_prevProjViewMatrix = m_uniforms.prevProjView; 
   m_inverseProjViewMatrix = LiteMath::inverse4x4(mWorldViewProj);
   m_inversePrevProjViewMatrix = LiteMath::inverse4x4(m_prevProjViewMatrix);
-  pushConst2M.projView = mWorldViewProj;
-  pushConst2M.lightView = LiteMath::float4x4();
+  m_uniforms.projView = mWorldViewProj;
   m_uniforms.invProjView = m_inverseProjViewMatrix;
-  //m_inverseProjViewMatrix = mWorldViewProj;
 }
 
 void SimpleRender::LoadScene(const char* path)

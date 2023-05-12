@@ -26,12 +26,9 @@ layout (binding = 13) uniform sampler2D samplerRTAO;
 
 layout(push_constant) uniform params_t
 {
-    mat4 mProjView;
     mat4 mModel;
-    mat4 lightMatrix;
-    vec4 color;
-    vec4 vehiclePos;
-    vec2 screenSize; 
+    uint dynamicBit;
+    uint meshID;
 } params;
 
 layout (location = 0) in vec2 inUV;
@@ -46,7 +43,7 @@ const float M_PI = 3.141592653589793;
 vec3 GetPosFromDepth(vec2 screenPos){
   float depth = texture(samplerDepth, screenPos).x;
   vec4 clipPos = vec4( screenPos * 2.0f - 1.0f, depth, 1.0f);
-  vec4 pixelPos = inverse(params.mProjView) * clipPos; 
+  vec4 pixelPos = UboParams.invProjView * clipPos;
   return (pixelPos.xyz/pixelPos.w);
 }
 float sq(float x) { return x*x; }
@@ -178,7 +175,7 @@ vec3 BRDF(PBRData d, float shadow_visibility, float ao)
 
 void main() 
 {
-    vec2 uv = gl_FragCoord.xy / params.screenSize;
+    vec2 uv = gl_FragCoord.xy / UboParams.settings.zw;
     vec3 fragPos = GetPosFromDepth(uv);
 	vec3 normal = texture(samplerNormal, uv).rgb;
 	vec4 albedo = texture(samplerAlbedo, uv);

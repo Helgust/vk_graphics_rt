@@ -195,12 +195,7 @@ protected:
 
   struct
   {
-    LiteMath::float4x4 projView;
     LiteMath::float4x4 model;
-    LiteMath::float4x4 lightView;
-    LiteMath::float4 color;
-    LiteMath::float4 vehiclePos;
-    LiteMath::float2 screenSize;
     uint dynamicBit;
     uint meshID;
   } pushConst2M;
@@ -449,8 +444,6 @@ protected:
 
   void CreateInstance();
   void CreateDevice(uint32_t a_deviceId);
-
-  void UpdateCubeFace(uint32_t faceIndex, VkCommandBuffer cmdBuff);
 
   void BuildCommandBufferSimple(VkCommandBuffer cmdBuff, VkFramebuffer frameBuff,
                                 VkImageView a_targetImageView, VkPipeline a_pipeline);
