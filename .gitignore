@@ -5,3 +5,5 @@ external/vkutils
 external/volk
 .vscode
 .vs
+*.patch
+*.spv
