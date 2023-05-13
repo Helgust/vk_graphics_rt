@@ -28,7 +28,7 @@ void main()
 {
   if (UboParams.settings.x == 1)
   {
-    float weight = 0.97;
+    float weight = 0.95;
     vec3 minColor = vec3(9999.0), maxColor = vec3(-9999.0);
     vec2 velocityUV = textureLod(velocityTex,surf.texCoord,0).xy;
     vec2 reprojectedUV = surf.texCoord + velocityUV;

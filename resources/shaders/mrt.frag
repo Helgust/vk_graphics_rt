@@ -59,8 +59,7 @@ vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
     newPosNDC.xy = (newPosNDC.xy * 0.5f + 0.5f);
     oldPosNDC.xy = (oldPosNDC.xy * 0.5f + 0.5f);
     vec2 velocity =  oldPosNDC.xy - newPosNDC.xy;
-    velocity -= (UboParams.m_cur_prev_jiiter.xy / UboParams.settings.zw);
-    velocity -= (UboParams.m_cur_prev_jiiter.zw / UboParams.settings.zw);
+    velocity -= UboParams.jitterOffset.xy;
     return velocity;
 }
 
