@@ -12,13 +12,13 @@
 #ifndef uint32_t
 #define uint32_t uint
 #endif
-struct CRT_Hit 
+struct CRT_Hit
 {
   float    t;         ///< intersection distance from ray origin to object
-  uint primId; 
+  uint primId;
   uint instId;
-  uint geomId; 
-  vec3 bars;   ///< use 4 most significant bits for geometry type; thay are zero for triangles 
+  uint geomId;
+  vec3 bars;   ///< use 4 most significant bits for geometry type; thay are zero for triangles
   float    coords[4]; ///< custom intersection data; for triangles coords[0] and coords[1] stores baricentric coords (u,v)
 };
 const uint MAX_DEPTH = 2;
@@ -35,7 +35,7 @@ const uint m_palette[4] = {
 
 const float m_reflection[5] = { 0.1f, 0.75f, 0.0f, 0.0f, 0.0f };
 
-// struct Light 
+// struct Light
 // {
 //   vec3 dir;
 //   uint color;
@@ -204,7 +204,7 @@ const vec2 BlueNoiseInDisk[64] = vec2[64](
     vec2(-0.550658,-0.315773),
     vec2(-0.652078,0.589846),
     vec2(0.008818,0.530556),
-    vec2(-0.210004,0.519896) 
+    vec2(-0.210004,0.519896)
 );
 
 uint fakeOffset(uint x, uint y, uint pitch) { return y*pitch + x; }  // RTV pattern, for 2D threading

@@ -25,18 +25,18 @@ struct RayTracer_UBO_Data
   mat4 m_currProjView;
   mat4 m_prevProjView;
   mat4 m_invPrevProjView;
-  mat4 m_invTransMat;   
+  mat4 m_invTransMat;
   vec4 m_camPos;
   vec4 m_vehPos;
   uvec4 needUpdate;
-  ivec4 randomVal; 
-  uint m_height; 
-  uint m_width; 
-  uint m_pAccelStruct_capacity; 
+  ivec4 randomVal;
+  uint m_height;
+  uint m_width;
+  uint m_pAccelStruct_capacity;
   uint m_pAccelStruct_size;
   Light lights[1];
   float time;
-  uint dummy; 
+  uint dummy;
 };
 
 #endif

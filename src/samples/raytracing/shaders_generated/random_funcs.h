@@ -156,7 +156,7 @@ uint city(uvec4 s)
 
 
 
-// Schechter and Bridson hash 
+// Schechter and Bridson hash
 // https://www.cs.ubc.ca/~rbridson/docs/schechter-sca08-turbulence.pdf
 uint esgtsa(uint s)
 {
@@ -701,19 +701,19 @@ uvec3 pcg3d16(uvec3 v)
 uvec4 pcg4d(uvec4 v)
 {
     v = v * 1664525u + 1013904223u;
-    
+
     v.x += v.y*v.w;
     v.y += v.z*v.x;
     v.z += v.x*v.y;
     v.w += v.y*v.z;
-    
+
     v ^= v >> 16u;
-    
+
     v.x += v.y*v.w;
     v.y += v.z*v.x;
     v.z += v.x*v.y;
     v.w += v.y*v.z;
-    
+
     return v;
 }
 

@@ -34,7 +34,7 @@ layout(binding = 23, set = 0) uniform sampler prevColor_sampler;
 layout(binding = 24, set = 0, rgba8) uniform writeonly image2D resultImageAO;
 
 
-uint ColorToInt(vec4 color) 
+uint ColorToInt(vec4 color)
 {
   uvec4 bytes = uvec4(color * 255.0f);
   uint result = (bytes.a << 24) | (bytes.b << 16) | (bytes.g << 8) | (bytes.r);
@@ -78,9 +78,9 @@ CRT_Hit m_pAccelStruct_RayQuery_NearestHit(const vec4 rayPos, const vec4 rayDir,
 {
   rayQueryEXT rayQuery;
   rayQueryInitializeEXT(rayQuery, m_pAccelStruct, gl_RayFlagsTerminateOnFirstHitEXT, cullMask, rayPos.xyz, rayPos.w, rayDir.xyz, rayDir.w);
-  
+
   while(rayQueryProceedEXT(rayQuery)) { } // actually may omit 'while' when 'gl_RayFlagsOpaqueEXT' is used
- 
+
   CRT_Hit res;
   res.primId = -1;
   res.instId = -1;
@@ -88,13 +88,13 @@ CRT_Hit m_pAccelStruct_RayQuery_NearestHit(const vec4 rayPos, const vec4 rayDir,
   res.t      = rayDir.w;
 
   if(rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
-  {    
+  {
 	  res.primId    = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true);
 	  res.geomId    = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true);
     res.instId    = rayQueryGetIntersectionInstanceIdEXT    (rayQuery, true);
 	  res.t         = rayQueryGetIntersectionTEXT(rayQuery, true);
     vec2 bars     = rayQueryGetIntersectionBarycentricsEXT(rayQuery, true);
-    
+
     res.coords[0] = bars.y;
     res.coords[1] = bars.x;
     res.coords[2] = 1.0f - bars.y - bars.x;
@@ -118,12 +118,12 @@ layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 layout( push_constant ) uniform kernelArgs
 {
-  uint iNumElementsX; 
-  uint iNumElementsY; 
-  uint iNumElementsZ; 
+  uint iNumElementsX;
+  uint iNumElementsY;
+  uint iNumElementsZ;
   uint tFlagsMask;
   uint isStaticPass;
-  uint isAO;    
+  uint isAO;
 } kgenArgs;
 
 
@@ -151,14 +151,14 @@ vec3 GetNormal(CRT_Hit hit) {
 vec3 GetPosFromDepth(vec2 screenPos){
   float depth = texture(sampler2D(gBufferDepth, colorSampler), screenPos).x;
   vec4 clipPos = vec4( screenPos * 2.0f - 1.0f, depth, 1.0f);
-  vec4 pixelPos = ubo.m_invProjView * clipPos; 
+  vec4 pixelPos = ubo.m_invProjView * clipPos;
   return (pixelPos.xyz/pixelPos.w);
 }
 
 vec3 GetPosFromPrevDepth(vec2 screenPos){
   float depth = texture(sampler2D(prevDepth, prevDepth_sampler), screenPos).x;
   vec4 clipPos = vec4( screenPos * 2.0f - 1.0f, depth, 1.0f);
-  vec4 pixelPos = ubo.m_invPrevProjView * clipPos; 
+  vec4 pixelPos = ubo.m_invPrevProjView * clipPos;
   return (pixelPos.xyz/pixelPos.w);
 }
 
@@ -233,12 +233,12 @@ float GetRandomFloat1(ivec3 random)
   return value;
 }
 ///////////////////////////////////////////////////////////////// subkernels here
-void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset) 
+void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
 {
   uvec2 coordInit = uvec2(gl_GlobalInvocationID[0], gl_GlobalInvocationID[1]);
   ivec2 resCord = ivec2((gl_GlobalInvocationID.x), (gl_GlobalInvocationID.y));
   vec3 color = vec3(0.0f, 0.0f, 0.0f);
-  
+
   uint hash = ((uint(coordInit.x) << 12) | uint(coordInit.y)) ^ floatBitsToUint(ubo.time);
   vec2 screenPos = vec2(tidX, tidY)/1024;
   //CRT_Hit hit = m_pAccelStruct_RayQuery_NearestHit(rayPos, rayDir);
@@ -266,15 +266,15 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
       float currDepth = texture(sampler2D(gBufferDepth, colorSampler), prevUV).x;
       vec3 currNormal = texture(sampler2D(gBufferNormal, colorSampler), prevUV).xyz;
       vec3 prevNormal = texture(sampler2D(prevNormal, prevColor_sampler), prevUV).xyz;
-      
+
       //add a store for prevNormal
-      if (prevShadow.x == 0.0f && prevShadow.z == 1.0f 
+      if (prevShadow.x == 0.0f && prevShadow.z == 1.0f
         && abs(currDepth - prevDepth) < 0.001)
       {
         imageStore(resultImageStatic, resCord, vec4(prevShadow, 1.0));
         return;
       }
-      if ((ubo.needUpdate.y != 1U) &&  prevShadow.x == 1.0f 
+      if ((ubo.needUpdate.y != 1U) &&  prevShadow.x == 1.0f
         && abs(currDepth - prevDepth) < 0.00001)
       {
         imageStore(resultImageStatic, resCord, vec4(1.0,0.5,1.0f, 1.0));
@@ -286,7 +286,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
   {
     if (ubo.needUpdate.x != 1U)
     {
-      // vec4 prevColor = imageLoad(resultImageStatic, resCord); 
+      // vec4 prevColor = imageLoad(resultImageStatic, resCord);
       // if(prevColor.x == 0.0f && prevColor.z == 1.0f)
       // {
       //   imageStore(resultImageDynamic, resCord, vec4(0.0f,0.0f,0.6f,1.0f));
@@ -363,17 +363,17 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
       //}
     }
   }
-  
+
 
   //vec3 hitPoint_old = vec3(rayPos) + vec3(rayDir)*hit.t;
- 
+
   vec3 lightTangent = normalize(cross(lightDir, vec3(0.0f, 1.0f, 0.0f)));
   vec3 lightBitangent = normalize(cross(lightTangent, lightDir));
 
   float total = 0.0f;
   uvec3 rnd = uvec3(ubo.randomVal.xyz);
   for (int u = 0; u < samples_cnt; u++)
-  {   
+  {
     uvec3 hash = pcg3d(uvec3(coordInit, rnd.x));
     float rngOffset = GetRandomFloat1(ivec3(coordInit, hash.x^floatBitsToUint(ubo.time)));
     rnd.x+=u;
@@ -381,7 +381,7 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
     vec2 diskPoint = PointOnDisk(ubo.lights[0], rngOffset, samplesPos);
     vec3 shadowDir = normalize(lightDir + diskPoint.x * lightTangent + diskPoint.y * lightBitangent);
     CRT_Hit hitShadow;
-    if((kgenArgs.isStaticPass == 1U)) 
+    if((kgenArgs.isStaticPass == 1U))
      hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hitPoint + shadowDir * 0.15f, 0.0f), vec4(shadowDir, rayMax - 0.15f * 2.0), 1U);
     else
      hitShadow = m_pAccelStruct_RayQuery_NearestHit(vec4(hitPoint + shadowDir * 0.15f, 0.0f), vec4(shadowDir, rayMax - 0.15f * 2.0), (1U << 2));
@@ -415,15 +415,15 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
   {
     imageStore(resultImageDynamic, resCord, vec4(color, 1.0));
   }
-  
+
 }
 
-void kernel_RayTrace_out_AO(uint tidX, uint tidY, uint out_colorOffset) 
+void kernel_RayTrace_out_AO(uint tidX, uint tidY, uint out_colorOffset)
 {
   uvec2 coordInit = uvec2(gl_GlobalInvocationID[0], gl_GlobalInvocationID[1]);
-  
+
   vec3 color = vec3(0.0f, 0.0f, 0.0f);
-  
+
   //uint hash = ((uint(coordInit.x) << 12) | uint(coordInit.y)) ^ floatBitsToUint(ubo.time);
   vec2 screenPos = vec2(tidX/1024.0f, tidY/1024.0f);
   vec3 hitPoint = GetPosFromDepth(screenPos);
@@ -455,15 +455,15 @@ void kernel_RayTrace_out_AO(uint tidX, uint tidY, uint out_colorOffset)
       float shade = min(hitAO.t / rayAOMax, 1.0f);
       color.x += shade;
     }
-      
+
   }
   color.x*=(total / (ao_samples_cnt));
-  imageStore(resultImageAO, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));  
+  imageStore(resultImageAO, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));
 }
-void kernel_InitEyeRay(uint tidX, uint tidY, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar) 
+void kernel_InitEyeRay(uint tidX, uint tidY, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar)
 {
   rayPosAndNear = ubo.m_camPos; // to_float4(m_camPos, 1.0f);
-  
+
   const vec3 rayDir = EyeRayDir(float(tidX), float(tidY), float(ubo.m_width), float(ubo.m_height), ubo.m_invProjView);
   rayDirAndFar  = vec4(rayDir, MAXFLOAT);
 
@@ -474,8 +474,8 @@ void kernel_InitEyeRay(uint tidX, uint tidY, inout vec4 rayPosAndNear, inout vec
 void main()
 {
   ///////////////////////////////////////////////////////////////// prolog
-  const uint tidX = uint(gl_GlobalInvocationID[0]); 
-  const uint tidY = uint(gl_GlobalInvocationID[1]); 
+  const uint tidX = uint(gl_GlobalInvocationID[0]);
+  const uint tidY = uint(gl_GlobalInvocationID[1]);
   const vec4 m_camPos = ubo.m_camPos;
   const uint m_height = ubo.m_height;
   const uint m_width = ubo.m_width;
