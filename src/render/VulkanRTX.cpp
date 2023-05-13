@@ -46,7 +46,7 @@ void VulkanRTX::ClearGeom()
 {
   m_pScnMgr->DestroyScene();
 }
-  
+
 uint32_t VulkanRTX::AddGeom_Triangles4f(const LiteMath::float4* a_vpos4f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber)
 {
   cmesh::SimpleMesh mesh(a_vertNumber, a_indNumber);
@@ -66,7 +66,7 @@ void VulkanRTX::UpdateGeom_Triangles4f(uint32_t a_geomId, const LiteMath::float4
 void VulkanRTX::ClearScene()
 {
   std::cout << "[VulkanRTX::ClearScene]: not implemented" << std::endl;
-} 
+}
 
 uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix)
 {
@@ -77,7 +77,7 @@ void VulkanRTX::CommitScene()
 {
   m_pScnMgr->BuildTLAS();
   m_accel = m_pScnMgr->GetTLAS();
-}  
+}
 
 void VulkanRTX::UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& a_matrix)
 {
@@ -85,7 +85,7 @@ void VulkanRTX::UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& 
 }
 
 CRT_Hit VulkanRTX::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)
-{    
+{
   CRT_Hit result;
   result.t      = std::numeric_limits<float>::max();
   result.geomId = uint32_t(-1);

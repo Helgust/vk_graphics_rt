@@ -31,7 +31,7 @@ void main()
     vec4 lightColor1 = mix(dark_violet, chartreuse, 0.5f);
     vec4 lightColor2 = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-    vec3 N = surf.wNorm; 
+    vec3 N = surf.wNorm;
 
     vec4 color1 = max(dot(N, lightDir1), 0.0f) * lightColor1;
     vec4 color2 = max(dot(N, lightDir2), 0.0f) * lightColor2;

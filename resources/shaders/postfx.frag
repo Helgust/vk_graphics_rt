@@ -35,7 +35,7 @@ vec3 sharpness_filter()
       * neighbor
       + texture(colorTexture, (texCoord + vec2( 0, -1)/ texSize)).rgb
       * neighbor;
-      
+
   return color;
 }
 
@@ -59,7 +59,7 @@ vec3 uncharted2(vec3 color, float exposure) {
 
 void main()
 {
-  
+
   //vec3 result_color =  sharpness_filter();
   vec2 texSize   = textureSize(colorTexture, 0).xy;
   vec2 texCoord  = gl_FragCoord.xy / texSize;

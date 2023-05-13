@@ -17,11 +17,11 @@ ISceneObject* CreateVulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, 
                               uint32_t a_maxMeshes, uint32_t a_maxTotalVertices, uint32_t a_maxTotalPrimitives, uint32_t a_maxPrimitivesPerMesh,
                               bool build_as_add);
 
-std::shared_ptr<RayTracer> CreateRayTracer_Generated(uint32_t a_width, uint32_t a_height, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated) 
-{ 
-  auto pObj = std::make_shared<RayTracer_Generated>(a_width, a_height); 
+std::shared_ptr<RayTracer> CreateRayTracer_Generated(uint32_t a_width, uint32_t a_height, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated)
+{
+  auto pObj = std::make_shared<RayTracer_Generated>(a_width, a_height);
   pObj->SetVulkanContext(a_ctx);
-  pObj->InitVulkanObjects(a_ctx.device, a_ctx.physicalDevice, a_maxThreadsGenerated); 
+  pObj->InitVulkanObjects(a_ctx.device, a_ctx.physicalDevice, a_maxThreadsGenerated);
   return pObj;
 }
 
@@ -42,7 +42,7 @@ constexpr uint32_t KGEN_FLAG_DONT_SET_EXIT     = 4;
 constexpr uint32_t KGEN_FLAG_SET_EXIT_NEGATIVE = 8;
 constexpr uint32_t KGEN_REDUCTION_LAST_STEP    = 16;
 
-void RayTracer_Generated::InitVulkanObjects(VkDevice a_device, VkPhysicalDevice a_physicalDevice, size_t a_maxThreadsCount) 
+void RayTracer_Generated::InitVulkanObjects(VkDevice a_device, VkPhysicalDevice a_physicalDevice, size_t a_maxThreadsCount)
 {
   physicalDevice = a_physicalDevice;
   device         = a_device;
@@ -79,7 +79,7 @@ void RayTracer_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngi
   m_uboData.needUpdate = a_needUpdate;
   m_uboData.m_vehPos = a_vehPos;
   srand((unsigned) time(NULL));
-  for (int i = 0; i < 4; i++) 
+  for (int i = 0; i < 4; i++)
   {
     m_uboData.randomVal[i] = rand()%256;
   }
@@ -92,7 +92,7 @@ void RayTracer_Generated::UpdateVectorMembers(std::shared_ptr<vk_utils::ICopyEng
 }
 
 void RayTracer_Generated::UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine)
-{ 
+{
 }
 
 void RayTracer_Generated::CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uint32_t* out_color, uint32_t a_IsStaticPass, uint32_t a_isAO)
@@ -110,11 +110,11 @@ void RayTracer_Generated::CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uin
     uint32_t m_tIsStaticPass;
     uint32_t m_isAO;
   } pcData;
-  
+
   uint32_t sizeX  = uint32_t(tidX);
   uint32_t sizeY  = uint32_t(tidY);
   uint32_t sizeZ  = uint32_t(1);
-  
+
   pcData.m_sizeX  = tidX;
   pcData.m_sizeY  = tidY;
   pcData.m_sizeZ  = 1;
@@ -123,10 +123,10 @@ void RayTracer_Generated::CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uin
   pcData.m_isAO = a_isAO;
 
   vkCmdPushConstants(m_currCmdBuffer, CastSingleRayMegaLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(KernelArgsPC), &pcData);
-  
+
   vkCmdBindPipeline(m_currCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, CastSingleRayMegaPipeline);
   vkCmdDispatch    (m_currCmdBuffer, (sizeX + blockSizeX - 1) / blockSizeX, (sizeY + blockSizeY - 1) / blockSizeY, (sizeZ + blockSizeZ - 1) / blockSizeZ);
- 
+
 }
 
 
@@ -169,7 +169,7 @@ VkBufferMemoryBarrier RayTracer_Generated::BarrierForSingleBuffer(VkBuffer a_buf
   return bar;
 }
 
-VkImageMemoryBarrier RayTracer_Generated::BarrierForSingleImage(VkImage a_image, uint32_t srcFlag, uint32_t dstFlag, 
+VkImageMemoryBarrier RayTracer_Generated::BarrierForSingleImage(VkImage a_image, uint32_t srcFlag, uint32_t dstFlag,
 VkImageLayout oldLayout,
 VkImageLayout newLayout,
 uint32_t a_aspectMask)
@@ -180,11 +180,11 @@ uint32_t a_aspectMask)
   bar.srcAccessMask       = srcFlag;
   bar.dstAccessMask       = dstFlag;
   bar.oldLayout           = oldLayout;
-  bar.newLayout           = newLayout; 
+  bar.newLayout           = newLayout;
   bar.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   bar.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   bar.image              = a_image;
-  
+
   bar.subresourceRange.aspectMask     = a_aspectMask;
   bar.subresourceRange.baseMipLevel   = 0;
   bar.subresourceRange.baseArrayLayer = 0;
@@ -209,19 +209,19 @@ void RayTracer_Generated::BarriersForSeveralBuffers(VkBuffer* a_inBuffers, VkBuf
   }
 }
 
-void RayTracer_Generated::CastSingleRayCmd(VkCommandBuffer a_commandBuffer, 
+void RayTracer_Generated::CastSingleRayCmd(VkCommandBuffer a_commandBuffer,
  uint32_t tidX, uint32_t tidY, uint32_t* out_color, VkImage a_image, uint32_t a_isStaticPass, uint32_t a_isAO)
 {
   m_currCmdBuffer = a_commandBuffer;
-  VkMemoryBarrier memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT }; 
-  
+  VkMemoryBarrier memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
+
   // VkImageMemoryBarrier imageBarrier;
   // imageBarrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
   // imageBarrier.pNext               = nullptr;
   // imageBarrier.srcAccessMask       = VK_ACCESS_SHADER_WRITE_BIT;
   // imageBarrier.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT;
   // imageBarrier.oldLayout           = VK_IMAGE_LAYOUT_GENERAL;
-  // imageBarrier.newLayout           = VK_IMAGE_LAYOUT_GENERAL; 
+  // imageBarrier.newLayout           = VK_IMAGE_LAYOUT_GENERAL;
   // imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   // imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   // imageBarrier.image               = a_image;

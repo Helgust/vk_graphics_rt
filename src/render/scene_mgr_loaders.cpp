@@ -78,7 +78,7 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
     loadVehicleFromFile(modelPath, gltfVehModel, vehicleFolder);
 
     maxVertexCountPerMesh    = std::max((uint32_t)8, maxVertexCountPerMesh);
-    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working 
+    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working
 
     for(const auto& mesh : gltfVehModel.meshes)
     {
@@ -93,7 +93,7 @@ bool SceneManager::LoadSceneXML(const std::string &scenePath, bool transpose)
     }
 
     maxVertexCountPerMesh    = std::max((uint32_t)8, maxVertexCountPerMesh);
-    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working 
+    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working
 
     InitGeoBuffersGPU(totalMeshes, totalVerticesCount, totalPrimitiveCount * 3);
     if(m_config.build_acc_structs)
@@ -290,7 +290,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
       totalMeshes++;
     }
     maxVertexCountPerMesh    = std::max((uint32_t)8, maxVertexCountPerMesh);
-    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working 
+    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working
 
     loadVehicleFromFile(modelPath, gltfVehModel, vehicleFolder);
 
@@ -307,7 +307,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
     }
 
     maxVertexCountPerMesh    = std::max((uint32_t)8, maxVertexCountPerMesh);
-    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working 
+    maxPrimitiveCountPerMesh = std::max((uint32_t)12, maxPrimitiveCountPerMesh); // this just to be working
 
     InitGeoBuffersGPU(totalMeshes, totalVerticesCount, totalPrimitiveCount * 3);
     if(m_config.build_acc_structs)
@@ -323,7 +323,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
       auto identity = LiteMath::float4x4();
       LoadGLTFNodesRecursive(gltfModel, node, identity, loaded_meshes_to_meshId, false);
     }
-    
+
     //load vehicle here
     //meshCounter = loaded_meshes_to_meshId.size();
     std::unordered_map<int, uint32_t> vehloaded_meshes_to_meshId;
@@ -382,7 +382,7 @@ bool SceneManager::LoadSceneGLTF(const std::string &scenePath)
       m_dynTextureInfos.push_back(texInfo);
     }
   }
-  
+
   if(m_config.load_geometry)
   {
     LoadCommonGeoDataOnGPU();
@@ -406,7 +406,7 @@ void SceneManager::LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const 
   std::unordered_map<int, uint32_t> &a_loadedMeshesToMeshId, bool loadVehicle)
 {
   auto nodeMatrix = a_parentMatrix * transformMatrixFromGLTFNode(a_node);
-  
+
   if(m_config.debug_output)
   {
     std::cout << "Node Name # " << a_node.name << std::endl;
@@ -416,7 +416,7 @@ void SceneManager::LoadGLTFNodesRecursive(const tinygltf::Model &a_model, const 
     }
     std::cout <<"---"<< std::endl;
   }
-    
+
 
   for (size_t i = 0; i < a_node.children.size(); i++)
   {

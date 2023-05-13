@@ -70,7 +70,7 @@ vec3 getVertexSimplex() {
 	return vec3(0);
 }
 
-void main() 
+void main()
 {
 	outUVW = getVertexSimplex();
 		// debugPrintfEXT("point %d: %v3f\n", gl_VertexIndex, outUVW.xyz);

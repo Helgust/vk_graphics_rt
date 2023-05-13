@@ -102,7 +102,7 @@ unsigned char* loadImageLDR(const char* a_filename, int &w, int &h, int &channel
 }
 
 
-void SimpleRender::SetupNoiseImage() 
+void SimpleRender::SetupNoiseImage()
 {
   int w, h, channels;
   auto pixels = loadImageLDR(NOISE_TEX.c_str(), w, h, channels);
@@ -119,12 +119,12 @@ void SimpleRender::SetupNoiseImage()
   if (m_NoiseTexSampler == VK_NULL_HANDLE)
   {
     m_NoiseTexSampler = vk_utils::createSampler(m_device, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
-  }  
+  }
 }
 
 void SimpleRender::SetupRTImage()
 {
-  vk_utils::deleteImg(m_device, &m_rtImage);  
+  vk_utils::deleteImg(m_device, &m_rtImage);
   // change format and usage according to your implementation of RT
   m_rtImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
@@ -137,7 +137,7 @@ void SimpleRender::SetupRTImage()
 
   setObjectName(m_rtImage.image, VK_OBJECT_TYPE_IMAGE, "rtStatic_Image");
 
-  vk_utils::deleteImg(m_device, &m_rtImageDynamic);  
+  vk_utils::deleteImg(m_device, &m_rtImageDynamic);
   // change format and usage according to your implementation of RT
   m_rtImageDynamic.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
@@ -150,7 +150,7 @@ void SimpleRender::SetupRTImage()
 
   setObjectName(m_rtImageDynamic.image, VK_OBJECT_TYPE_IMAGE, "rtDynamic_Image");
 
-  vk_utils::deleteImg(m_device, &m_rtImageAO);  
+  vk_utils::deleteImg(m_device, &m_rtImageAO);
   // change format and usage according to your implementation of RT
   m_rtImageAO.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
@@ -166,7 +166,7 @@ void SimpleRender::SetupRTImage()
 
 void SimpleRender::SetupOmniShadowImage() // it is prepareCubeMap at Sasha Willems
 {
-  vk_utils::deleteImg(m_device, &m_omniShadowImage);  
+  vk_utils::deleteImg(m_device, &m_omniShadowImage);
   // change format and usage according to your implementation of RT
   m_omniShadowImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   VkFormat format = VK_FORMAT_R32_SFLOAT;
@@ -181,7 +181,7 @@ void SimpleRender::SetupOmniShadowImage() // it is prepareCubeMap at Sasha Wille
   imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
   imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
   imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;  
+  imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   imageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 
   VkCommandBuffer layoutCmd = vk_utils::createCommandBuffer(m_device, m_commandPool);
@@ -262,11 +262,11 @@ void SimpleRender::SetupHistoryImages()
     m_prevFrameImageSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
-  vk_utils::deleteImg(m_device, &m_prevDepthImage);  
+  vk_utils::deleteImg(m_device, &m_prevDepthImage);
 
   m_prevDepthImage.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_D32_SFLOAT,
-    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT 
+    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
     | VK_IMAGE_USAGE_TRANSFER_DST_BIT , &m_prevDepthImage);
 
   if(m_prevDepthImageSampler == VK_NULL_HANDLE)
@@ -274,11 +274,11 @@ void SimpleRender::SetupHistoryImages()
     m_prevDepthImageSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
-  vk_utils::deleteImg(m_device, &m_prevNormalImage);  
+  vk_utils::deleteImg(m_device, &m_prevNormalImage);
 
   m_prevNormalImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R16G16B16A16_SFLOAT,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT 
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
     | VK_IMAGE_USAGE_TRANSFER_DST_BIT , &m_prevNormalImage);
 
   if(m_prevColorImageSampler == VK_NULL_HANDLE)
@@ -286,11 +286,11 @@ void SimpleRender::SetupHistoryImages()
     m_prevColorImageSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
-  vk_utils::deleteImg(m_device, &m_prevRTImage);  
+  vk_utils::deleteImg(m_device, &m_prevRTImage);
 
   m_prevRTImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT 
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
     | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_prevRTImage);
 
   if(m_prevRTImageSampler == VK_NULL_HANDLE)
@@ -298,24 +298,24 @@ void SimpleRender::SetupHistoryImages()
     m_prevRTImageSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
 
-  vk_utils::deleteImg(m_device, &m_prevAOImage);  
+  vk_utils::deleteImg(m_device, &m_prevAOImage);
 
   m_prevAOImage.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   createImgAllocAndBind(m_device, m_physicalDevice, m_width, m_height, VK_FORMAT_R8G8B8A8_UNORM,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT 
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
     | VK_IMAGE_USAGE_TRANSFER_DST_BIT, &m_prevAOImage);
 
   if(m_prevAOImageSampler == VK_NULL_HANDLE)
   {
     m_prevAOImageSampler = vk_utils::createSampler(m_device, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
   }
-  
+
   setObjectName(m_prevFrameImage.image, VK_OBJECT_TYPE_IMAGE, "prev_frame");
   setObjectName(m_prevDepthImage.image, VK_OBJECT_TYPE_IMAGE, "prev_depth");
   setObjectName(m_prevNormalImage.image, VK_OBJECT_TYPE_IMAGE, "prev_normal");
   setObjectName(m_prevRTImage.image, VK_OBJECT_TYPE_IMAGE, "prev_RTImage");
   setObjectName(m_prevAOImage.image, VK_OBJECT_TYPE_IMAGE, "prev_AOImage");
-  
+
 }
 // ***************************************************************************************************************************
 
@@ -398,7 +398,7 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, Lite
     m_pRayTracerGPU->SetVulkanInOutFor_CastSingleRay(m_genColorBuffer, 0);
     m_pRayTracerGPU->InitDescriptors(m_pScnMgr,
       m_NoiseMapTex, m_NoiseTexSampler,
-      m_gBuffer, m_colorSampler, 
+      m_gBuffer, m_colorSampler,
       m_prevRTImage, m_prevRTImageSampler,
       m_rtImage, m_rtImageSampler,
       m_rtImageDynamic, m_rtImageDynamicSampler,
@@ -406,7 +406,7 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, Lite
       m_prevNormalImage, m_prevColorImageSampler,
       m_rtImageAO, m_rtImageAOSampler);
     //m_pRayTracerGPU->InitDescriptors(m_pScnMgr);
-    
+
     m_pRayTracerGPU->UpdateAll(m_pCopyHelper, a_time, m_uniforms.lights[0], a_needUpdate, m_pScnMgr->GetVehicleInstancePos(0));
   }
 
@@ -416,7 +416,7 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, Lite
   // {
   //   a_needUpdate = 0U;
   // }
-  
+
   // do ray tracing
   //
   {
@@ -462,14 +462,14 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, Lite
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    
+
     vk_utils::setImageLayout(
 			commandBuffer,
 			m_rtImageAO.image,
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_GENERAL);
-    
+
     std::vector<VkImageMemoryBarrier> imageBarriers;
     VkImageMemoryBarrier imageBarrierStatic;
     VkImageMemoryBarrier imageBarrierDynamic;
@@ -479,7 +479,7 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, Lite
     imageBarrierStatic = m_pRayTracerGPU->BarrierForSingleImage(m_rtImage.image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT);
     imageBarrierDynamic = m_pRayTracerGPU->BarrierForSingleImage(m_rtImageDynamic.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT);
     imageBarrierAO = m_pRayTracerGPU->BarrierForSingleImage(m_rtImageAO.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT);
-    imageBarrierPrevDepth = m_pRayTracerGPU->BarrierForSingleImage(m_prevDepthImage.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL, 
+    imageBarrierPrevDepth = m_pRayTracerGPU->BarrierForSingleImage(m_prevDepthImage.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
       VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
     imageBarrierPrevNormal = m_pRayTracerGPU->BarrierForSingleImage(m_prevNormalImage.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     imageBarriers.push_back(imageBarrierStatic);
@@ -497,8 +497,8 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, Lite
     imageBarriers.push_back(imageBarrierPrevDepth);
     imageBarriers.push_back(imageBarrierPrevNormal);
 
-    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data()); 
-    m_pRayTracerGPU->CastSingleRayCmd(commandBuffer, m_width, m_height, nullptr, m_rtImageDynamic.image, 0U);  
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());
+    m_pRayTracerGPU->CastSingleRayCmd(commandBuffer, m_width, m_height, nullptr, m_rtImageDynamic.image, 0U);
     imageBarriers.clear();
     imageBarrierStatic = m_pRayTracerGPU->BarrierForSingleImage(m_rtImage.image, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT);
     imageBarrierDynamic = m_pRayTracerGPU->BarrierForSingleImage(m_rtImageDynamic.image, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT);
@@ -506,11 +506,11 @@ void SimpleRender::RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, Lite
     imageBarriers.push_back(imageBarrierDynamic);
     imageBarriers.push_back(imageBarrierPrevDepth);
     imageBarriers.push_back(imageBarrierPrevNormal);
-    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());   
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());
     m_pRayTracerGPU->CastSingleRayCmd(commandBuffer, m_width, m_height, nullptr, m_rtImageDynamic.image, 0U, 1U);
     imageBarriers.clear();
     imageBarriers.push_back(imageBarrierAO);
-    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());   
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, imageBarriers.size(), imageBarriers.data());
     VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
   }
 }

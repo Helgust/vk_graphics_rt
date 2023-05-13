@@ -184,15 +184,15 @@ namespace hydra_xml
   {
     LiteMath::float4x4 result;
     std::wstringstream inputStream(matrix_str);
-    
+
     float data[16];
     for(int i = 0; i < 16; i++)
       inputStream >> data[i];
-    
+
     result.set_row(0, LiteMath::float4(data[0],data[1], data[2], data[3]));
     result.set_row(1, LiteMath::float4(data[4],data[5], data[6], data[7]));
     result.set_row(2, LiteMath::float4(data[8],data[9], data[10], data[11]));
-    result.set_row(3, LiteMath::float4(data[12],data[13], data[14], data[15])); 
+    result.set_row(3, LiteMath::float4(data[12],data[13], data[14], data[15]));
 
     return result;
   }
@@ -231,7 +231,7 @@ namespace hydra_xml
     return color;
   }
 
-  std::vector<LightInstance> HydraScene::InstancesLights(uint32_t a_sceneId) 
+  std::vector<LightInstance> HydraScene::InstancesLights(uint32_t a_sceneId)
   {
     auto sceneNode = m_sceneNode.child(L"scene");
     if(a_sceneId != 0)
@@ -242,7 +242,7 @@ namespace hydra_xml
       sceneNode = m_sceneNode.find_child_by_attribute(L"id", tempStr.c_str());
     }
 
-    std::vector<pugi::xml_node> lights; 
+    std::vector<pugi::xml_node> lights;
     lights.reserve(256);
     for(auto lightNode : m_lightsLib.children())
       lights.push_back(lightNode);
@@ -258,7 +258,7 @@ namespace hydra_xml
         continue;
       inst.instNode  = instNode;
       inst.instId    = instNode.attribute(L"id").as_uint();
-      inst.lightId   = instNode.attribute(L"light_id").as_uint(); 
+      inst.lightId   = instNode.attribute(L"light_id").as_uint();
       inst.lightNode = lights[inst.lightId];
     }
     return result;

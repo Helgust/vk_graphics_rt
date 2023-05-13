@@ -23,7 +23,7 @@
 #include "raytracing.h"
 #include "raytracing_generated.h"
 
-//delete after 
+//delete after
 #include <vector>
 #include <fstream>
 #include <cstring>
@@ -52,9 +52,9 @@ struct FrameBuffer {
 class RayTracer_GPU : public RayTracer_Generated
 {
 public:
-  RayTracer_GPU(int32_t a_width, uint32_t a_height) : RayTracer_Generated(a_width, a_height) {} 
+  RayTracer_GPU(int32_t a_width, uint32_t a_height) : RayTracer_Generated(a_width, a_height) {}
   std::string AlterShaderPath(const char* a_shaderPath) override { return std::string("../../src/samples/raytracing/") + std::string(a_shaderPath); }
-  void InitDescriptors(std::shared_ptr<SceneManager> sceneManager, 
+  void InitDescriptors(std::shared_ptr<SceneManager> sceneManager,
     vk_utils::VulkanImageMem noiseMapTex, VkSampler noiseTexSampler, FrameBuffer a_gbuffer, VkSampler colorSampler,
     vk_utils::VulkanImageMem prevRT, VkSampler a_prevRTimage_sampler,
     vk_utils::VulkanImageMem a_rtImage,  VkSampler a_rtImageSampler,
@@ -90,10 +90,10 @@ public:
   const std::string SOFT_RT_AO_VERTEX_SHADER_PATH = "../resources/shaders/softRT.vert";
   const std::string SOFT_RT_AO_FRAGMENT_SHADER_PATH = "../resources/shaders/softAO.frag";
 
-  
+
 
   const std::string NOISE_TEX = "../resources/textures/STBN.png";
-  
+
   const bool        ENABLE_HARDWARE_RT   = true;
 
   static constexpr uint64_t STAGING_MEM_SIZE = 16 * 16 * 1024u;
@@ -120,7 +120,7 @@ public:
   void generateCubemaps();
   void loadEnvMap(const std::string& filename, VkFormat format, VkImageUsageFlags imageUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT,
     VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-  
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -319,8 +319,8 @@ protected:
   VkSampler                m_brdf_lutSampler = VK_NULL_HANDLE;
 
   pipeline_data_t m_quadPipeline;
-  VkRenderPass m_quadRenderPass = VK_NULL_HANDLE; 
-  VkRenderPass m_resolveRenderPass = VK_NULL_HANDLE; 
+  VkRenderPass m_quadRenderPass = VK_NULL_HANDLE;
+  VkRenderPass m_resolveRenderPass = VK_NULL_HANDLE;
 
   VkFramebuffer    m_quadFrameBuffer = VK_NULL_HANDLE;
   VkImageView      m_quadTargetView;
@@ -329,7 +329,7 @@ protected:
   VkDescriptorSetLayout m_finalQuadDSLayout = VK_NULL_HANDLE;
 
   int filterRadius = 0;
- 
+
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
   std::unique_ptr<RayTracer> m_pRayTracerCPU;
@@ -349,7 +349,7 @@ protected:
 
   std::shared_ptr<vk_utils::RenderTarget>        m_pSoftAOImage;
   VkDeviceMemory        m_memSoftAOImage = VK_NULL_HANDLE;
-  uint32_t m_taaImageId = 0;          
+  uint32_t m_taaImageId = 0;
 
   void RayTraceCPU();
   void RayTraceGPU(VkCommandBuffer commandBuffer, float a_time, LiteMath::uint4 &a_needUpdate);
@@ -397,7 +397,7 @@ protected:
     vec2(3.0 / 8.0, 2.0 / 9.0),
     vec2(7.0 / 8.0, 5.0 / 9.0),
     vec2(1.0 / 16.0, 8.0 / 9.0),
-    
+
   };
 
   // const int HALTON_COUNT = 16;
@@ -452,7 +452,7 @@ protected:
                               VkImageView a_targetImageView, VkPipeline a_pipeline);
 
   void BuildResolveCommandBuffer(VkCommandBuffer cmdBuff, VkFramebuffer frameBuff,
-                                VkImageView a_targetImageView, VkPipeline a_pipeline);                               
+                                VkImageView a_targetImageView, VkPipeline a_pipeline);
   void AddCmdsShadowmapPass(VkCommandBuffer a_cmdBuff, VkFramebuffer a_frameBuff);
   // *** Ray tracing related stuff
   void BuildCommandBufferQuad(VkCommandBuffer a_cmdBuff, VkImageView a_targetImageView);
@@ -462,8 +462,8 @@ protected:
   void SetupHistoryImages();
   void SetupOmniShadowImage();
   void SetupRTScene();
-  void CopyImage(VkCommandBuffer a_cmdBuffer, VkImage srcImage, VkImage dstImage, 
-    uint32_t srcImageAspect = VK_IMAGE_ASPECT_COLOR_BIT, 
+  void CopyImage(VkCommandBuffer a_cmdBuffer, VkImage srcImage, VkImage dstImage,
+    uint32_t srcImageAspect = VK_IMAGE_ASPECT_COLOR_BIT,
     uint32_t dstImageAspect = VK_IMAGE_ASPECT_COLOR_BIT,
     VkImageLayout srcLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
     VkImageLayout dstLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

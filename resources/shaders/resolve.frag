@@ -173,7 +173,7 @@ vec3 BRDF(PBRData d, float shadow_visibility, float ao)
     return color;
 }
 
-void main() 
+void main()
 {
     vec2 uv = gl_FragCoord.xy / UboParams.settings.zw;
     vec3 fragPos = GetPosFromDepth(uv);
@@ -188,7 +188,7 @@ void main()
     // Specular contribution
     PBRData pbrData;
     mat4 mViewInv = inverse(UboParams.View);
-    pbrData.V = normalize((mViewInv * vec4(0., 0., 0., 1.)).xyz - fragPos);    
+    pbrData.V = normalize((mViewInv * vec4(0., 0., 0., 1.)).xyz - fragPos);
     //spmething about sky
     if (depth == 1.) {
         outFragcolor = textureLod(prefilteredMap, pbrData.V, 0);
@@ -202,7 +202,7 @@ void main()
     pbrData.albedo = albedo.xyz;
     pbrData.metallic = metRough.x;
     pbrData.roughness = metRough.y;
-    
+
     // pbrData.N = normalize(transpose(mat3(UboParams.View)) * pbrData.N);
     pbrData.L = UboParams.lights[0].dir.xyz;
 
@@ -221,7 +221,7 @@ void main()
         shadow_visibility = softShadow;
         ao_vis = rtAO;
     }
-        
+
     vec3 color = BRDF(pbrData, shadow_visibility, ao_vis);
 
     switch (int(UboParams.m_time_gbuffer_index.w)) {

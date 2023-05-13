@@ -26,7 +26,7 @@ layout (location = 0 ) in VS_OUT
 vec2 iResolution = vec2(1024,1024);
 void main()
 {
-  if (UboParams.settings.x == 1) 
+  if (UboParams.settings.x == 1)
   {
     float weight = 0.97;
     vec3 minColor = vec3(9999.0), maxColor = vec3(-9999.0);
@@ -34,11 +34,11 @@ void main()
     vec2 reprojectedUV = surf.texCoord + velocityUV;
     vec3 currentFrame = textureLod(colorTex,surf.texCoord,0).xyz;
     vec3 prevFrame = textureLod(oldColorTex,reprojectedUV,0).xyz;
-    
+
     for(int x = -1; x <= 1; ++x)
     {
       for(int y = -1; y <= 1; ++y)
-      {   
+      {
         vec3 color = textureLod(colorTex,surf.texCoord + vec2(x, y)/1024.0f,0).xyz;
         minColor = min(minColor, color); // Take min and max
         maxColor = max(maxColor, color);
@@ -59,5 +59,5 @@ void main()
     vec3 currentFrame = textureLod(colorTex,surf.texCoord,0).xyz;
     outColor = vec4(currentFrame,1.0);
   }
-  
+
 }

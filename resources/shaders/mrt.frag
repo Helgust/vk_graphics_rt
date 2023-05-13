@@ -48,11 +48,11 @@ vec2 CalcVelocity(vec4 newPos, vec4 oldPos)
     // oldPos /= oldPos.w;
     // oldPos.xy = (oldPos.xy+1)/2.0f;
     // oldPos.y = 1 - oldPos.y;
-    
+
     // newPos /= newPos.w;
     // newPos.xy = (newPos.xy+1)/2.0f;
     // newPos.y = 1 - newPos.y;
-    
+
     // return (newPos - oldPos).xy;
     vec3 newPosNDC = newPos.xyz / newPos.w;
     vec3 oldPosNDC = oldPos.xyz / oldPos.w;
@@ -79,7 +79,7 @@ void main()
         metRough = vec2(material.metallic, material.roughness);
         if (material.metallicRoughnessTexId >= 0)
             metRough = texture(textures[material.metallicRoughnessTexId], surf.texCoord).bg;
-        
+
         if (material.baseColorTexId >= 0) {
             float alpha = texture(textures[material.baseColorTexId], surf.texCoord).a;
 

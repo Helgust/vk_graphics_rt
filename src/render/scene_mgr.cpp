@@ -361,7 +361,7 @@ void SceneManager::LoadInstanceDataOnGPU()
   m_instMatricesBuf = vk_utils::createBuffer(m_device, instMatBufSize, flags);
   m_instMemAlloc    = vk_utils::allocateAndBindWithPadding(m_device, m_physDevice, {m_instMatricesBuf});
   std::vector<LiteMath::float4x4> totalIntstanceMatrices = m_instanceMatrices;
-  
+
   //totalIntstanceMatrices.insert(totalIntstanceMatrices.end(), m_instanceMatrices.begin(),  m_instanceMatrices.end());
   //totalIntstanceMatrices.insert(totalIntstanceMatrices.end(), m_dynamicInstanceMatrices.begin(),  m_dynamicInstanceMatrices.end());
   std::copy(m_dynamicInstanceMatrices.cbegin(), m_dynamicInstanceMatrices.cend(), std::back_inserter(totalIntstanceMatrices));
@@ -452,7 +452,7 @@ void SceneManager::LoadMaterialDataOnGPU()
       VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK);
     m_samplers.reserve(m_textures.size());
     m_textureViews.reserve(m_textureInfos.size());
-    
+
     m_dynSamplers.reserve(m_dynTextures.size());
     m_dynTextureViews.reserve(m_dynTextureInfos.size());
 
@@ -554,7 +554,7 @@ void SceneManager::DestroyScene()
     vkDestroyBuffer(m_device, m_matIdsBuf, nullptr);
     m_matIdsBuf = VK_NULL_HANDLE;
   }
-  
+
   if(m_matPerVertIdsBuf != VK_NULL_HANDLE)
   {
     vkDestroyBuffer(m_device, m_matPerVertIdsBuf, nullptr);
@@ -740,7 +740,7 @@ void SceneManager::BuildTLAS(bool need_update)
   VkDeviceOrHostAddressConstKHR instBufferDeviceAddress{};
   instBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, instancesBuffer);
   m_pBuilderV2->BuildTLAS(geometryInstances.size(), instBufferDeviceAddress,
-    VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR, 
+    VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
     need_update);
 
   if (instancesAlloc != VK_NULL_HANDLE)
@@ -754,7 +754,7 @@ void SceneManager::BuildTLAS(bool need_update)
 }
 
 void SceneManager::MadeCubeMesh (cmesh::SimpleMesh& cube, float size)
-{ 
+{
   std::vector<float> cubePosWithSize = {};
   for (float pos : cubePos)
     cubePosWithSize.push_back(pos * size);
@@ -824,7 +824,7 @@ void SceneManager::MoveCarX(float a_time, bool teleport, LiteMath::float4x4 &a_m
     {
       deltaTime+=0.5;
     }
-    
+
     if (direction < 0)
       newPos.x = 30;
     else
@@ -862,7 +862,7 @@ void SceneManager::MoveCarY(float a_time, bool teleport, LiteMath::float4x4 &a_m
     {
       deltaTime+=0.5;
     }
-    
+
     if (direction < 0)
       newPos.y = 15;
     else
@@ -900,7 +900,7 @@ void SceneManager::MoveCarZ(float a_time, bool teleport, LiteMath::float4x4 &a_m
     {
       deltaTime+=0.5;
     }
-    
+
     if (direction < 0)
       newPos.z = -20;
     else
@@ -939,18 +939,18 @@ void SceneManager::RotCarY(float a_time, bool teleport, LiteMath::float4x4 &a_ma
     {
       deltaTime+=0.5;
     }
-    
+
     if (rotFlag)
     {
       a_mat = a_mat * rotate4x4Y(45.0f * direction);
       m_deltaRotations[1] = 45.0f * direction;
       rotFlag = false;
     }
-       
+
     a_mat.set_col(3, newPos);
   }
   else
-  {    
+  {
     a_mat = a_mat * rotate4x4Y(1.0f*a_time);
     m_deltaRotations[1] = 1.0f*a_time;
   }
@@ -972,17 +972,17 @@ void SceneManager::RotCarX(float a_time, bool teleport, LiteMath::float4x4 &a_ma
     {
       deltaTime+=0.5;
     }
-    
+
     if (direction < 0)
     {
       a_mat = a_mat * rotate4x4X(45.0f * direction);
       m_deltaRotations[0] = 45.0f * direction;
     }
-    
+
     a_mat.set_col(3, newPos);
   }
   else
-  {    
+  {
     a_mat = a_mat * rotate4x4X(1.0f*a_time);
     m_deltaRotations[0] = 1.0f*a_time;
   }
@@ -1004,17 +1004,17 @@ void SceneManager::RotCarZ(float a_time, bool teleport, LiteMath::float4x4 &a_ma
     {
       deltaTime+=0.5;
     }
-    
+
     if (direction < 0)
     {
       a_mat = a_mat * rotate4x4Z(45.0f * direction);
       m_deltaRotations[2] = 45.0f * direction;
     }
-    
+
     a_mat.set_col(3, newPos);
   }
   else
-  {    
+  {
     a_mat = a_mat * rotate4x4Z(1.0f*a_time);
     m_deltaRotations[2] = 1.0f*a_time;
   }

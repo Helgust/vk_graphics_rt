@@ -24,9 +24,9 @@ void RayTracer_Generated::AllocateAllDescriptorSets()
   descriptorPoolCreateInfo.maxSets       = 1 + 2; // add 1 to prevent zero case and one more for internal needs
   descriptorPoolCreateInfo.poolSizeCount = 1;
   descriptorPoolCreateInfo.pPoolSizes    = &buffersSize;
-  
+
   VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, NULL, &m_dsPool));
-  
+
   // allocate all descriptor sets
   //
   VkDescriptorSetLayout layouts[1] = {};
@@ -34,8 +34,8 @@ void RayTracer_Generated::AllocateAllDescriptorSets()
 
   VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
   descriptorSetAllocateInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  descriptorSetAllocateInfo.descriptorPool     = m_dsPool;  
-  descriptorSetAllocateInfo.descriptorSetCount = 1;     
+  descriptorSetAllocateInfo.descriptorPool     = m_dsPool;
+  descriptorSetAllocateInfo.descriptorSetCount = 1;
   descriptorSetAllocateInfo.pSetLayouts        = layouts;
 
   auto tmpRes = vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, m_allGeneratedDS);
@@ -59,7 +59,7 @@ void RayTracer_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     descriptorBufferInfo[0]        = VkDescriptorBufferInfo{};
     descriptorBufferInfo[0].buffer = CastSingleRay_local.out_colorBuffer;
     descriptorBufferInfo[0].offset = CastSingleRay_local.out_colorOffset;
-    descriptorBufferInfo[0].range  = VK_WHOLE_SIZE;  
+    descriptorBufferInfo[0].range  = VK_WHOLE_SIZE;
 
     writeDescriptorSet[0]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -69,7 +69,7 @@ void RayTracer_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     writeDescriptorSet[0].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     writeDescriptorSet[0].pBufferInfo      = &descriptorBufferInfo[0];
     writeDescriptorSet[0].pImageInfo       = nullptr;
-    writeDescriptorSet[0].pTexelBufferView = nullptr; 
+    writeDescriptorSet[0].pTexelBufferView = nullptr;
 
     {
       VulkanRTX* pScene = dynamic_cast<VulkanRTX*>(m_pAccelStruct.get());
@@ -90,7 +90,7 @@ void RayTracer_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     descriptorBufferInfo[2]        = VkDescriptorBufferInfo{};
     descriptorBufferInfo[2].buffer = m_classDataBuffer;
     descriptorBufferInfo[2].offset = 0;
-    descriptorBufferInfo[2].range  = VK_WHOLE_SIZE;  
+    descriptorBufferInfo[2].range  = VK_WHOLE_SIZE;
 
     writeDescriptorSet[2]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

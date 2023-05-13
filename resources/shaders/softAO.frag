@@ -35,7 +35,7 @@ void main()
     for(int x = -1; x <= 1; ++x)
     {
       for(int y = -1; y <= 1; ++y)
-      {   
+      {
         vec3 color = textureLod(colorTex, surf.texCoord + vec2(x, y)/1024.0f,0).xyz;
         minColor = min(minColor, color.x); // Take min and max
         maxColor = max(maxColor, color.x);
@@ -55,5 +55,5 @@ void main()
     vec3 currentFrame = textureLod(colorTex,surf.texCoord,0).xyz;
     outColor = vec4(currentFrame, 1.0f);
   }
-  
+
 }

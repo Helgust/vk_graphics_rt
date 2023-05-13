@@ -125,7 +125,7 @@ struct SceneManager
   uint32_t InstancesNum() const {return m_instanceInfos.size();}
   uint32_t DynamicInstancesNum() const {return m_dynamicInstanceInfos.size();}
 
-  
+
   uint32_t GetVehicleMeshId() { return m_vehicleMesh;};
 
   hydra_xml::Camera GetCamera(uint32_t camId) const;
@@ -248,22 +248,22 @@ private:
 
   std::vector<unsigned int> cubeIndices
   {
-    // front   
+    // front
     0, 1, 2,
     0, 2, 3,
-    // right   
+    // right
     1, 5, 6,
     6, 2, 1,
-    // back   
+    // back
     7, 6, 5,
     5, 4, 7,
-    // left   
+    // left
     4, 0, 3,
     3, 7, 4,
-    // bottom   
+    // bottom
     4, 5, 1,
     1, 0, 4,
-    // top   
+    // top
     3, 2, 6,
     6, 7, 3
   };

@@ -28,7 +28,7 @@ namespace hydra_xml
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  
+
   struct Instance
   {
     uint32_t           geomId = uint32_t(-1); ///< geom id
@@ -95,30 +95,30 @@ namespace hydra_xml
 	{
 	  friend class pugi::xml_node;
     friend class pugi::xml_node_iterator;
-  
+
 	public:
-  
+
 		// Default constructor
 		LocIterator() = default;
 		LocIterator(const pugi::xml_node_iterator& a_iter, const std::string& a_str) : m_iter(a_iter), m_libraryRootDir(a_str) {}
-  
+
 		// Iterator operators
 		bool operator==(const LocIterator& rhs) const { return m_iter == rhs.m_iter;}
 		bool operator!=(const LocIterator& rhs) const { return (m_iter != rhs.m_iter); }
-  
-    std::string operator*() const 
-    { 
+
+    std::string operator*() const
+    {
       auto attr    = m_iter->attribute(L"loc");
       auto meshLoc = ws2s(std::wstring(attr.as_string()));
       return m_libraryRootDir + "/" + meshLoc;
     }
-  
+
 		const LocIterator& operator++() { ++m_iter; return *this; }
 		LocIterator operator++(int)     { m_iter++; return *this; }
-  
+
 		const LocIterator& operator--() { --m_iter; return *this; }
 		LocIterator operator--(int)     { m_iter--; return *this; }
-  
+
   private:
     pugi::xml_node_iterator m_iter;
     std::string m_libraryRootDir;
@@ -128,32 +128,32 @@ namespace hydra_xml
 	{
 	  friend class pugi::xml_node;
     friend class pugi::xml_node_iterator;
-  
+
 	public:
-  
+
 		// Default constructor
 		InstIterator() = default;
 		InstIterator(const pugi::xml_node_iterator& a_iter, const pugi::xml_node_iterator& a_end) : m_iter(a_iter), m_end(a_end) {}
-  
+
 		// Iterator operators
 		bool operator==(const InstIterator& rhs) const { return m_iter == rhs.m_iter;}
 		bool operator!=(const InstIterator& rhs) const { return (m_iter != rhs.m_iter); }
-  
-    Instance operator*() const 
-    { 
+
+    Instance operator*() const
+    {
       Instance inst;
       inst.geomId = m_iter->attribute(L"mesh_id").as_uint();
       inst.rmapId = m_iter->attribute(L"rmap_id").as_uint();
       inst.matrix = float4x4FromString(m_iter->attribute(L"matrix").as_string());
       return inst;
     }
-  
+
 		const InstIterator& operator++() { do ++m_iter; while(m_iter != m_end && std::wstring(m_iter->name()) != L"instance"); return *this; }
 		InstIterator operator++(int)     { do m_iter++; while(m_iter != m_end && std::wstring(m_iter->name()) != L"instance"); return *this; }
-  
+
 		const InstIterator& operator--() { do --m_iter; while(m_iter != m_end && std::wstring(m_iter->name()) != L"instance"); return *this; }
 		InstIterator operator--(int)     { do m_iter--; while(m_iter != m_end && std::wstring(m_iter->name()) != L"instance"); return *this; }
-  
+
   private:
     pugi::xml_node_iterator m_iter;
     pugi::xml_node_iterator m_end;
@@ -163,24 +163,24 @@ namespace hydra_xml
 	{
 	  friend class pugi::xml_node;
     friend class pugi::xml_node_iterator;
-  
+
 	public:
-  
+
 		// Default constructor
 		CamIterator() = default;
 		CamIterator(const pugi::xml_node_iterator& a_iter) : m_iter(a_iter) {}
-  
+
 		// Iterator operators
 		bool operator==(const CamIterator& rhs) const { return m_iter == rhs.m_iter;}
 		bool operator!=(const CamIterator& rhs) const { return (m_iter != rhs.m_iter); }
-  
-    Camera operator*() const 
-    { 
+
+    Camera operator*() const
+    {
       Camera cam = {};
-      cam.fov       = m_iter->child(L"fov").text().as_float(); 
+      cam.fov       = m_iter->child(L"fov").text().as_float();
       cam.nearPlane = m_iter->child(L"nearClipPlane").text().as_float();
-      cam.farPlane  = m_iter->child(L"farClipPlane").text().as_float();  
-      
+      cam.farPlane  = m_iter->child(L"farClipPlane").text().as_float();
+
       LiteMath::float3 pos    = hydra_xml::read3f(m_iter->child(L"position"));
       LiteMath::float3 lookAt = hydra_xml::read3f(m_iter->child(L"look_at"));
       LiteMath::float3 up     = hydra_xml::read3f(m_iter->child(L"up"));
@@ -192,13 +192,13 @@ namespace hydra_xml
       }
       return cam;
     }
-  
+
 		const CamIterator& operator++() { ++m_iter; return *this; }
 		CamIterator operator++(int)     { m_iter++; return *this; }
-  
+
 		const CamIterator& operator--() { --m_iter; return *this; }
 		CamIterator operator--(int)     { m_iter--; return *this; }
-  
+
   private:
     pugi::xml_node_iterator m_iter;
 	};
@@ -315,22 +315,22 @@ namespace hydra_xml
   {
   public:
     HydraScene() = default;
-    ~HydraScene() = default;  
-    
+    ~HydraScene() = default;
+
     #if defined(__ANDROID__)
     int LoadState(AAssetManager* mgr, const std::string &path);
     #else
     int LoadState(const std::string &path);
-    #endif  
+    #endif
 
-    //// use this functions with C++11 range for 
+    //// use this functions with C++11 range for
     //
-    pugi::xml_object_range<pugi::xml_node_iterator> TextureNodes()  { return m_texturesLib.children();  } 
+    pugi::xml_object_range<pugi::xml_node_iterator> TextureNodes()  { return m_texturesLib.children();  }
     pugi::xml_object_range<pugi::xml_node_iterator> MaterialNodes() { return m_materialsLib.children(); }
     pugi::xml_object_range<pugi::xml_node_iterator> GeomNodes()     { return m_geometryLib.children();  }
     pugi::xml_object_range<pugi::xml_node_iterator> LightNodes()    { return m_lightsLib.children();    }
     pugi::xml_object_range<pugi::xml_node_iterator> CameraNodes()   { return m_cameraLib.children();    }
-    
+
     //// please also use this functions with C++11 range for
     //
     pugi::xml_object_range<LocIterator> MeshFiles()    { return {LocIterator(m_geometryLib.begin(), m_libraryRootDir),
@@ -341,7 +341,7 @@ namespace hydra_xml
 
     pugi::xml_object_range<InstIterator> InstancesGeom() { return {InstIterator(m_sceneNode.child(L"scene").child(L"instance"), m_sceneNode.child(L"scene").end()),
                                                                    InstIterator(m_sceneNode.child(L"scene").end(), m_sceneNode.child(L"scene").end())}; }
-    
+
     std::vector<LightInstance> InstancesLights(uint32_t a_sceneId = 0);
 
     pugi::xml_object_range<CamIterator> Cameras() { return {CamIterator(m_cameraLib.begin()),
@@ -350,34 +350,34 @@ namespace hydra_xml
     pugi::xml_object_range<MaterialIteratorGLTF> MaterialsGLTF() { return {MaterialIteratorGLTF(m_materialsLib.begin()),
         MaterialIteratorGLTF(m_materialsLib.end())}; }
 
-    std::vector<LiteMath::float4x4> GetAllInstancesOfMeshLoc(const std::string& a_loc) const 
-    { 
+    std::vector<LiteMath::float4x4> GetAllInstancesOfMeshLoc(const std::string& a_loc) const
+    {
       auto pFound = m_instancesPerMeshLoc.find(a_loc);
       if(pFound == m_instancesPerMeshLoc.end())
         return {};
       else
-        return pFound->second; 
+        return pFound->second;
     }
-    
+
   private:
     void parseInstancedMeshes(pugi::xml_node a_scenelib, pugi::xml_node a_geomlib);
-    void LogError(const std::string &msg);  
-    
+    void LogError(const std::string &msg);
+
     std::set<std::string> unique_meshes;
     std::string m_libraryRootDir;
-    pugi::xml_node m_texturesLib ; 
-    pugi::xml_node m_materialsLib; 
-    pugi::xml_node m_geometryLib ; 
+    pugi::xml_node m_texturesLib ;
+    pugi::xml_node m_materialsLib;
+    pugi::xml_node m_geometryLib ;
     pugi::xml_node m_lightsLib   ;
-    pugi::xml_node m_cameraLib   ; 
-    pugi::xml_node m_settingsNode; 
-    pugi::xml_node m_sceneNode   ; 
+    pugi::xml_node m_cameraLib   ;
+    pugi::xml_node m_settingsNode;
+    pugi::xml_node m_sceneNode   ;
     pugi::xml_document m_xmlDoc;
 
     std::unordered_map<std::string, std::vector<LiteMath::float4x4> > m_instancesPerMeshLoc;
   };
 
-  
+
 }
 
 #endif //HYDRAXML_H

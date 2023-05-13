@@ -71,6 +71,4 @@ void main(void)
         //vOut.materialId = dynMaterialPerVertIds[gl_BaseVertexARB];
         vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
     }
-    
-    
 }

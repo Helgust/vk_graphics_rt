@@ -128,17 +128,17 @@ void ImGuiRender::CleanupImGui()
     vkDestroyRenderPass(m_device, m_renderpass, VK_NULL_HANDLE);
     m_renderpass = VK_NULL_HANDLE;
   }
-  
+
   if(m_commandPool)
   {
     vkDestroyCommandPool(m_device, m_commandPool, VK_NULL_HANDLE);
-    m_commandPool = VK_NULL_HANDLE;  
+    m_commandPool = VK_NULL_HANDLE;
   }
 
   if(m_descriptorPool)
   {
     vkDestroyDescriptorPool(m_device, m_descriptorPool, VK_NULL_HANDLE);
-    m_descriptorPool = VK_NULL_HANDLE;   
+    m_descriptorPool = VK_NULL_HANDLE;
   }
 }
 

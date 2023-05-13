@@ -58,7 +58,7 @@ void main()
     for(int x = -1; x <= 1; ++x)
     {
       for(int y = -1; y <= 1; ++y)
-      {   
+      {
         vec3 color = vec3(mixedColor(surf.texCoord + vec2(x, y)/1024.0f));
         minColor = min(minColor, color.x); // Take min and max
         maxColor = max(maxColor, color.x);
@@ -78,5 +78,5 @@ void main()
     vec3 res = mixedColor(surf.texCoord);
     outColor = vec4(res, 1.0f);
   }
-  
+
 }

@@ -42,7 +42,7 @@ RayTracer_Generated::~RayTracer_Generated()
   vkDestroyBuffer(device, CastSingleRay_local.rayDirAndFarBuffer, nullptr);
   vkDestroyBuffer(device, CastSingleRay_local.rayPosAndNearBuffer, nullptr);
 
- 
+
   vkDestroyBuffer(device, m_classDataBuffer, nullptr);
 
 
@@ -80,7 +80,7 @@ VkDescriptorSetLayout RayTracer_Generated::CreateCastSingleRayMegaDSLayout()
   dsBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[2].pImmutableSamplers = nullptr;
 
-  for (int i = 0; i < 6; i++) 
+  for (int i = 0; i < 6; i++)
   {
     dsBindings[i + 3].binding = i + 3;
     dsBindings[i + 3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -137,7 +137,7 @@ VkDescriptorSetLayout RayTracer_Generated::CreateCastSingleRayMegaDSLayout()
   dsBindings[15].descriptorCount    = 1;
   dsBindings[15].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[15].pImmutableSamplers = nullptr;
-  
+
   // binding for rtImage static
   dsBindings[16].binding            = 16;
   dsBindings[16].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -205,7 +205,7 @@ VkDescriptorSetLayout RayTracer_Generated::CreateCastSingleRayMegaDSLayout()
   descriptorSetLayoutCreateInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
   descriptorSetLayoutCreateInfo.bindingCount = uint32_t(dsBindings.size());
   descriptorSetLayoutCreateInfo.pBindings    = dsBindings.data();
-  
+
   VkDescriptorSetLayout layout = nullptr;
   VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &layout));
   return layout;
@@ -240,12 +240,12 @@ VkDescriptorSetLayout RayTracer_Generated::CreatecopyKernelFloatDSLayout()
 
 void RayTracer_Generated::InitKernel_CastSingleRayMega(const char* a_filePath)
 {
-  std::string shaderPath = AlterShaderPath("shaders_generated/CastSingleRayMega.comp.spv"); 
-  
+  std::string shaderPath = AlterShaderPath("shaders_generated/CastSingleRayMega.comp.spv");
+
   m_pMaker->LoadShader(device, shaderPath.c_str(), nullptr, "main");
   CastSingleRayMegaDSLayout = CreateCastSingleRayMegaDSLayout();
   CastSingleRayMegaLayout   = m_pMaker->MakeLayout(device, { CastSingleRayMegaDSLayout }, 128); // at least 128 bytes for push constants
-  CastSingleRayMegaPipeline = m_pMaker->MakePipeline(device);  
+  CastSingleRayMegaPipeline = m_pMaker->MakePipeline(device);
 }
 
 
@@ -310,7 +310,7 @@ void RayTracer_Generated::InitBuffers(size_t a_maxThreadsCount, bool a_tempBuffe
 
   m_classDataBuffer = vk_utils::createBuffer(device, sizeof(m_uboData),  VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | GetAdditionalFlagsForUBO());
   allBuffersRef.push_back(m_classDataBuffer);
-  
+
   auto internalBuffersMem = AllocAndBind(allBuffersRef);
   if(a_tempBuffersOverlay)
   {
@@ -349,7 +349,7 @@ void RayTracer_Generated::AssignBuffersToMemory(const std::vector<VkBuffer>& a_b
       memInfos[i].size = 0;
     }
   }
-  
+
   for(size_t i=1;i<memInfos.size();i++)
   {
     if(memInfos[i].memoryTypeBits != memInfos[0].memoryTypeBits)
@@ -384,7 +384,7 @@ RayTracer_Generated::MemLoc RayTracer_Generated::AllocAndBind(const std::vector<
   MemLoc currLoc;
   if(a_images.size() > 0)
   {
-    std::vector<VkMemoryRequirements> reqs(a_images.size()); 
+    std::vector<VkMemoryRequirements> reqs(a_images.size());
     for(size_t i=0; i<reqs.size(); i++)
       vkGetImageMemoryRequirements(device, a_images[i], &reqs[i]);
 
@@ -395,7 +395,7 @@ RayTracer_Generated::MemLoc RayTracer_Generated::AllocAndBind(const std::vector<
         std::cout << "RayTracer_Generated::AllocAndBind(textures): memoryTypeBits warning, need to split mem allocation (override me)" << std::endl;
         break;
       }
-    } 
+    }
 
     auto offsets  = vk_utils::calculateMemOffsets(reqs);
     auto memTotal = offsets[offsets.size() - 1];
@@ -406,7 +406,7 @@ RayTracer_Generated::MemLoc RayTracer_Generated::AllocAndBind(const std::vector<
     allocateInfo.allocationSize  = memTotal;
     allocateInfo.memoryTypeIndex = vk_utils::findMemoryType(reqs[0].memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, physicalDevice);
     VK_CHECK_RESULT(vkAllocateMemory(device, &allocateInfo, NULL, &currLoc.memObject));
-    
+
     for(size_t i=0;i<a_images.size();i++) {
       VK_CHECK_RESULT(vkBindImageMemory(device, a_images[i], currLoc.memObject, offsets[i]));
     }
@@ -424,7 +424,7 @@ void RayTracer_Generated::FreeAllAllocations(std::vector<MemLoc>& a_memLoc)
   for(auto mem : a_memLoc)
     vkFreeMemory(device, mem.memObject, nullptr);
   a_memLoc.resize(0);
-}     
+}
 
 void RayTracer_Generated::AllocMemoryForMemberBuffersAndImages(const std::vector<VkBuffer>& a_buffers, const std::vector<VkImage>& a_images)
 {

@@ -27,7 +27,7 @@ void RayTracer::CastSingleRay(uint32_t tidX, uint32_t tidY, uint32_t* out_color)
 void RayTracer::kernel_InitEyeRay(uint32_t tidX, uint32_t tidY, LiteMath::float4* rayPosAndNear, LiteMath::float4* rayDirAndFar)
 {
   *rayPosAndNear = m_camPos; // to_float4(m_camPos, 1.0f);
-  
+
   const LiteMath::float3 rayDir  = EyeRayDir(float(tidX), float(tidY), float(m_width), float(m_height), m_invProjView);
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
 }

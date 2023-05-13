@@ -44,30 +44,30 @@ public:
 
   virtual void InitMemberBuffers();
 
-  virtual void UpdateAll(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine, float a_time, 
+  virtual void UpdateAll(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine, float a_time,
     Light ligth, LiteMath::uint4 a_needUpdate, LiteMath::float4 a_vehPos)
   {
     UpdatePlainMembers(a_pCopyEngine, a_time, ligth, a_needUpdate, a_vehPos);
     UpdateVectorMembers(a_pCopyEngine);
     UpdateTextureMembers(a_pCopyEngine);
   }
-  
-  
+
+
   virtual void UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine,float a_time, Light ligth, LiteMath::uint4 needUpdate, LiteMath::float4 a_vehPos);
   virtual void UpdateVectorMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);
   virtual void UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);
-  
+
   virtual void CastSingleRayCmd(VkCommandBuffer a_commandBuffer, uint32_t tidX, uint32_t tidY, uint32_t* out_color,
    VkImage a_image, uint32_t isStaticPass, uint32_t isAO = 0);
 
   virtual void copyKernelFloatCmd(uint32_t length);
-  
+
   virtual void CastSingleRayMegaCmd(uint32_t tidX, uint32_t tidY, uint32_t* out_color, uint32_t isStaticPass, uint32_t isAO);
-  VkImageMemoryBarrier BarrierForSingleImage(VkImage a_buffer, uint32_t srcFlag, uint32_t dstFlag, 
+  VkImageMemoryBarrier BarrierForSingleImage(VkImage a_buffer, uint32_t srcFlag, uint32_t dstFlag,
     VkImageLayout oldImagelayout = VK_IMAGE_LAYOUT_GENERAL,
     VkImageLayout newImagelayout = VK_IMAGE_LAYOUT_GENERAL,
     uint32_t a_aspectMask  = VK_IMAGE_ASPECT_COLOR_BIT);
-  
+
   struct MemLoc
   {
     VkDeviceMemory memObject = VK_NULL_HANDLE;
@@ -109,8 +109,8 @@ protected:
   virtual void AllocMemoryForMemberBuffersAndImages(const std::vector<VkBuffer>& a_buffers, const std::vector<VkImage>& a_image);
   virtual std::string AlterShaderPath(const char* in_shaderPath) { return std::string("../../src/samples/raytracing/") + std::string(in_shaderPath); }
 
-  
-  
+
+
 
   struct CastSingleRay_Data
   {
@@ -134,7 +134,7 @@ protected:
   VkBuffer m_classDataBuffer = VK_NULL_HANDLE;
 
   VkPipelineLayout      CastSingleRayMegaLayout   = VK_NULL_HANDLE;
-  VkPipeline            CastSingleRayMegaPipeline = VK_NULL_HANDLE; 
+  VkPipeline            CastSingleRayMegaPipeline = VK_NULL_HANDLE;
   VkDescriptorSetLayout CastSingleRayMegaDSLayout = VK_NULL_HANDLE;
   VkDescriptorSetLayout CreateCastSingleRayMegaDSLayout();
   void InitKernel_CastSingleRayMega(const char* a_filePath);
@@ -151,7 +151,7 @@ protected:
   VkDescriptorSet  m_allGeneratedDS[1];
 
   RayTracer_UBO_Data m_uboData;
-  
+
   constexpr static uint32_t MEMCPY_BLOCK_SIZE = 256;
   constexpr static uint32_t REDUCTION_BLOCK_SIZE = 256;
 };
