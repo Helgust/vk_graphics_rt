@@ -1247,6 +1247,7 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
 // most uniforms are updated in GUI -> SetupGUIElements()
   m_uniforms.m_time_gbuffer_index = vec4(0, 0, a_time, gbuffer_index);
   m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, m_width, m_height);
+  m_uniforms.PrevVecMat = m_pScnMgr->GetDynamicInstanceMatrix(0);
   auto transMat = LiteMath::float4x4();
   //m_pScnMgr->MoveCarX(a_time, teleport, transMat);
   m_pScnMgr->MoveCarZ(a_time, teleport, transMat);
@@ -1255,13 +1256,11 @@ void SimpleRender::UpdateUniformBuffer(float a_time)
   //m_pScnMgr->RotCarX(a_time, teleport, transMat);
   //m_pScnMgr->MoveCarZ(a_time, teleport,transMat);
   m_pScnMgr->ApplyMovement(transMat);
-  LiteMath::float4x4 curVehMat = m_pScnMgr->GetVehicleInstanceMatrix(0);
-  LiteMath::float4x4 prevVehMat = m_pScnMgr->GetVehiclePrevInstanceMatrix(0);
-  m_uniforms.PrevVecMat = prevVehMat;
+  LiteMath::float4x4 curVehMat = m_pScnMgr->GetDynamicInstanceMatrix(0);
   LiteMath::float3 deltaRot = m_pScnMgr->GetVehicleDeltaRotationAngels();
   LiteMath::float4x4 transMatrix = rotate4x4X(-deltaRot[0])  * rotate4x4Y(-deltaRot[1]) * rotate4x4Z(-deltaRot[2]);
   transMatrix = transpose(transMatrix);
-  transMatrix.set_col(3, curVehMat.get_col(3) - prevVehMat.get_col(3));
+  transMatrix.set_col(3, curVehMat.get_col(3) - m_uniforms.PrevVecMat.get_col(3));
   //m_inverseTransMatrix = LiteMath::inverse4x4(curVehMat);
   if (!forceHistory)
   {
@@ -2005,8 +2004,8 @@ void SimpleRender::UpdateView()
     JitterMat(1,3) = -jitter.y;
     mWorldViewProj = mProjFix * JitterMat * mProj * mLookAt;
     float2 offset = (jitter - prevJitter)* 0.5f;
-    m_uniforms.jitterOffset.x = offset.x / m_width;
-    m_uniforms.jitterOffset.y = offset.y / m_height;
+    m_uniforms.jitterOffset.x = offset.x;
+    m_uniforms.jitterOffset.y = offset.y;
     prevJitter = jitter;
   }
   else

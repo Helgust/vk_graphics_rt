@@ -233,7 +233,7 @@ private:
   float m_distanceTraveledZ = 0.0f;
   float direction = 1.0f;
   bool rotFlag = false;
-  float m_velocity = 10.0f;
+  float m_velocity = 5.0f;
   std::vector<float> cubePos
   {
     -1.0f, -1.0f, +1.0f, +1.0f,

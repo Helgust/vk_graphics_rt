@@ -58,17 +58,13 @@ void main(void)
     //clipSpacePos += vec4(UboParams.m_jitter_time_gbuffer_index.xy * clipSpacePos.w, 0, 0);
     vOut.currClipSpacePos = clipSpacePos;
     gl_Position = clipSpacePos;
-    if (params.dynamicBit.x != 1)
+    if (params.dynamicBit.x == 0)
     {
         vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
-        // vOut.color = materials[matIdx].baseColor.xyz;
-        //vOut.materialId = materiaPerVertlIds[gl_BaseVertexARB];
     }
     else
     {
-        vOut.prevClipSpacePos = UboParams.prevProjView * UboParams.PrevVecMat * vec4(vOut.wPos, 1.0);//Fixme
-        // vOut.color = dynMaterials[matIdx].baseColor.xyz;
-        //vOut.materialId = dynMaterialPerVertIds[gl_BaseVertexARB];
-        vOut.prevClipSpacePos = UboParams.prevProjView * vec4(vOut.wPos, 1.0);
+        vec3 prevPos = (UboParams.PrevVecMat * vec4(vPosNorm.xyz, 1.0f)).xyz;
+        vOut.prevClipSpacePos = UboParams.prevProjView * vec4(prevPos, 1.0);//Fixme
     }
 }

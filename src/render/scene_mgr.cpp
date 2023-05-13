@@ -910,7 +910,7 @@ void SceneManager::MoveCarZ(float a_time, bool teleport, LiteMath::float4x4 &a_m
   else
   {
     deltaTime = 0;
-    if ( m_distanceTraveledZ > 100.f)
+    if ( m_distanceTraveledZ > 10.f)
     {
       direction *= -1.0f;
       m_distanceTraveledZ = 0.0;
@@ -1022,10 +1022,10 @@ void SceneManager::RotCarZ(float a_time, bool teleport, LiteMath::float4x4 &a_ma
 
 void SceneManager::ApplyMovement(LiteMath::float4x4 &a_mat)
 {
-  m_prevVehicleInstanceMatrices[0] = m_currVehicleInstanceMatrices[0];
+  m_prevVehicleInstanceMatrices[0] = m_dynamicInstanceMatrices[0];
   for (auto &vehMat : m_dynamicInstanceMatrices)
   {
     vehMat = vehMat * a_mat;
   }
-  m_currVehicleInstanceMatrices[0]= m_currVehicleInstanceMatrices[0] * a_mat;
+  m_dynamicInstanceMatrices[0]= m_dynamicInstanceMatrices[0] * a_mat;
 }
