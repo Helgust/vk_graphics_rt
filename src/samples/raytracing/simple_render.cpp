@@ -1348,7 +1348,7 @@ void SimpleRender::BuildGbufferCommandBuffer(VkCommandBuffer a_cmdBuff, VkFrameb
     for (uint32_t i = 0; i < m_pScnMgr->DynamicInstancesNum(); ++i)
     {
       auto inst = m_pScnMgr->GetDynamicInstanceInfo(i);
-      pushConst2M.meshID = inst.mesh_id + m_pScnMgr->InstancesNum();
+      pushConst2M.meshID = (inst.mesh_id-1) + m_pScnMgr->InstancesNum();
       pushConst2M.model = m_pScnMgr->GetDynamicInstanceMatrix(i);
       //pushConst2M.vehiclePos =  m_pScnMgr->GetVehicleInstancePos(0);
       pushConst2M.dynamicBit = 1;
