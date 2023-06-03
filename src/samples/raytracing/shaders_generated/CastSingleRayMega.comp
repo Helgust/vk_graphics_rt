@@ -301,8 +301,8 @@ void kernel_RayTrace_out_color(uint tidX, uint tidY, uint out_colorOffset)
         // //apply rotation
         vec3 rotPoint = prevHitPoint.xyz - ubo.m_vehPos.xyz;
         prevHitPoint = (vec4(rotPoint,1) * GetRotationFromMat4(ubo.m_invTransMat)) + vec4(ubo.m_vehPos.xyz,0);
-        vec3 HitPointProj = dot(lightDir,hitPoint.xyz);
-        vec3 PrevHitPointProj = dot(lightDir,prevHitPoint.xyz);
+        vec3 HitPointProj = lightDir * dot(lightDir,hitPoint.xyz);
+        vec3 PrevHitPointProj = lightDir * dot(lightDir,prevHitPoint.xyz);
         int directionOfDepthTrace = dot(HitPointProj,HitPointProj) > dot(PrevHitPointProj,PrevHitPointProj)  ? -1 : 1; //rework to distance between points
         vec3 initPos = prevHitPoint.xyz;
         bool intersectFind = false;
