@@ -23,7 +23,6 @@ layout (location = 0 ) in VS_OUT
   vec2 texCoord;
 } surf;
 
-vec2 iResolution = vec2(1024,1024);
 void main()
 {
   if (UboParams.settings.x == 1)
@@ -39,7 +38,7 @@ void main()
     {
       for(int y = -1; y <= 1; ++y)
       {
-        vec3 color = textureLod(colorTex,surf.texCoord + vec2(x, y)/1024.0f,0).xyz;
+        vec3 color = textureLod(colorTex,surf.texCoord + vec2(x, y)/UboParams.resolution.xy,0).xyz;
         minColor = min(minColor, color); // Take min and max
         maxColor = max(maxColor, color);
       }

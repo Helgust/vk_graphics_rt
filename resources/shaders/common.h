@@ -25,21 +25,22 @@ typedef int4        ivec4;
 #include "lights_common.h"
 struct UniformParams
 {
-  Light lights[1];
-  vec4  baseColor;
-  vec4 m_time_gbuffer_index; // xy dummy z time w gbuffer_index
-  vec4 jitterOffset; // xy curr jitter zw prev jitter
   mat4 projView;
   mat4 invProjView;
   mat4 prevProjView;
   mat4 invPrevProjView;
   mat4 PrevVecMat;
   mat4 View;
+  Light lights[1];
+  vec4  baseColor;
+  vec2 resolution; // xy resolution
+  vec2 time_frame; // time frame
+  vec4 jitterOffset; // xy curr jitter zw prev jitter
   float prefilteredCubeMipLevels;
   float exposure;
   float IBLShadowedRatio;
   float envMapRotation;
-  ivec4 settings;// x taa y softShadow zw resolution
+  ivec4 settings;// x taa y softShadow z gbuffer_index
 };
 
 struct MaterialData_pbrMR

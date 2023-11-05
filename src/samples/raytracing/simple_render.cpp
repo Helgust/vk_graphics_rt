@@ -1245,8 +1245,9 @@ void SimpleRender::CreateUniformBuffer()
 void SimpleRender::UpdateUniformBuffer(float a_time)
 {
 // most uniforms are updated in GUI -> SetupGUIElements()
-  m_uniforms.m_time_gbuffer_index = vec4(0, 0, a_time, gbuffer_index);
-  m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, m_width, m_height);
+  m_uniforms.resolution = vec2(m_width, m_height);
+  m_uniforms.time_frame = vec2(a_time, 0);
+  m_uniforms.settings = int4(taaFlag ? 1 : 0, softShadow ? 1 : 0, gbuffer_index, 0);
   m_uniforms.PrevVecMat = m_pScnMgr->GetDynamicInstanceMatrix(0);
   auto transMat = LiteMath::float4x4();
   //m_pScnMgr->MoveCarX(a_time, teleport, transMat);

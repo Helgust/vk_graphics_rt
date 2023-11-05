@@ -36,7 +36,7 @@ void main()
     {
       for(int y = -1; y <= 1; ++y)
       {
-        vec3 color = textureLod(colorTex, surf.texCoord + vec2(x, y)/1024.0f,0).xyz;
+        vec3 color = textureLod(colorTex, surf.texCoord + vec2(x, y)/UboParams.resolution.xy,0).xyz;
         minColor = min(minColor, color.x); // Take min and max
         maxColor = max(maxColor, color.x);
       }

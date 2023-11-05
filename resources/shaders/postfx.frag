@@ -64,7 +64,7 @@ void main()
   vec2 texSize   = textureSize(colorTexture, 0).xy;
   vec2 texCoord  = gl_FragCoord.xy / texSize;
   vec4 result_color =  texture(colorTexture, texCoord);
-  if(int(UboParams.m_time_gbuffer_index.w) != 0)
+  if(UboParams.settings.z != 0)
   {
     out_color = result_color;
   }

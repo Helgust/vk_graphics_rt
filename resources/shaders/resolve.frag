@@ -175,7 +175,7 @@ vec3 BRDF(PBRData d, float shadow_visibility, float ao)
 
 void main()
 {
-    vec2 uv = gl_FragCoord.xy / UboParams.settings.zw;
+    vec2 uv = gl_FragCoord.xy / UboParams.resolution;
     vec3 fragPos = GetPosFromDepth(uv);
 	vec3 normal = texture(samplerNormal, uv).rgb;
 	vec4 albedo = texture(samplerAlbedo, uv);
@@ -224,7 +224,7 @@ void main()
 
     vec3 color = BRDF(pbrData, shadow_visibility, ao_vis);
 
-    switch (int(UboParams.m_time_gbuffer_index.w)) {
+    switch (UboParams.settings.z) {
     case 0:
         outFragcolor = vec4(color,1.0f);
         break;
