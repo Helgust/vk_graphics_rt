@@ -761,7 +761,7 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
 
   // create resolveImage
   //
-  m_pResolveImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{1024, 1024});
+  m_pResolveImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{m_width, m_height});
 
   vk_utils::AttachmentInfo infoDepth;
   infoDepth.format           = VK_FORMAT_R8G8B8A8_UNORM;
@@ -788,7 +788,7 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
 
   // create TaaImage
   //
-  m_pTaaImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{1024, 1024});
+  m_pTaaImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{m_width, m_height});
 
   vk_utils::AttachmentInfo infoRes;
   infoRes.format           = VK_FORMAT_R8G8B8A8_UNORM;
@@ -815,7 +815,7 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
 
   // create filteredImage
   //
-  m_pFilterImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{1024, 1024});
+  m_pFilterImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{m_width, m_height});
 
   vk_utils::AttachmentInfo infoFilter;
   infoFilter.format           = VK_FORMAT_R8G8B8A8_UNORM;
@@ -842,7 +842,7 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
 
   // create softRTshadow
   //
-  m_pSoftRTImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{1024, 1024});
+  m_pSoftRTImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{m_width, m_height});
 
   vk_utils::AttachmentInfo infoSoftRt;
   infoSoftRt.format           = VK_FORMAT_R8G8B8A8_UNORM;
@@ -869,7 +869,7 @@ void SimpleRender::InitPresentation(VkSurfaceKHR &a_surface)
 
   // create softAO
   //
-  m_pSoftAOImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{1024, 1024});
+  m_pSoftAOImage = std::make_shared<vk_utils::RenderTarget>(m_device, VkExtent2D{m_width, m_height});
 
   vk_utils::AttachmentInfo infoSoftAO;
   infoSoftAO.format           = VK_FORMAT_R8G8B8A8_UNORM;
