@@ -378,6 +378,7 @@ protected:
   Camera   m_cam;
   uint32_t m_width  = 1024u;
   uint32_t m_height = 1024u;
+  uint64_t frameCount = 0;
 
   uint32_t m_shadowWidth  = 1024u;
   uint32_t m_shadowHeight = 1024u;
@@ -399,6 +400,25 @@ protected:
     vec2(1.0 / 16.0, 8.0 / 9.0),
 
   };
+
+  int numSamplesForJitter = 4u;
+
+  // Computes a radical inverse with base 2 using crazy bit-twiddling from "Hacker's Delight"
+  inline float RadicalInverseBase2(uint32_t bits)
+  {
+      bits = (bits << 16u) | (bits >> 16u);
+      bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+      bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+      bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+      bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+      return float(bits) * 2.3283064365386963e-10f; // / 0x100000000
+  }
+
+  // Returns a single 2D point in a Hammersley sequence of length "numSamples", using base 1 and base 2
+  inline vec2 Hammersley2D(uint32_t sampleIdx, uint32_t numSamples)
+  {
+      return vec2(float(sampleIdx) / float(numSamples), RadicalInverseBase2(uint32_t(sampleIdx)));
+  }
 
   // const int HALTON_COUNT = 16;
   // const vec2 HALTON_SEQUENCE[16] = {

@@ -243,6 +243,7 @@ void main()
         break;
     case 5:
         outFragcolor = vec4(texture(samplerVelocity, uv).xy, 0.0f, 1.0f);
+        outFragcolor *= 100.0f;
         break;
     case 6:
         outFragcolor = vec4(texture(samplerRTAO, uv).x);

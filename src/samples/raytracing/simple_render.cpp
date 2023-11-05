@@ -1996,17 +1996,18 @@ void SimpleRender::UpdateView()
   auto mWorldViewProj = LiteMath::float4x4();
   if (m_uniforms.settings.x)
   {
-    std::random_device dev;
-    std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist6(0,7);
-    vec2 jitter = ((HALTON_SEQUENCE[dist6(rng) % HALTON_COUNT]) - 0.5f) * JITTER_SCALE / vec2(m_width, m_height);
+    vec2 jitter = vec2(0.0f);
+    uint32_t idx = frameCount % numSamplesForJitter;
+    jitter = Hammersley2D(idx, numSamplesForJitter) * 2.0f - vec2(1.0f);
+    jitter *= JITTER_SCALE;
+    const float offsetX = jitter.x * (1.0f/(m_width));
+    const float offsetY = jitter.y * (1.0f/(m_height));
     float4x4 JitterMat = LiteMath::float4x4();
-    JitterMat(0,3) = jitter.x;
-    JitterMat(1,3) = -jitter.y;
+    JitterMat(0,3) = offsetX;
+    JitterMat(1,3) = -offsetY;
     mWorldViewProj = mProjFix * JitterMat * mProj * mLookAt;
     float2 offset = (jitter - prevJitter)* 0.5f;
-    m_uniforms.jitterOffset.x = offset.x;
-    m_uniforms.jitterOffset.y = offset.y;
+    m_uniforms.jitterOffset = vec4(offset.x, offset.y, 0 ,0);
     prevJitter = jitter;
   }
   else
@@ -2181,6 +2182,7 @@ void SimpleRender::DrawFrame(float a_time, DrawMode a_mode)
     DrawFrameSimple(a_time);
   }
   m_pScnMgr->BuildTLAS(true);
+  frameCount++;
 }
 
 void SimpleRender::Cleanup()
@@ -2384,6 +2386,7 @@ void SimpleRender::SetupGUIElements()
     ImGui::DragFloat("Envmap angle", &m_uniforms.envMapRotation, 1.f, -180.f, 180.f);
     ImGui::DragFloat("Exposure", &m_uniforms.exposure, 0.1f, 0.0f, 5.0f);
     ImGui::SliderInt("FaceIndex", &gbuffer_index, 0, 10); //0 no debug, 1 pos, 2 normal, 3 albedo, 4 shadow, 5 velocity
+    ImGui::DragInt("NumaTaaSmaplers", &numSamplesForJitter, 4, 4, 16);
     ImGui::Checkbox("Taa", &taaFlag);
     ImGui::Checkbox("TurnOff", &softShadow);
     ImGui::Checkbox("UpdateShadows", &m_shadowsUpdate);
